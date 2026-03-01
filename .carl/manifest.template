@@ -1,0 +1,12 @@
+# CARL Project Manifest — {{PROJECT_NAME}}
+# ====================================
+# Project-level domains. Merged with global ~/.carl/manifest.
+# Project config values override global for same domain name.
+# New domains here are added to the global set.
+
+# ============================================================================
+# {{CARL_DOMAIN_UPPER}} - Règles du projet {{PROJECT_NAME}}
+# ============================================================================
+{{CARL_DOMAIN_UPPER}}_STATE=active
+{{CARL_DOMAIN_UPPER}}_ALWAYS_ON=false
+{{CARL_DOMAIN_UPPER}}_RECALL={{RECALL_KEYWORDS}}

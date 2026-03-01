@@ -1,0 +1,64 @@
+# MEMORY.md — {{PROJECT_NAME}}
+
+> Fichier d'état courant. Lu en premier à chaque session.
+> Mis à jour en fin de session avant le commit.
+
+---
+
+## État du projet
+
+**Statut :** [x] En démarrage  [ ] En cours  [ ] Bloqué  [ ] Terminé
+**Dernière session :** {{DATE}}
+**Prochaine étape :** {{NEXT_STEP}}
+
+---
+
+## Contexte courant
+
+{{PROJECT_DESCRIPTION}}
+
+---
+
+## Ce qui a été fait
+
+### {{DATE}} — Initialisation
+
+- Structure projet créée depuis project-template/
+- {{INIT_ACTION_1}}
+- {{INIT_ACTION_2}}
+
+---
+
+## Décisions actives
+
+| Décision | Raison | Date |
+|----------|--------|------|
+| {{DECISION_1}} | {{REASON_1}} | {{DATE}} |
+
+---
+
+## Blocages et questions ouvertes
+
+- [ ] Aucun blocage actuel
+
+---
+
+## Patterns découverts cette semaine
+
+Aucun pattern à capitaliser pour l'instant — projet en démarrage.
+→ À traiter au prochain /workflows:compound
+
+---
+
+## Stack et config
+
+- {{STACK_ITEM_1}}
+- {{STACK_ITEM_2}}
+- Variables d'environnement : voir `.env`
+
+---
+
+## Liens utiles
+
+- Repo : {{REPO_URL}}
+- Projet local : {{PROJECT_PATH}}

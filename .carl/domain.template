@@ -1,0 +1,21 @@
+# CARL Domain: {{DOMAIN_DISPLAY_NAME}}
+# ==========================
+# Rules for the {{PROJECT_NAME}} project.
+# {{DOMAIN_DESCRIPTION}}
+# Activated when context mentions {{RECALL_KEYWORDS_SHORT}}.
+
+# --- FOUNDATIONAL RULES ---
+
+{{CARL_DOMAIN_UPPER}}_RULE_0=These rules apply when working on the {{PROJECT_NAME}} project at {{PROJECT_PATH}}. {{DOMAIN_PURPOSE}}.
+
+{{CARL_DOMAIN_UPPER}}_RULE_1=FLYWHEEL - CONSULT BEFORE IMPLEMENTING: Always check docs/solutions/ for existing validated patterns before writing new code or giving recommendations. Reuse what's proven, don't reinvent.
+
+{{CARL_DOMAIN_UPPER}}_RULE_2=FLYWHEEL - DOCUMENT AFTER SOLVING: After resolving any non-trivial problem, document the pattern in the appropriate docs/solutions/ subfolder. Every solved problem compounds into future productivity.
+
+{{CARL_DOMAIN_UPPER}}_RULE_3=CREDENTIALS SAFETY: All API credentials must be stored in .env files, never hardcoded. Verify .gitignore includes .env before any commit.
+
+# --- PROJECT-SPECIFIC RULES (add below) ---
+
+# {{CARL_DOMAIN_UPPER}}_RULE_4=
+# {{CARL_DOMAIN_UPPER}}_RULE_5=
+# {{CARL_DOMAIN_UPPER}}_RULE_6=

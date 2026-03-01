@@ -1,0 +1,384 @@
+# {{PROJECT_NAME}}
+
+## Stack
+
+- {{STACK_ITEM_1}}
+- {{STACK_ITEM_2}}
+
+## Outils actifs
+
+- GSD                    → exécution, subagents frais, parallélisme
+- Compound Engineering   → planning riche, review, capitalisation
+- CARL                   → règles dynamiques selon contexte (domaine `{{CARL_DOMAIN}}`)
+
+## MCP actifs
+
+- Supermemory            → mémoire cross-projet, cross-session
+- Context7               → documentation librairies en temps réel
+- {{MCP_EXTRA_1}}
+- {{MCP_EXTRA_2}}
+
+## Skills installés
+
+- {{SKILLS_DESCRIPTION}}
+
+---
+
+## Fichiers mémoire et état
+
+| Fichier | Rôle | Géré par | Mis à jour quand |
+|---------|------|----------|-----------------|
+| memory/MEMORY.md | Contexte métier : décisions actives, prochaine étape, patterns découverts, blocages | Template (sessions) | Début et fin de chaque session |
+| STATE.md | Position technique : phase active, wave courante, tasks complétées, milestone | GSD (automatique) | Automatiquement par GSD à chaque commande |
+| docs/solutions/ | Patterns et leçons apprises, référence durable | Flywheel | Post /workflows:compound |
+| .carl/{{CARL_DOMAIN}} | Règles comportementales CARL, chargées automatiquement | Flywheel | Quand pattern réutilisable classifié |
+| Supermemory | Mémoire cross-projet, cross-session, personnelle | Flywheel | Quand pattern cross-projet classifié |
+
+### Séparation STATE.md vs MEMORY.md
+
+Ces deux fichiers coexistent sans se chevaucher :
+
+- **STATE.md** = le GPS technique. Où on est dans le roadmap GSD (phase, wave, task).
+  Géré automatiquement par GSD. Ne PAS éditer manuellement.
+  Ne contient PAS de décisions métier ni de contexte de session.
+
+- **MEMORY.md** = le journal de bord. Contexte métier, décisions prises et pourquoi,
+  prochaine étape humaine, blocages, patterns découverts.
+  Géré manuellement par Claude en début/fin de session.
+  Ne contient PAS de position technique GSD.
+
+En début de session, lire les deux : MEMORY.md pour le contexte, STATE.md pour la position.
+
+---
+
+## Workflow de base
+
+```
+/workflows:brainstorm    → si requirements flous
+/workflows:plan          → planifier (consulte memory/ + docs/solutions/ en premier)
+/gsd:plan-phase          → plans atomiques avec vérification structurelle
+/pre-flight              → review multi-agent du plan (sécurité, perf, archi, flows)
+/gsd:execute-phase       → exécuter avec subagents frais en waves parallèles
+/workflows:review        → review multi-agents avant commit
+/workflows:compound      → déclenche le flywheel (voir ci-dessous)
+```
+
+### Workflow détaillé par phase de projet
+
+```
+Phase amont (requirements → plan) :
+  /workflows:brainstorm ou /gsd:new-project
+  → /gsd:discuss-phase (capturer les décisions)
+  → /gsd:plan-phase (research + plan + verify loop)
+  → /pre-flight (4 agents parallèles : archi, sécu, perf, flows)
+     GO        → /gsd:execute-phase
+     COND. GO  → user confirme ou corrige
+     NO-GO     → corriger le plan, re-run /gsd:plan-phase
+
+Phase exécution :
+  /gsd:execute-phase (waves parallèles, commits atomiques)
+  → /workflows:review (15 agents review spécialisés)
+  → /gsd:verify-work (UAT goal-backward)
+
+Phase capitalisation :
+  /workflows:compound → flywheel (classifier → documenter → CARL → Supermemory)
+```
+
+---
+
+## Gestion du contexte et de la mémoire
+
+### Règle #1 — Début de session : charger avant de coder
+
+Au démarrage de chaque session, Claude doit TOUJOURS lire dans cet ordre :
+
+1. `memory/MEMORY.md`               → état courant, où on en est, décisions actives
+2. `docs/solutions/{domaine}/`      → patterns connus sur le domaine du jour
+3. Supermemory query sur domaine    → leçons cross-projet pertinentes
+4. CARL charge `{{CARL_DOMAIN}}` automatiquement selon contexte détecté
+
+Ne jamais commencer à planifier ou coder avant d'avoir lu MEMORY.md.
+C'est le point d'entrée obligatoire de chaque session.
+
+---
+
+### Règle #2 — Fin de session : mettre à jour avant de fermer
+
+Avant de fermer la session, Claude doit mettre à jour `memory/MEMORY.md` :
+
+- Ce qui a été fait (résumé 3-5 lignes max)
+- Décisions prises et leur raison courte
+- Prochaine étape claire (une seule, actionnable)
+- Blocages ou questions ouvertes
+
+Si la session a produit un pattern → déclencher le flywheel.
+Commiter MEMORY.md avec le code dans le même commit.
+
+---
+
+### Règle #3 — Sessions longues : checkpoints de contexte
+
+Quand le contexte commence à se dégrader (réponses moins précises,
+Claude répète des questions déjà répondues, ou après ~60-70% du contexte utilisé) :
+
+Signal d'alerte : Claude annonce "Contexte à [X]% — checkpoint recommandé"
+
+Checkpoint :
+
+1. Résumer l'état actuel en moins de 200 mots dans MEMORY.md
+2. Lister les décisions prises depuis le début de session
+3. Identifier la prochaine tâche clairement
+4. Ouvrir une nouvelle session avec MEMORY.md comme contexte initial
+
+Ne pas continuer une session dégradée — la qualité se dégrade exponentiellement.
+Une coupure propre avec MEMORY.md à jour vaut mieux qu'une heure de contexte pourri.
+
+---
+
+### Règle #4 — Chain of thought : externaliser avant d'exécuter
+
+Pour toute tâche complexe (logique métier, architecture, debug difficile),
+Claude doit externaliser son raisonnement AVANT de coder.
+
+Format obligatoire pour les tâches complexes :
+
+```
+## Raisonnement
+Problème : [ce qu'on résout exactement]
+Contraintes : [limites connues]
+Options considérées :
+  A) [option] — avantage / inconvénient
+  B) [option] — avantage / inconvénient
+Choix : [option retenue] parce que [raison courte]
+Risques : [ce qui pourrait mal tourner]
+```
+
+Ce bloc va dans le PLAN.md GSD ou en commentaire dans le code si court.
+Ne jamais sauter cette étape sur des décisions d'architecture ou de logique métier.
+
+---
+
+### Règle #5 — Supermemory : quand et comment sauvegarder
+
+Sauvegarder dans Supermemory seulement si :
+
+- Pattern cross-projet (s'applique à d'autres projets futurs)
+- Décision d'architecture structurante
+- Leçon apprise après une erreur coûteuse
+- Convention ou préférence de travail personnelle
+
+Ne pas sauvegarder :
+
+- Détails spécifiques à ce projet       → MEMORY.md ou docs/solutions/
+- Code ou implémentation                → Git
+- Choses triviales ou évidentes
+
+Format obligatoire pour chaque entrée Supermemory :
+
+```
+[tag:{domaine}] Titre court et précis
+Contexte : dans quel projet/situation découvert
+Problème : ce qui se passait avant
+Solution : ce qui fonctionne
+Règle : "Toujours X quand Y." — une phrase actionnable
+Réf : chemin fichier ou URL si applicable
+```
+
+Tags standards :
+
+- `[skill:{domaine}]`         → règle technique réutilisable
+- `[decision:architecture]`   → choix structurant cross-projets
+- `[decision:stack]`          → choix de librairie ou outil
+- `[lesson:error]`            → erreur à ne pas répéter
+- `[convention:workflow]`     → façon de travailler à retenir
+- `[context:preference]`      → préférence personnelle sur comment travailler
+
+---
+
+### Règle #6 — CARL : charger le bon domaine au bon moment
+
+CARL charge les domaines automatiquement selon le contexte détecté.
+Ne pas charger manuellement sauf si CARL ne l'a pas fait et que c'est nécessaire.
+
+Quand enrichir un domaine CARL existant :
+
+- Après /workflows:compound, si pattern classifié "réutilisable"
+- Ajouter dans `.carl/{{CARL_DOMAIN}}` (ne pas créer de doublon)
+- Une règle distillée = une ou deux lignes max (concis, actionnable)
+
+Quand créer un nouveau domaine CARL :
+
+- Minimum 3 règles distinctes sur un même sous-domaine avant de créer
+- Nommer sans tirets : `{domaine}expert` (ex: `googleadsexpert`)
+- Ajouter les RECALL keywords dans `.carl/manifest`
+
+Note : les domaines CARL (`.carl/`) sont distincts des skills Claude Code (`.claude/skills/`).
+CARL = règles injectées dynamiquement par hook. Skills = prompts invocables par /commande.
+
+---
+
+### Règle #7 — Anti-patterns de gestion contexte
+
+Ne jamais :
+
+- Commencer une session sans lire MEMORY.md
+- Continuer une session dont le contexte est clairement dégradé
+- Sauvegarder dans Supermemory sans tag structuré
+- Dupliquer un pattern dans docs/solutions/ au lieu de mettre à jour l'existant
+- Stocker des credentials ou données clients dans MEMORY.md, docs/ ou Supermemory
+- Mélanger l'état courant (MEMORY.md) avec les patterns durables (docs/solutions/)
+- Modifier un domaine CARL sans que le pattern ait été classifié d'abord
+- Créer un domaine CARL avec moins de 3 règles distinctes
+
+---
+
+## Flywheel — instructions post /workflows:compound
+
+### Étape 1 — Classifier le pattern appris
+
+**Ponctuel**
+→ Spécifique à ce projet, peu probable ailleurs
+→ Action : docs/solutions/ seulement
+
+**Réutilisable**
+→ S'applique sur plusieurs projets du même domaine
+→ Action : docs/solutions/ + domaine CARL
+
+**Cross-projet**
+→ Change ta façon de travailler en général
+→ Action : docs/solutions/ + domaine CARL + Supermemory
+
+---
+
+### Étape 2 — Documenter dans docs/solutions/
+
+Toujours, quelle que soit la classification.
+Créer `docs/solutions/{domaine}/{pattern}.md` :
+
+```markdown
+# [Titre du pattern]
+## Contexte
+## Problème
+## Solution (+ code si applicable)
+## Anti-patterns
+## Règle distillée — "Toujours X quand Y."
+## Classification : ponctuel / réutilisable / cross-projet
+## Référence — session source : [date]
+```
+
+Domaines disponibles : {{SOLUTION_DOMAINS}}
+
+---
+
+### Étape 3 — Si réutilisable ou cross-projet : domaine CARL (AUTOMATISÉ)
+
+Après avoir documenté dans docs/solutions/, Claude DOIT proposer l'ajout CARL :
+
+1. Identifier le numéro de la prochaine règle disponible dans `.carl/{{CARL_DOMAIN}}`
+2. Formuler la règle distillée (1-2 lignes, actionnable, format `{DOMAIN_UPPER}_RULE_{N}=...`)
+3. Présenter la règle à l'utilisateur pour validation
+4. Si validé, ajouter dans `.carl/{{CARL_DOMAIN}}`
+5. Si le pattern concerne un sous-domaine distinct avec 3+ règles → proposer un nouveau domaine
+
+Ne PAS attendre que l'utilisateur pense à demander l'ajout CARL.
+La proposition est automatique dès que la classification est "réutilisable" ou "cross-projet".
+
+---
+
+### Étape 4 — Si cross-projet : Supermemory (AUTOMATISÉ)
+
+Après l'étape CARL, si classification = cross-projet, Claude DOIT proposer la sauvegarde Supermemory :
+
+1. Formuler l'entrée au format de la Règle #5 (tag + contexte + problème + solution + règle)
+2. Présenter à l'utilisateur pour validation
+3. Si validé, sauvegarder via MCP supermemory
+
+Ne PAS attendre que l'utilisateur pense à demander la sauvegarde Supermemory.
+La proposition est automatique dès que la classification est "cross-projet".
+
+---
+
+### Étape 5 — Commit
+
+Inclure dans le même commit :
+
+- Code produit
+- `memory/MEMORY.md` mis à jour
+- `docs/solutions/{domaine}/{pattern}.md` si nouveau
+- `.carl/{{CARL_DOMAIN}}` si enrichi
+
+Message : `feat: [ce qui a été construit] / docs: pattern {nom} → {domaine}`
+
+---
+
+## Règle de consultation — début de chaque planification
+
+Avant de planifier (que ce soit `/workflows:plan`, `/gsd:plan-phase`, ou `/gsd:discuss-phase`),
+Claude doit exécuter cette séquence de consultation :
+
+1. Lire `memory/MEMORY.md`                       → état courant
+2. Lancer l'agent `learnings-researcher` sur `docs/solutions/` avec les mots-clés du domaine
+   → patterns connus, anti-patterns, solutions validées
+3. Interroger Supermemory sur le domaine         → leçons cross-projet
+4. CARL charge le domaine automatiquement        → règles injectées
+5. Intégrer tout ça dans le plan → ne pas redécouvrir
+
+Cette séquence s'applique à TOUTES les commandes de planification, pas seulement `/workflows:plan`.
+
+---
+
+## Règle de coordination — GSD ↔ Compound
+
+GSD et Compound Engineering produisent des artifacts complémentaires.
+Ils doivent lire les outputs de l'autre pour éviter la duplication.
+
+### GSD lit les outputs Compound
+
+Lors de `/gsd:plan-phase` et `/gsd:discuss-phase` :
+- Consulter `docs/solutions/` (output de `/workflows:compound`) pour les patterns connus
+- Consulter `docs/plans/` (output de `/workflows:plan`) si un plan Compound existe déjà
+- Consulter `docs/brainstorms/` si un brainstorm a précédé la phase
+
+### Compound lit les outputs GSD
+
+Lors de `/workflows:review` après exécution GSD :
+- Lire `.planning/{phase}-VERIFICATION.md` comme contexte pour la review
+- Lire `.planning/{phase}-{N}-SUMMARY.md` pour comprendre ce qui a été construit
+
+Lors de `/workflows:compound` :
+- Lire `.planning/{phase}-PREFLIGHT.md` si pre-flight a été exécuté
+  → Les findings pre-flight résolus sont des patterns à capitaliser
+
+### Fichiers partagés
+
+| Fichier | Producteur | Consommateurs |
+|---------|-----------|---------------|
+| `docs/solutions/` | `/workflows:compound` | `/gsd:plan-phase`, `/workflows:plan`, `learnings-researcher` |
+| `docs/plans/` | `/workflows:plan` | `/gsd:discuss-phase` |
+| `.planning/{phase}-PLAN.md` | `/gsd:plan-phase` | `/pre-flight`, `/gsd:execute-phase` |
+| `.planning/{phase}-PREFLIGHT.md` | `/pre-flight` | `/workflows:compound` |
+| `.planning/{phase}-VERIFICATION.md` | `/gsd:verify-work` | `/workflows:review` |
+| `memory/MEMORY.md` | Toutes les sessions | Toutes les sessions |
+| `STATE.md` | GSD (position technique) | GSD uniquement |
+
+---
+
+## Ce que les agents ne font PAS
+
+- Commencer sans lire MEMORY.md
+- Modifier un domaine CARL sans classifier le pattern d'abord
+- Sauvegarder dans Supermemory sans tag structuré
+- Documenter du code standard et trivial
+- Dupliquer un pattern existant au lieu de mettre à jour
+- Stocker des données sensibles dans MEMORY.md ou docs/solutions/
+- Créer un domaine CARL avec moins de 3 règles distinctes
+- Continuer une session dont le contexte est dégradé
+
+---
+
+## Domaines actifs
+
+| Domaine | docs/solutions/ | Domaine CARL | Tag Supermemory |
+|---------|----------------|--------------|-----------------|
+| {{DOMAIN_1}} | {{DOMAIN_1_FOLDER}}/ | {{CARL_DOMAIN}} | [skill:{{DOMAIN_1_TAG}}] |
+| {{DOMAIN_2}} | {{DOMAIN_2_FOLDER}}/ | {{CARL_DOMAIN}} | [skill:{{DOMAIN_2_TAG}}] |
