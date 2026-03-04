@@ -14,8 +14,14 @@
 
 {{CARL_DOMAIN_UPPER}}_RULE_3=CREDENTIALS SAFETY: All API credentials must be stored in .env files, never hardcoded. Verify .gitignore includes .env before any commit.
 
+# --- EXECUTION DISCIPLINE (PAUL) ---
+
+{{CARL_DOMAIN_UPPER}}_RULE_4=LOOP CLOSURE: After every /gsd:execute-phase, verify that .planning/{phase}-SUMMARY.md includes a planned-vs-actual reconciliation: tasks planned vs completed, decisions made during execution, items deferred. This closure is MANDATORY before /workflows:review.
+
+{{CARL_DOMAIN_UPPER}}_RULE_5=DEVIATION LOGGING: If execution diverges from the plan — task skipped, scope changed, different approach taken, or a file in the plan's Boundaries section touched — log the deviation and reason in MEMORY.md under "Déviations d'exécution" BEFORE proceeding. New implementation files created as part of completing a planned task are NOT deviations. Never silently drift from the plan.
+
 # --- PROJECT-SPECIFIC RULES (add below) ---
 
-# {{CARL_DOMAIN_UPPER}}_RULE_4=
-# {{CARL_DOMAIN_UPPER}}_RULE_5=
 # {{CARL_DOMAIN_UPPER}}_RULE_6=
+# {{CARL_DOMAIN_UPPER}}_RULE_7=
+# {{CARL_DOMAIN_UPPER}}_RULE_8=

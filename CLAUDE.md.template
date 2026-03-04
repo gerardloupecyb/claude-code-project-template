@@ -59,6 +59,7 @@ En début de session, lire les deux : MEMORY.md pour le contexte, STATE.md pour 
 /gsd:plan-phase          → plans atomiques avec vérification structurelle
 /pre-flight              → review multi-agent du plan (sécurité, perf, archi, flows)
 /gsd:execute-phase       → exécuter avec subagents frais en waves parallèles
+  → closure obligatoire  → résumé planifié vs réalisé
 /workflows:review        → review multi-agents avant commit
 /workflows:compound      → déclenche le flywheel (voir ci-dessous)
 ```
@@ -77,8 +78,10 @@ Phase amont (requirements → plan) :
 
 Phase exécution :
   /gsd:execute-phase (waves parallèles, commits atomiques)
+    → lire ## Boundaries du PLAN.md avant la première wave
+  → closure (OBLIGATOIRE — résumé planifié vs réalisé, décisions, items différés)
   → /workflows:review (15 agents review spécialisés)
-  → /gsd:verify-work (UAT goal-backward)
+  → /gsd:verify-work (UAT goal-backward — vérifie les AC)
 
 Phase capitalisation :
   /workflows:compound → flywheel (classifier → documenter → CARL → Supermemory)
@@ -99,6 +102,7 @@ Au démarrage de chaque session, Claude doit TOUJOURS lire dans cet ordre :
 
 Ne jamais commencer à planifier ou coder avant d'avoir lu MEMORY.md.
 C'est le point d'entrée obligatoire de chaque session.
+En début de session, vider la section "Déviations d'exécution" de MEMORY.md (données de la session précédente).
 
 ---
 
@@ -232,6 +236,46 @@ Ne jamais :
 
 ---
 
+### Règle #8 — Structure des plans : critères d'acceptation et frontières
+
+Tout plan créé par `/gsd:plan-phase` ou `/workflows:plan` doit inclure :
+
+#### Critères d'acceptation (BDD)
+
+Format obligatoire Given/When/Then pour tout plan :
+
+```
+AC-1: Given [contexte], When [action], Then [résultat attendu]
+AC-2: Given [contexte], When [action], Then [résultat attendu]
+```
+
+Chaque tâche doit référencer quel AC elle satisfait (ex: "→ satisfait AC-1").
+Les critères doivent être déclaratifs (comportement attendu), pas impératifs (étapes mécaniques).
+Les critères servent de référence pour `/gsd:verify-work` (UAT goal-backward).
+
+Règles pour écrire de bons AC :
+
+- Un seul comportement par AC (ne pas combiner plusieurs vérifications)
+- Le "Then" doit être vérifiable par lecture de fichier ou exécution de commande
+- Pas de détails d'implémentation dans le "Then" (tester le comportement, pas le code)
+
+#### Frontières — tous les plans
+
+Lister explicitement les fichiers et répertoires qui ne doivent PAS être modifiés :
+
+```
+## Boundaries
+- CLAUDE.md (ne pas modifier)
+- .carl/ (ne pas modifier sauf si flywheel)
+- [autres fichiers protégés selon contexte]
+```
+
+Les frontières protègent contre les modifications accidentelles pendant l'exécution.
+Si une tâche nécessite de modifier un fichier listé en frontière,
+le signaler comme déviation dans MEMORY.md avant de procéder.
+
+---
+
 ## Flywheel — instructions post /workflows:compound
 
 ### Étape 1 — Classifier le pattern appris
@@ -358,6 +402,7 @@ Lors de `/workflows:compound` :
 | `.planning/{phase}-PLAN.md` | `/gsd:plan-phase` | `/pre-flight`, `/gsd:execute-phase` |
 | `.planning/{phase}-PREFLIGHT.md` | `/pre-flight` | `/workflows:compound` |
 | `.planning/{phase}-VERIFICATION.md` | `/gsd:verify-work` | `/workflows:review` |
+| `.planning/{phase}-{N}-SUMMARY.md` | `/gsd:execute-phase` + closure | `/workflows:review`, `/workflows:compound` |
 | `memory/MEMORY.md` | Toutes les sessions | Toutes les sessions |
 | `STATE.md` | GSD (position technique) | GSD uniquement |
 

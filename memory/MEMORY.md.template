@@ -43,6 +43,16 @@
 
 ---
 
+## Déviations d'exécution
+
+> Vidé en début de session suivante. Max 5 entrées.
+> Si la table atteint 5 entrées, signaler que le plan nécessite révision.
+
+| Étape prévue | Action réelle | Raison | Date |
+|---|---|---|---|
+
+---
+
 ## Patterns découverts cette semaine
 
 Aucun pattern à capitaliser pour l'instant — projet en démarrage.
