@@ -10,167 +10,48 @@ description: >
 
 # Context Manager
 
-Règles pour maintenir la qualité des réponses sur des sessions longues,
-gérer la mémoire entre sessions, et structurer le raisonnement sur des
-tâches complexes.
+Ce skill rappelle les règles de gestion du contexte définies dans CLAUDE.md.
+Les règles complètes sont dans CLAUDE.md (Règles #1 à #7). Ce skill ne les duplique pas.
 
 ---
 
-## Règles critiques — s'appliquent toujours
+## Rappels critiques
 
 ### Démarrage de session
 
-TOUJOURS lire avant de coder ou planifier :
-
-1. memory/MEMORY.md          → état courant, décisions actives
-2. LESSONS.md                → leçons apprises, à appliquer immédiatement
-
-Supermemory et docs/solutions/ sont consultés uniquement lors de la planification,
-pas à chaque début de session (économie de tokens).
-
-Si MEMORY.md n'existe pas → le créer depuis le template avant de continuer.
-Si LESSONS.md n'existe pas → le créer depuis le template avant de continuer.
-Ne jamais supposer le contexte. Toujours le lire.
+Lire AVANT de coder : `memory/MEMORY.md` + `LESSONS.md`.
+Si l'un n'existe pas → le créer depuis le template.
+Voir CLAUDE.md Règle #1 pour le détail.
 
 ### Fin de session
 
-Mettre à jour MEMORY.md avant de fermer :
+Mettre à jour MEMORY.md (ce qui a été fait, décisions, prochaine étape, blocages).
+Proposer `/lesson` si fix non-trivial.
+Commiter MEMORY.md + LESSONS.md avec le code.
+Voir CLAUDE.md Règle #2 pour le détail.
 
-- Ce qui a été fait (3-5 lignes max)
-- Décisions prises + raison courte
-- Une seule prochaine étape, claire et actionnable
-- Blocages ou questions ouvertes
+### Sessions longues
 
-Si la session a résolu un problème non-trivial → proposer `/lesson` pour capturer.
-Commiter MEMORY.md et LESSONS.md dans le même commit que le code produit.
-
----
-
-## Gestion des sessions longues
-
-### Détecter la dégradation du contexte
-
-Signaux d'alerte :
-
-- Claude répète des questions déjà répondues plus tôt dans la session
-- Réponses moins précises ou qui ignorent des contraintes établies
-- Contexte à ~60-70% de capacité utilisée
-- Incohérences avec des décisions prises en début de session
-
-Action quand signal détecté :
-Annoncer : "Contexte à [X]% — checkpoint recommandé avant de continuer."
-
-### Protocole checkpoint
-
-1. Résumer l'état en moins de 200 mots dans MEMORY.md
-2. Lister les décisions prises depuis le début de session
-3. Identifier la prochaine tâche (une seule, actionnable)
-4. Proposer d'ouvrir une nouvelle session avec MEMORY.md en contexte initial
-
-Règle absolue : ne jamais continuer une session dégradée.
-La qualité se dégrade exponentiellement passé un certain seuil.
-Une coupure propre avec MEMORY.md à jour produit de meilleurs résultats.
+Quand le contexte se dégrade (~60-70%) → checkpoint dans MEMORY.md → nouvelle session.
+Ne jamais continuer une session dégradée.
+Voir CLAUDE.md Règle #3 pour le détail.
 
 ---
 
-## Chain of thought — externaliser avant d'exécuter
+## Quand ce skill est utile
 
-### Quand l'appliquer
+Ce skill se charge quand le contexte détecte des mots-clés liés à la gestion de session.
+Son rôle est de **rappeler** que les règles existent dans CLAUDE.md, pas de les redéfinir.
 
-Obligatoire pour :
-
-- Décisions d'architecture ou de structure de données
-- Logique métier complexe (règles conditionnelles multiples)
-- Debug difficile (plus d'une hypothèse possible)
-- Choix entre plusieurs approches techniques
-
-Optionnel pour :
-
-- Tâches CRUD simples et bien définies
-- Code boilerplate standard
-- Modifications mineures sans impact architectural
-
-### Format chain of thought
-
-```
-Problème : [ce qu'on résout exactement, pas ce qu'on va faire]
-Contraintes : [limites connues — perf, API, sécurité, budget, etc.]
-Options :
-  A) [option] → avantage : [X] / inconvénient : [Y]
-  B) [option] → avantage : [X] / inconvénient : [Y]
-Choix : [option] parce que [raison courte et précise]
-Risques : [ce qui pourrait mal tourner et comment on le détecte]
-```
-
-Où mettre ce bloc :
-
-- Dans le PLAN.md GSD si c'est une tâche planifiée
-- En commentaire en tête du fichier si c'est de l'architecture
-- Dans MEMORY.md sous "Décisions actives" si c'est un choix durable
-
----
-
-## Supermemory — archive principale par projet
-
-Supermemory sert d'archive des leçons, organisée par projet.
-Les leçons y arrivent via `/lesson migrate` (quand LESSONS.md atteint le cap 50).
-Ne pas sauvegarder directement dans Supermemory — passer par `/lesson` ou `/workflows:compound`.
-
-### Tags standards
-
-- `[lesson:{domaine}]`        → leçon projet migrée depuis LESSONS.md
-- `[skill:{domaine}]`         → règle technique réutilisable
-- `[decision:architecture]`   → choix structurant cross-projets
-- `[decision:stack]`          → choix de librairie ou outil
-- `[lesson:error]`            → erreur à ne pas répéter
-- `[convention:workflow]`     → façon de travailler à retenir
-- `[context:preference]`      → préférence personnelle de travail
-
----
-
-## Hiérarchie des couches mémoire (cache L1→L4)
-
-| Couche | Contenu | Accès |
-|--------|---------|-------|
-| CARL rules | Règles critiques one-liner | Auto-injecté chaque prompt |
-| LESSONS.md | Leçons récentes (quand/faire/parce que, cap 50) | Lu chaque session |
-| Supermemory (projet) | Leçons archivées + résumés structurés | `recall` à la planification |
-| docs/solutions/ | Patterns complets + code (backup git) | Agent search (fallback ou profondeur) |
-
-| Information | Où la mettre |
-|-------------|-------------|
-| État courant du projet, où on en est | memory/MEMORY.md |
-| Décisions actives qui influencent le code | memory/MEMORY.md → Décisions actives |
-| Leçon apprise récente | LESSONS.md (via `/lesson`) |
-| Leçon critique ou répétée | CARL rule (promotion via `/lesson`) |
-| Leçon archivée (cap LESSONS.md atteint) | Supermemory projet + docs/solutions/ |
-| Pattern détaillé avec code | docs/solutions/ (via `/workflows:compound`) |
-| Code et implémentation | Git |
-| Credentials et secrets | .env (jamais dans mémoire) |
-
-Ne jamais mélanger les couches. Une leçon dans MEMORY.md doit migrer
-vers LESSONS.md via `/lesson`.
-
----
-
-## Anti-patterns
-
-- Commencer à coder sans lire MEMORY.md et LESSONS.md
-- Continuer une session dont le contexte est dégradé
-- Sauvegarder directement dans Supermemory (passer par `/lesson` ou `/workflows:compound`)
-- Dupliquer une leçon dans LESSONS.md au lieu de mettre à jour l'existante
-- Stocker credentials ou données clients dans MEMORY.md, LESSONS.md, docs/, ou Supermemory
-- Faire du chain of thought en tête implicitement sans l'externaliser
-- Créer un domaine CARL avec moins de 3 règles distinctes
-- Ignorer LESSONS.md lors de la planification
+Si une situation nécessite les règles complètes (chain of thought, Supermemory, CARL,
+hiérarchie des couches mémoire), lire directement CLAUDE.md Règles #4 à #7.
 
 ---
 
 ## Références
 
-- memory/MEMORY.md                    → état courant projet
-- LESSONS.md                          → cache chaud des leçons (cap 50)
-- Supermemory (projet)                → archive principale des leçons
-- docs/solutions/                     → backup local + patterns détaillés
-- .carl/{domaine}                     → règles critiques injectées
-- CLAUDE.md du projet                 → règles flywheel complètes
+- CLAUDE.md Règles #1-#7    → règles complètes de gestion du contexte
+- memory/MEMORY.md          → état courant projet
+- LESSONS.md                → cache chaud des leçons (cap 50)
+- Supermemory (projet)      → archive principale des leçons
+- docs/solutions/           → backup local + patterns détaillés

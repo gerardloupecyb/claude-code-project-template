@@ -62,30 +62,44 @@ En début de session, lire les trois : MEMORY.md pour le contexte, LESSONS.md po
 ### Parcours rapide — tâche claire, scope connu
 
 ```
-/gsd:plan-phase → /pre-flight → /gsd:execute-phase → closure → /workflows:review
+/gsd:plan-phase → /pre-flight → /gsd:execute-phase
+→ closure → /lesson → /gsd:verify-work → /ce:review
 ```
 
 ### Parcours standard — feature à planifier
 
 ```
-/workflows:brainstorm (si requirements flous)
-→ /gsd:plan-phase → /pre-flight → /gsd:execute-phase → closure
-→ /workflows:review → /workflows:compound
+/ce:brainstorm (si requirements flous)
+→ /gsd:discuss-phase (optionnel — capturer les décisions)
+→ /gsd:plan-phase → /pre-flight → /gsd:execute-phase
+→ closure → /lesson → /gsd:verify-work → /ce:review → /ce:compound
 ```
 
 ### Parcours complet — grosse feature multi-phases
 
 ```
-/workflows:brainstorm → /workflows:plan
-→ /gsd:plan-phase → /pre-flight → /gsd:execute-phase → closure
-→ /workflows:review → /workflows:compound
+/ce:brainstorm → /ce:plan
+→ /gsd:discuss-phase → /gsd:plan-phase → /pre-flight → /gsd:execute-phase
+→ closure → /lesson → /gsd:verify-work → /ce:review → /ce:compound
 ```
+
+### Protocole closure (obligatoire après chaque exécution)
+
+Closure n'est pas un skill — c'est une checklist mécanique :
+
+1. Écrire `.planning/{phase}-{N}-SUMMARY.md` :
+   - Planifié vs réalisé (ce qui a divergé du plan et pourquoi)
+   - Décisions prises pendant l'exécution
+   - Items différés (ce qui n'a pas été fait et pourquoi)
+2. Mettre à jour `memory/MEMORY.md` (Règle #2)
+3. Logger les déviations dans la table "Déviations d'exécution" de MEMORY.md
+4. Proposer `/lesson` si un fix non-trivial a été résolu
 
 ### Workflow détaillé par phase de projet
 
 ```
 Phase amont (requirements → plan) :
-  /workflows:brainstorm ou /gsd:new-project
+  /ce:brainstorm ou /gsd:new-project
   → /gsd:discuss-phase (capturer les décisions)
   → /gsd:plan-phase (research + plan + verify loop)
   → /pre-flight (4 agents parallèles : archi, sécu, perf, flows)
@@ -96,13 +110,20 @@ Phase amont (requirements → plan) :
 Phase exécution :
   /gsd:execute-phase (waves parallèles, commits atomiques)
     → lire ## Boundaries du PLAN.md avant la première wave
-  → closure (OBLIGATOIRE — résumé planifié vs réalisé, décisions, items différés)
-  → /workflows:review (15 agents review spécialisés)
+  → closure (checklist ci-dessus — écrire SUMMARY.md, MAJ MEMORY.md)
+  → /lesson (si fix non-trivial découvert)
   → /gsd:verify-work (UAT goal-backward — vérifie les AC)
+  → /ce:review (15 agents review spécialisés)
 
 Phase capitalisation :
-  /workflows:compound → flywheel (classifier → documenter → CARL → Supermemory)
+  /ce:compound → flywheel (classifier → documenter → CARL → Supermemory)
 ```
+
+### Distinction `.planning/` vs `docs/`
+
+- `.planning/` = plans GSD **éphémères** (par phase, par wave). Géré par GSD automatiquement.
+- `docs/plans/` = plans CE **persistants** (stratégiques, cross-phases). Output de `/ce:plan`.
+- `docs/brainstorms/` = brainstorms CE **persistants**. Output de `/ce:brainstorm`.
 
 ---
 
@@ -138,7 +159,7 @@ Plafonnement : garder uniquement les 5 dernières entrées dans "Ce qui a été 
 Supprimer les entrées plus anciennes (l'historique complet reste dans Git).
 
 Si la session a résolu un problème non-trivial → proposer `/lesson` pour capturer la leçon.
-Si un pattern lourd nécessite du détail (code, anti-patterns) → déclencher le flywheel complet (`/workflows:compound`).
+Si un pattern lourd nécessite du détail (code, anti-patterns) → déclencher le flywheel complet (`/ce:compound`).
 Commiter MEMORY.md et LESSONS.md avec le code dans le même commit.
 Optionnellement, lancer `/session-gate end` avant le commit pour vérifier que MEMORY.md est à jour.
 Optionnellement, lancer `/project-sync` pour synchroniser l'état avec les outils externes (Linear, GSD).
@@ -204,7 +225,7 @@ Projet: {{PROJECT_NAME}}
 Date: YYYY-MM-DD
 ```
 
-**Leçons cross-projet** (via flywheel `/workflows:compound`) :
+**Leçons cross-projet** (via flywheel `/ce:compound`) :
 ```
 [tag:{domaine}] Titre court et précis
 Contexte : dans quel projet/situation découvert
@@ -224,7 +245,7 @@ Tags standards :
 - `[convention:workflow]`     → façon de travailler à retenir
 - `[context:preference]`      → préférence personnelle sur comment travailler
 
-Ne pas sauvegarder directement dans Supermemory — passer par `/lesson` (rapide) ou `/workflows:compound` (complet).
+Ne pas sauvegarder directement dans Supermemory — passer par `/lesson` (rapide) ou `/ce:compound` (complet).
 Ne pas stocker de code ou credentials dans Supermemory.
 
 ---
@@ -236,7 +257,7 @@ Ne pas charger manuellement sauf si CARL ne l'a pas fait et que c'est nécessair
 
 Quand enrichir un domaine CARL existant :
 
-- Après /workflows:compound, si pattern classifié "réutilisable"
+- Après /ce:compound, si pattern classifié "réutilisable"
 - Ajouter dans `.carl/{{CARL_DOMAIN}}` (ne pas créer de doublon)
 - Une règle distillée = une ou deux lignes max (concis, actionnable)
 
@@ -258,7 +279,7 @@ Ne jamais :
 - Commencer une session sans lire MEMORY.md et LESSONS.md
 - Continuer une session dont le contexte est clairement dégradé
 - Sauvegarder dans Supermemory sans tag structuré
-- Sauvegarder directement dans Supermemory — passer par `/lesson migrate` ou `/workflows:compound`
+- Sauvegarder directement dans Supermemory — passer par `/lesson migrate` ou `/ce:compound`
 - Stocker des credentials ou données clients dans MEMORY.md, LESSONS.md, docs/ ou Supermemory
 - Mélanger l'état courant (MEMORY.md) avec les leçons (LESSONS.md)
 - Modifier un domaine CARL sans que la leçon ait été capturée d'abord dans LESSONS.md
@@ -269,7 +290,7 @@ Ne jamais :
 
 ### Règle #8 — Structure des plans : critères d'acceptation et frontières
 
-Tout plan créé par `/gsd:plan-phase` ou `/workflows:plan` doit inclure :
+Tout plan créé par `/gsd:plan-phase` ou `/ce:plan` doit inclure :
 
 #### Critères d'acceptation (BDD)
 
@@ -316,12 +337,12 @@ L'utilisateur confirme (oui/non). La leçon va dans LESSONS.md.
 Si critique ou répétée → promotion CARL proposée automatiquement.
 Si cap 50 atteint → `/lesson migrate` vers Supermemory + docs/solutions/.
 
-### Chemin complet — `/workflows:compound` (patterns lourds)
+### Chemin complet — `/ce:compound` (patterns lourds)
 
 Pour les patterns qui nécessitent du détail (code, anti-patterns, raisonnement long).
 Produit un fichier complet dans docs/solutions/.
 
-## Flywheel — instructions post /workflows:compound
+## Flywheel — instructions post /ce:compound
 
 ### Étape 1 — Classifier le pattern appris
 
@@ -402,17 +423,17 @@ Message : `feat: [ce qui a été construit] / docs: pattern {nom} → {domaine}`
 
 ## Règle de consultation — début de chaque planification
 
-Avant de planifier (que ce soit `/workflows:plan`, `/gsd:plan-phase`, ou `/gsd:discuss-phase`),
+Avant de planifier (que ce soit `/ce:plan`, `/gsd:plan-phase`, ou `/gsd:discuss-phase`),
 Claude doit compléter le contexte de session (Règle #1) avec les sources de planification :
 
 1. LESSONS.md est déjà chargé (Règle #1) → leçons récentes, applicables immédiatement
 2. `recall` Supermemory avec les mots-clés du domaine → leçons archivées + cross-projet
 3. Si besoin de plus de détail OU Supermemory indisponible :
-   lancer l'agent `learnings-researcher` sur `docs/solutions/` → patterns complets avec code
+   lancer un agent `Explore` sur `docs/solutions/` → patterns complets avec code
 4. Intégrer tout ça dans le plan → ne pas redécouvrir
 
 MEMORY.md, LESSONS.md et CARL sont déjà chargés par la Règle #1 — ne pas recharger.
-Cette séquence s'applique à TOUTES les commandes de planification, pas seulement `/workflows:plan`.
+Cette séquence s'applique à TOUTES les commandes de planification, pas seulement `/ce:plan`.
 
 ---
 
@@ -424,17 +445,17 @@ Ils doivent lire les outputs de l'autre pour éviter la duplication.
 ### GSD lit les outputs Compound
 
 Lors de `/gsd:plan-phase` et `/gsd:discuss-phase` :
-- Consulter `docs/solutions/` (output de `/workflows:compound`) pour les patterns connus
-- Consulter `docs/plans/` (output de `/workflows:plan`) si un plan Compound existe déjà
+- Consulter `docs/solutions/` (output de `/ce:compound`) pour les patterns connus
+- Consulter `docs/plans/` (output de `/ce:plan`) si un plan Compound existe déjà
 - Consulter `docs/brainstorms/` si un brainstorm a précédé la phase
 
 ### Compound lit les outputs GSD
 
-Lors de `/workflows:review` après exécution GSD :
+Lors de `/ce:review` après exécution GSD :
 - Lire `.planning/{phase}-VERIFICATION.md` comme contexte pour la review
 - Lire `.planning/{phase}-{N}-SUMMARY.md` pour comprendre ce qui a été construit
 
-Lors de `/workflows:compound` :
+Lors de `/ce:compound` :
 - Lire `.planning/{phase}-PREFLIGHT.md` si pre-flight a été exécuté
   → Les findings pre-flight résolus sont des patterns à capitaliser
 
@@ -443,14 +464,14 @@ Lors de `/workflows:compound` :
 | Fichier | Producteur | Consommateurs |
 |---------|-----------|---------------|
 | `LESSONS.md` | `/lesson` | Toutes les sessions (lu au démarrage), planification |
-| `docs/solutions/` | `/lesson migrate`, `/workflows:compound` | `learnings-researcher` (fallback ou profondeur) |
-| `docs/plans/` | `/workflows:plan` | `/gsd:discuss-phase` |
+| `docs/solutions/` | `/lesson migrate`, `/ce:compound` | Agent Explore (fallback ou profondeur) |
+| `docs/plans/` | `/ce:plan` | `/gsd:discuss-phase` |
 | `.planning/{phase}-PLAN.md` | `/gsd:plan-phase` | `/pre-flight`, `/gsd:execute-phase` |
-| `.planning/{phase}-PREFLIGHT.md` | `/pre-flight` | `/workflows:compound` |
-| `.planning/{phase}-VERIFICATION.md` | `/gsd:verify-work` | `/workflows:review` |
-| `.planning/{phase}-{N}-SUMMARY.md` | `/gsd:execute-phase` + closure | `/workflows:review`, `/workflows:compound` |
+| `.planning/{phase}-PREFLIGHT.md` | `/pre-flight` | `/ce:compound` |
+| `.planning/{phase}-VERIFICATION.md` | `/gsd:verify-work` | `/ce:review` |
+| `.planning/{phase}-{N}-SUMMARY.md` | `/gsd:execute-phase` + closure | `/ce:review`, `/ce:compound` |
 | `memory/MEMORY.md` | Toutes les sessions | Toutes les sessions, `/session-gate` |
-| `STATE.md` | GSD (position technique) | GSD uniquement |
+| `STATE.md` | GSD (position technique) | GSD, `/pre-flight` |
 | Supermemory (projet) | `/lesson migrate` | `recall` à la planification |
 
 ---
@@ -459,7 +480,7 @@ Lors de `/workflows:compound` :
 
 - Commencer sans lire MEMORY.md et LESSONS.md
 - Modifier un domaine CARL sans leçon capturée d'abord dans LESSONS.md
-- Sauvegarder directement dans Supermemory (passer par `/lesson migrate` ou `/workflows:compound`)
+- Sauvegarder directement dans Supermemory (passer par `/lesson migrate` ou `/ce:compound`)
 - Documenter du code standard et trivial
 - Dupliquer une leçon existante dans LESSONS.md au lieu de mettre à jour
 - Stocker des données sensibles dans MEMORY.md, LESSONS.md ou docs/solutions/

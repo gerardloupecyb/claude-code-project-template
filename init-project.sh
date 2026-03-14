@@ -69,6 +69,7 @@ mkdir -p "${PROJECT_DIR}/.claude/skills/session-gate"
 mkdir -p "${PROJECT_DIR}/.claude/skills/project-sync"
 mkdir -p "${PROJECT_DIR}/.claude/skills/lesson"
 mkdir -p "${PROJECT_DIR}/.carl"
+mkdir -p "${PROJECT_DIR}/.planning"
 mkdir -p "${PROJECT_DIR}/docs/solutions"
 mkdir -p "${PROJECT_DIR}/docs/plans"
 mkdir -p "${PROJECT_DIR}/docs/brainstorms"
@@ -133,6 +134,7 @@ sed -e "s|{{PROJECT_NAME}}|${PROJECT_NAME}|g" \
     "${TEMPLATE_DIR}/.carl/domain.template" > "${PROJECT_DIR}/.carl/${CARL_DOMAIN}"
 
 # Add .gitkeep files for empty directories
+touch "${PROJECT_DIR}/.planning/.gitkeep"
 touch "${PROJECT_DIR}/docs/solutions/.gitkeep"
 touch "${PROJECT_DIR}/docs/plans/.gitkeep"
 touch "${PROJECT_DIR}/docs/brainstorms/.gitkeep"

@@ -137,7 +137,7 @@ Confirmer le nouveau nombre d'entrees : `"LESSONS.md: N/50 entrees apres migrati
 ## Ce que ce skill ne fait PAS
 
 - Modifier CARL sans confirmation explicite (propose, ne force pas)
-- Remplacer `/workflows:compound` (qui reste pour patterns lourds avec code + anti-patterns)
+- Remplacer `/ce:compound` (qui reste pour patterns lourds avec code + anti-patterns)
 - Lire ou modifier MEMORY.md (responsabilites separees)
 - Bloquer la session (advisory, oui/non, c'est tout)
 - Creer des fichiers dans docs/solutions/ lors de la capture (seulement lors de la migration)

@@ -10,13 +10,13 @@
 
 {{CARL_DOMAIN_UPPER}}_RULE_1=FLYWHEEL - CONSULT BEFORE IMPLEMENTING: Check LESSONS.md (already loaded), then recall Supermemory with domain keywords. Only search docs/solutions/ via agent if Supermemory is unavailable or if more detail is needed. Reuse what's proven, don't reinvent.
 
-{{CARL_DOMAIN_UPPER}}_RULE_2=FLYWHEEL - CAPTURE AFTER SOLVING: After resolving any non-trivial problem, propose /lesson to capture the lesson in LESSONS.md. For patterns needing detail (code, anti-patterns), use /workflows:compound instead. Every solved problem compounds into future productivity.
+{{CARL_DOMAIN_UPPER}}_RULE_2=FLYWHEEL - CAPTURE AFTER SOLVING: After resolving any non-trivial problem, propose /lesson to capture the lesson in LESSONS.md. For patterns needing detail (code, anti-patterns), use /ce:compound instead. Every solved problem compounds into future productivity.
 
 {{CARL_DOMAIN_UPPER}}_RULE_3=CREDENTIALS SAFETY: All API credentials must be stored in .env files, never hardcoded. Verify .gitignore includes .env before any commit.
 
 # --- EXECUTION DISCIPLINE (PAUL) ---
 
-{{CARL_DOMAIN_UPPER}}_RULE_4=LOOP CLOSURE: After every /gsd:execute-phase, verify that .planning/{phase}-SUMMARY.md includes a planned-vs-actual reconciliation: tasks planned vs completed, decisions made during execution, items deferred. This closure is MANDATORY before /workflows:review.
+{{CARL_DOMAIN_UPPER}}_RULE_4=LOOP CLOSURE: After every /gsd:execute-phase, verify that .planning/{phase}-SUMMARY.md includes a planned-vs-actual reconciliation: tasks planned vs completed, decisions made during execution, items deferred. This closure is MANDATORY before /gsd:verify-work and /ce:review.
 
 {{CARL_DOMAIN_UPPER}}_RULE_5=DEVIATION LOGGING: If execution diverges from the plan — task skipped, scope changed, different approach taken, or a file in the plan's Boundaries section touched — log the deviation and reason in MEMORY.md under "Déviations d'exécution" BEFORE proceeding. New implementation files created as part of completing a planned task are NOT deviations. Never silently drift from the plan.
 

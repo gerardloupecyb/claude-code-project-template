@@ -35,7 +35,7 @@ Locate the plan files to review:
 1. Read `STATE.md` or `.planning/` to identify the current phase number
 2. Find all `{phase}-{N}-PLAN.md` files for that phase
 3. Also read `REQUIREMENTS.md` and `{phase}-CONTEXT.md` if they exist
-4. Check `docs/solutions/` for relevant learnings (via learnings-researcher)
+4. Check `docs/solutions/` for relevant learnings (via Agent Explore)
 
 If no plan files found, inform the user and suggest running `/gsd:plan-phase` first.
 
@@ -177,7 +177,7 @@ Save the report to `.planning/milestones/{milestone}/{phase}-PREFLIGHT.md`
 - Replace GSD's plan checker (structural completeness remains GSD's job)
 - Modify plan files (read-only analysis, user decides what to fix)
 - Block execution (user can override CONDITIONAL GO)
-- Review code (this reviews plans, /workflows:review reviews code)
+- Review code (this reviews plans, /ce:review reviews code)
 
 ---
 

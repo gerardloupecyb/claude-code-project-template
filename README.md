@@ -36,7 +36,7 @@ Chaque couche ajoute du detail. Claude descend dans la pile seulement quand il a
 - **[Supermemory](https://supermemory.ai)** — memoire cross-projet persistante via MCP. Sans Supermemory, les etapes "cross-projet" du flywheel sont sautees.
 - **[Context7](https://github.com/upstash/context7)** — documentation librairies en temps reel via MCP
 - **[GSD](https://github.com/coleam00/gsd)** — execution structuree avec subagents
-- **[Compound Engineering](https://github.com/ColemanDuPless);** — planning, review, capitalisation
+- **[Compound Engineering](https://github.com/ColemanDuPlessis/compound-engineering)** — planning, review, capitalisation
 
 ## Installation des dependances
 
@@ -232,8 +232,8 @@ Mon Projet/
 │
 ├── docs/
 │   ├── solutions/                         <- Backup local lecons + patterns detailles
-│   ├── plans/                             <- Output /workflows:plan
-│   └── brainstorms/                       <- Output /workflows:brainstorm
+│   ├── plans/                             <- Output /ce:plan
+│   └── brainstorms/                       <- Output /ce:brainstorm
 │
 ├── todos/                                 <- Output /triage
 │
@@ -259,7 +259,7 @@ Mon Projet/
         |                               1. Supermemory (projet)
         |                               2. docs/solutions/ (backup git)
         |
-   /workflows:compound (complet, 20% des cas)
+   /ce:compound (complet, 20% des cas)
         |
         v
    docs/solutions/ (pattern detaille + code + anti-patterns)
