@@ -65,7 +65,9 @@ _Date: 2026-03-14_
 Ajouter a LESSONS.md ? (oui/non)
 ```
 
-- Si **oui** : ajouter l'entree dans LESSONS.md apres la derniere entree existante (avant le commentaire de fin)
+- Si **oui** : ajouter l'entree dans LESSONS.md :
+  - Si des entrees `###` existent deja : inserer apres la derniere entree (avant le commentaire de fin)
+  - Si aucune entree `###` n'existe (fichier vierge) : remplacer la ligne `_Aucune lecon pour l'instant..._` par la nouvelle entree, sous la section `## Lecons`
 - Si **non** : ne rien faire
 
 ### Etape 4 — Verifier le cap

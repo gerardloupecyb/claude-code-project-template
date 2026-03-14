@@ -83,6 +83,12 @@ En début de session, lire les trois : MEMORY.md pour le contexte, LESSONS.md po
 → closure → /lesson → /gsd:verify-work → /ce:review → /ce:compound
 ```
 
+### Chaînage brainstorm → plan
+
+Si un fichier `docs/brainstorms/*-brainstorm.md` existe avec une date < 7 jours,
+`/gsd:plan-phase` et `/gsd:discuss-phase` DOIVENT le lire AVANT de commencer.
+Le brainstorm contient les décisions de design déjà validées — ne pas les re-questionner.
+
 ### Protocole closure (obligatoire après chaque exécution)
 
 Closure n'est pas un skill — c'est une checklist mécanique :
@@ -94,6 +100,7 @@ Closure n'est pas un skill — c'est une checklist mécanique :
 2. Mettre à jour `memory/MEMORY.md` (Règle #2)
 3. Logger les déviations dans la table "Déviations d'exécution" de MEMORY.md
 4. Proposer `/lesson` si un fix non-trivial a été résolu
+5. Lancer les tests existants si un test runner est configuré (ex: `npm test`, `pytest`, `rspec`). Si des tests échouent, corriger AVANT de passer à `/gsd:verify-work`.
 
 ### Workflow détaillé par phase de projet
 
