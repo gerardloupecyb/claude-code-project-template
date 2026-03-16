@@ -29,7 +29,8 @@
 
 | Fichier | Rôle | Géré par | Mis à jour quand |
 |---------|------|----------|-----------------|
-| memory/MEMORY.md | Contexte métier : décisions actives, prochaine étape, blocages | Template (sessions) | Début et fin de chaque session |
+| memory/MEMORY.md | Contexte métier : prochaine étape, blocages, pointeur vers DECISIONS.md | Template (sessions) | Début et fin de chaque session |
+| DECISIONS.md | Registre ADR-light des décisions architecturales et métier (cap ~25 actives) | Closure protocol | Quand une décision est prise pendant l'exécution |
 | LESSONS.md | Cache chaud des leçons apprises (cap 50), format quand/faire/parce que | `/lesson` | Après chaque fix non-trivial |
 | STATE.md | Position technique : phase active, wave courante, tasks complétées, milestone | GSD (automatique) | Automatiquement par GSD à chaque commande |
 | .carl/{{CARL_DOMAIN}} | Règles critiques CARL, injectées automatiquement | `/lesson` (promotion) | Quand leçon critique ou répétée |
@@ -102,6 +103,13 @@ Closure n'est pas un skill — c'est une checklist mécanique :
 3. Logger les déviations dans la table "Déviations d'exécution" de MEMORY.md
 4. Proposer `/lesson` si un fix non-trivial a été résolu
 5. Lancer les tests existants si un test runner est configuré (ex: `npm test`, `pytest`, `rspec`). Si des tests échouent, corriger AVANT de passer à `/gsd:verify-work`.
+6. Quality score — ajouter dans le SUMMARY.md de la phase :
+   - AC coverage: X/Y AC satisfaits
+   - Deviations: N déviations loguées pendant l'exécution
+   - Verdict: CLEAN (0 déviations ET tous les AC satisfaits) | ROUGH (tout le reste)
+   - Si ROUGH : proposer `/lesson` avec focus "pourquoi le plan n'a pas tenu"
+     (remplace la proposition `/lesson` du step 4 pour cette session)
+7. Si des décisions ont été prises pendant l'exécution et ne sont pas dans DECISIONS.md : proposer l'ajout au format DEC-NNN
 
 ### Workflow détaillé par phase de projet
 
@@ -365,10 +373,11 @@ Avant de planifier (que ce soit `/ce:plan`, `/gsd:plan-phase`, ou `/gsd:discuss-
 Claude doit compléter le contexte de session (Règle #1) avec les sources de planification :
 
 1. LESSONS.md est déjà chargé (Règle #1) → leçons récentes, applicables immédiatement
-2. `recall` Supermemory avec les mots-clés du domaine → leçons archivées + cross-projet
-3. Si besoin de plus de détail OU Supermemory indisponible :
+2. Lire DECISIONS.md → décisions actives qui peuvent contraindre le plan
+3. `recall` Supermemory avec les mots-clés du domaine → leçons archivées + cross-projet
+4. Si besoin de plus de détail OU Supermemory indisponible :
    lancer un agent `Explore` sur `docs/solutions/` → patterns complets avec code
-4. Intégrer tout ça dans le plan → ne pas redécouvrir
+5. Intégrer tout ça dans le plan → ne pas redécouvrir
 
 MEMORY.md, LESSONS.md et CARL sont déjà chargés par la Règle #1 — ne pas recharger.
 Cette séquence s'applique à TOUTES les commandes de planification, pas seulement `/ce:plan`.

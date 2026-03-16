@@ -214,18 +214,27 @@ mkdir -p .claude/skills/mon-skill-expert
 Mon Projet/
 ├── CLAUDE.md                              <- Regles projet + workflows
 ├── LESSONS.md                             <- Cache chaud lecons (cap 50, /lesson)
+├── DECISIONS.md                           <- Registre ADR decisions (cap ~25 actives)
 │
 ├── .claude/
-│   └── skills/
-│       ├── context-manager/SKILL.md       <- Gestion contexte (universel)
-│       ├── pre-flight/SKILL.md            <- Review multi-agent des plans
-│       ├── session-gate/SKILL.md          <- Validation MEMORY.md
-│       ├── project-sync/SKILL.md          <- Sync outils externes
-│       └── lesson/SKILL.md               <- Capture rapide de lecons
+│   ├── skills/
+│   │   ├── context-manager/SKILL.md       <- Gestion contexte (universel)
+│   │   ├── pre-flight/SKILL.md            <- Review multi-agent des plans
+│   │   ├── session-gate/SKILL.md          <- Validation MEMORY.md (13 checks)
+│   │   ├── project-sync/SKILL.md          <- Sync outils externes
+│   │   ├── project-bootstrap/SKILL.md     <- Bootstrap cross-projet (Supermemory)
+│   │   ├── context-checkpoint/SKILL.md    <- Checkpoint avant coupure
+│   │   └── lesson/SKILL.md               <- Capture rapide de lecons
+│   ├── hooks/
+│   │   ├── pre-compact.sh                 <- Snapshot MEMORY.md avant compaction
+│   │   └── session-start.sh               <- Re-injection contexte au demarrage
+│   └── rules/
+│       ├── tool-routing.md                <- Routing outils + anti-flooding
+│       └── flywheel-workflow.md           <- Workflow capitalisation
 │
 ├── .carl/
 │   ├── manifest                           <- Config domaine CARL
-│   └── {domaine}                          <- Regles CARL projet
+│   └── {domaine}                          <- Regles CARL projet (RULE_0-8 + slots)
 │
 ├── memory/
 │   └── MEMORY.md                          <- Etat courant (lu en premier)
@@ -311,14 +320,17 @@ Sans CARL, les fichiers `.carl/` existent mais ne sont pas lus automatiquement. 
 | `init-project.sh` | Script | Genere un projet complet a partir des templates |
 | `CLAUDE.md.template` | Template | Regles projet avec `{{PLACEHOLDER}}` |
 | `LESSONS.md.template` | Template | Cache chaud des lecons (cap 50) |
+| `DECISIONS.md.template` | Template | Registre ADR decisions (cap ~25 actives) |
 | `memory/MEMORY.md.template` | Template | Etat courant avec `{{PLACEHOLDER}}` |
 | `.carl/manifest.template` | Template | Config domaine CARL |
-| `.carl/domain.template` | Template | Regles CARL (3 flywheel + slots) |
+| `.carl/domain.template` | Template | Regles CARL (RULE_0-8 + slots) |
 | `.claude/skills/context-manager/SKILL.md` | Skill | Gestion contexte (universel) |
 | `.claude/skills/lesson/SKILL.md` | Skill | Capture rapide de lecons |
 | `.claude/skills/pre-flight/SKILL.md` | Skill | Review multi-agent des plans |
-| `.claude/skills/session-gate/SKILL.md` | Skill | Validation MEMORY.md |
+| `.claude/skills/session-gate/SKILL.md` | Skill | Validation MEMORY.md (13 checks) |
 | `.claude/skills/project-sync/SKILL.md` | Skill | Sync outils externes |
+| `.claude/skills/project-bootstrap/SKILL.md` | Skill | Bootstrap cross-projet (Supermemory) |
+| `.claude/skills/context-checkpoint/SKILL.md` | Skill | Checkpoint avant coupure de session |
 
 ## Ajouter des skills tiers
 

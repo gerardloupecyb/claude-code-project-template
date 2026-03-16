@@ -14,9 +14,9 @@ Read-only, advisory, stateless. Never modify files. Never block the session.
 
 | Command | Mode | Checks |
 |---|---|---|
-| `/session-gate start` | START | 1, 2, 3, 4, 5, 8 |
-| `/session-gate end` | END | 1, 4, 5, 6, 7, 8, 9, 10 |
-| `/session-gate` (no arg) | BOTH | All 10 |
+| `/session-gate start` | START | 1, 2, 3, 4, 5, 8, 11, 12, 13 |
+| `/session-gate end` | END | 1, 4, 5, 6, 7, 8, 9, 10, 11 |
+| `/session-gate` (no arg) | BOTH | All 13 |
 
 ---
 
@@ -35,7 +35,7 @@ Skip all remaining checks.
 
 ---
 
-## The 10 Checks
+## The 13 Checks
 
 Run each applicable check. Use `Read` and `Grep` tools on memory/MEMORY.md
 and `Bash` for git status. All checks are mechanical — no semantic judgment.
@@ -130,6 +130,50 @@ in the file outside HTML comment blocks (`<!-- ... -->`).
 - If count < 3: `[--] LESSONS.md has only N entries (< 3) — consider running /lesson`
 
 This check is always informational (`[--]`), never blocking.
+Skip this check if Check 8 failed (file missing or empty).
+
+### Check 11 — DECISIONS.md exists and is non-empty (START, END)
+
+Read DECISIONS.md. Verify:
+- File exists
+- File contains at least one markdown heading (`^#`)
+
+If missing or empty: `[!!] DECISIONS.md missing or empty — create from template`
+If present: `[ok] DECISIONS.md exists and is non-empty`
+
+### Check 12 — Stale decisions (START) — informational
+
+If Check 11 passed (DECISIONS.md exists), scan for stale active decisions.
+
+For each `### DEC-` heading in DECISIONS.md:
+1. Extract the `**Statut:**` value within that section (stop at next `### ` heading)
+2. If Statut contains `ACCEPTED`, extract the `**Date:**` value
+3. Parse the date using pattern `\d{4}-\d{2}-\d{2}` (rejects literal YYYY-MM-DD)
+4. Calculate days since date
+
+Count entries where Statut is ACCEPTED and date > 30 days.
+
+- If count > 0: `[--] N active decisions are > 30 days old — verify if still valid`
+- If count == 0 or no ACCEPTED entries: skip (not applicable)
+
+Skip this check if Check 11 failed (file missing or empty).
+
+### Check 13 — LESSONS.md last entry age (START) — informational
+
+If Check 8 passed (LESSONS.md exists), find the most recent lesson date.
+
+Skip lines between `<!--` and `-->` markers (inclusive).
+Then find all lines matching `_Date: \d{4}-\d{2}-\d{2}` in LESSONS.md.
+The `\d{4}-\d{2}-\d{2}` pattern naturally rejects the literal `YYYY-MM-DD`
+in the template comment block. Heritage entries use
+`_Date: YYYY-MM-DD | Heritage: {source}_` — the regex matches the first
+date pattern, ignoring trailing content.
+
+Extract the most recent date.
+
+- If most recent > 14 days ago: `[--] Last lesson captured N days ago — consider /lesson if any fixes were made`
+- If <= 14 days or no entries: skip (not applicable)
+
 Skip this check if Check 8 failed (file missing or empty).
 
 ---

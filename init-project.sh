@@ -69,6 +69,7 @@ mkdir -p "${PROJECT_DIR}/.claude/skills/session-gate"
 mkdir -p "${PROJECT_DIR}/.claude/skills/project-sync"
 mkdir -p "${PROJECT_DIR}/.claude/skills/lesson"
 mkdir -p "${PROJECT_DIR}/.claude/skills/context-checkpoint"
+mkdir -p "${PROJECT_DIR}/.claude/skills/project-bootstrap"
 mkdir -p "${PROJECT_DIR}/.claude/hooks"
 mkdir -p "${PROJECT_DIR}/.claude/rules"
 mkdir -p "${PROJECT_DIR}/.carl"
@@ -94,6 +95,8 @@ cp "${TEMPLATE_DIR}/.claude/skills/lesson/SKILL.md" \
    "${PROJECT_DIR}/.claude/skills/lesson/SKILL.md"
 cp "${TEMPLATE_DIR}/.claude/skills/context-checkpoint/SKILL.md" \
    "${PROJECT_DIR}/.claude/skills/context-checkpoint/SKILL.md"
+cp "${TEMPLATE_DIR}/.claude/skills/project-bootstrap/SKILL.md" \
+   "${PROJECT_DIR}/.claude/skills/project-bootstrap/SKILL.md"
 
 # Copy hook scripts
 echo "→ Installing hooks..."
@@ -134,6 +137,11 @@ echo "→ Generating LESSONS.md..."
 sed -e "s|{{PROJECT_NAME}}|${PROJECT_NAME}|g" \
     "${TEMPLATE_DIR}/LESSONS.md.template" > "${PROJECT_DIR}/LESSONS.md"
 
+# Generate DECISIONS.md from template
+echo "→ Generating DECISIONS.md..."
+sed -e "s|{{PROJECT_NAME}}|${PROJECT_NAME}|g" \
+    "${TEMPLATE_DIR}/DECISIONS.md.template" > "${PROJECT_DIR}/DECISIONS.md"
+
 # Generate integrations.md from template
 echo "→ Generating .claude/integrations.md..."
 sed -e "s|{{PROJECT_NAME}}|${PROJECT_NAME}|g" \
@@ -173,8 +181,9 @@ echo "  Created:"
 echo "    • CLAUDE.md              (edit: Stack, MCP, Skills, Domaines)"
 echo "    • memory/MEMORY.md       (edit: Contexte, Stack, Liens)"
 echo "    • LESSONS.md             (ready to use — capture via /lesson)"
-echo "    • .claude/skills/         (6 skills: context-manager, pre-flight, session-gate,"
-echo "                               project-sync, lesson, context-checkpoint)"
+echo "    • DECISIONS.md           (ready to use — ADR register for architectural decisions)"
+echo "    • .claude/skills/         (7 skills: context-manager, pre-flight, session-gate,"
+echo "                               project-sync, lesson, context-checkpoint, project-bootstrap)"
 echo "    • .claude/hooks/          (pre-compact.sh + session-start.sh)"
 echo "    • .claude/rules/          (tool-routing.md + flywheel-workflow.md)"
 echo "    • .claude/settings.json   (hook configuration)"
@@ -189,4 +198,5 @@ echo "    2. Replace remaining {{PLACEHOLDER}} values in CLAUDE.md and MEMORY.md
 echo "    3. Add project-specific CARL rules in .carl/${CARL_DOMAIN}"
 echo "    4. Create docs/solutions/ subdirectories for your domains"
 echo "    5. Add project-specific skills in .claude/skills/"
+echo "    6. Run /project-bootstrap to inject cross-project lessons from Supermemory"
 echo ""

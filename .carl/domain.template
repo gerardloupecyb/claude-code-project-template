@@ -26,6 +26,10 @@
 
 {{CARL_DOMAIN_UPPER}}_RULE_7=MCP_DISCIPLINE: NEVER call list_*/query MCP tools without explicit limit/filter. Hardcoded limits: ms365 list_mail ($top=20,+$select), quickbooks query (MAXRESULTS 25), airtable list_records (maxRecords:20), azure resources (scope by resource group). No native limit available: delegate to subagent with explicit return contract (max 10 rows, named columns). After claude mcp add, update .claude/rules/tool-routing.md discipline table.
 
+# --- PLANNING DISCIPLINE ---
+
+{{CARL_DOMAIN_UPPER}}_RULE_8=PLANNING RECALL: Before any /gsd:plan-phase, /gsd:discuss-phase, or /ce:plan, run recall on Supermemory with the RECALL keywords from .carl/manifest. Also read DECISIONS.md for active decisions that may constrain the plan. Skip recall only if Supermemory unavailable. This is NOT optional — it prevents rediscovering solved problems.
+
 # --- PROJECT-SPECIFIC RULES (add below) ---
 
-# {{CARL_DOMAIN_UPPER}}_RULE_8=
+# {{CARL_DOMAIN_UPPER}}_RULE_9=

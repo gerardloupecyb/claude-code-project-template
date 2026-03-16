@@ -1,0 +1,42 @@
+# DECISIONS.md — {{PROJECT_NAME}}
+
+> Registre des decisions architecturales et metier.
+> Consulte par Claude a la planification (pas chaque session). Cap ~25 decisions actives.
+> Les decisions SUPERSEDED/DEPRECATED restent en bas du fichier pour contexte historique.
+> Ne jamais supprimer une decision — changer son statut.
+> Ne jamais modifier le contenu d'une decision acceptee — seulement son statut.
+
+---
+
+## Decisions actives
+
+<!-- FORMAT pour chaque entree :
+
+### DEC-NNN: Titre court [tag1] [tag2]
+- **Date:** YYYY-MM-DD | **Statut:** ACCEPTED
+- **Contexte:** Pourquoi cette decision etait necessaire
+- **Decision:** Ce qui a ete decide (une phrase)
+- **Rejete:** Alternative(s) consideree(s) et pourquoi rejetee(s)
+- **Consequences:** Ce que ca implique pour la suite
+
+Statuts possibles : ACCEPTED, SUPERSEDED, DEPRECATED
+Tags entre crochets : [database] [api] [auth] [infrastructure] [workflow] etc.
+
+-->
+
+_Aucune decision pour l'instant — projet en demarrage._
+
+---
+
+## Decisions archivees
+
+<!-- Les decisions SUPERSEDED ou DEPRECATED sont deplacees ici.
+     Gardees pour audit trail et pour empecher Claude de re-proposer
+     des approches deja rejetees.
+
+     Quand une decision est supersedee :
+     1. Changer son statut a SUPERSEDED
+     2. Ajouter "Supersede par: DEC-NNN" dans ses consequences
+     3. Deplacer l'entree complete dans cette section
+     4. La nouvelle decision doit referencer "Supersede: DEC-NNN"
+-->
