@@ -9,7 +9,7 @@
 
 **Statut :** [ ] En démarrage  [x] En cours  [ ] Bloqué  [ ] Terminé
 **Dernière session :** 2026-03-16
-**Prochaine étape :** Implémenter Change 6 — hook scripts (pre-compact.sh, session-start.sh) + settings.json + update init-project.sh
+**Prochaine étape :** Implémenter plan Layer 2 retention gaps (DECISIONS.md, closure quality score, /project-bootstrap, session-gate checks 11-13, CARL RULE_8)
 
 ---
 
@@ -21,18 +21,14 @@ Template de projet Claude Code avec skills personnalisés (session-gate, context
 
 ## Ce qui a été fait
 
-### 2026-03-16 — Context management improvements (7/10 changes done)
+### 2026-03-16 — Context management improvements (10/10 DONE)
 
 - Plan créé + deepened avec 7 agents parallèles (14 gaps identifiés, 12 corrections intégrées)
-- Branch `feat/context-management-improvements` créée, 5 commits incrémentaux
-- Change 9: markers pre-compact dans MEMORY.md.template
-- Change 5: CARL RULE_6 (tool routing) + RULE_7 (MCP discipline) dans domain.template
-- Change 1: .claude/rules/tool-routing.md créé + flywheel extrait (CLAUDE.md 505→435 lignes)
-- Change 2: Rule #4 COT 2-of-5 triggers + <plan> XML + précédence Override>Skip>Triggers
-- Change 3: /context-checkpoint skill créé
-- Change 8: context-manager SKILL.md mis à jour (hooks, /context-checkpoint, refs #1-#8)
-- Change 4: session-gate Checks 9 (COT docs/plans/) + 10 (LESSONS quality)
-- **RESTANT:** Change 6 (hooks + init-project.sh), Change 10 (CARL GLOBAL doc), Validation
+- Branch `feat/context-management-improvements`, 7 commits incrémentaux
+- Changes 1-5, 8-9: rules, COT, skills, session-gate checks 9-10, CARL RULE_6/7
+- Change 6: hooks pre-compact.sh + session-start.sh + settings.json + init-project.sh updated
+- Change 10: GLOBAL_RULE_9 step 6 (MCP discipline auto-update) dans ~/.carl/global + blueprint
+- Validation: test project généré, toutes les AC vérifiées, cleanup OK
 
 ### 2026-03-13 — Initialisation
 
