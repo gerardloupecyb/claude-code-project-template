@@ -15,8 +15,8 @@ Read-only, advisory, stateless. Never modify files. Never block the session.
 | Command | Mode | Checks |
 |---|---|---|
 | `/session-gate start` | START | 1, 2, 3, 4, 5, 8 |
-| `/session-gate end` | END | 1, 4, 5, 6, 7, 8 |
-| `/session-gate` (no arg) | BOTH | All 8 |
+| `/session-gate end` | END | 1, 4, 5, 6, 7, 8, 9, 10 |
+| `/session-gate` (no arg) | BOTH | All 10 |
 
 ---
 
@@ -35,7 +35,7 @@ Skip all remaining checks.
 
 ---
 
-## The 8 Checks
+## The 10 Checks
 
 Run each applicable check. Use `Read` and `Grep` tools on memory/MEMORY.md
 and `Bash` for git status. All checks are mechanical — no semantic judgment.
@@ -107,6 +107,31 @@ Read LESSONS.md. Verify:
 If missing or empty: `[!!] LESSONS.md missing or empty — create from template`
 If present: `[ok] LESSONS.md exists and is non-empty`
 
+### Check 9 — COT plan presence in modified plan files (END)
+
+Run `git diff --name-only HEAD` and check if any file matching `docs/plans/*-plan.md`
+was modified. If no plan file was modified, skip this check (not applicable).
+
+If a plan file was modified, extract its path and run `grep -q "<plan>" <path>`.
+
+- If `<plan>` tag found: `[ok] COT plan block present in <filename>`
+- If `<plan>` tag NOT found:
+  `[!!] <filename> modified but no <plan> block — add reasoning retroactively`
+
+Note: only check files matching `docs/plans/*-plan.md` pattern.
+If multiple plan files were modified, check each one.
+
+### Check 10 — LESSONS.md quality (END) — informational
+
+If Check 8 passed (LESSONS.md exists and is non-empty), count `### ` headings
+in the file outside HTML comment blocks (`<!-- ... -->`).
+
+- If count >= 3: `[--] LESSONS.md has N lesson entries`
+- If count < 3: `[--] LESSONS.md has only N entries (< 3) — consider running /lesson`
+
+This check is always informational (`[--]`), never blocking.
+Skip this check if Check 8 failed (file missing or empty).
+
 ---
 
 ## Output format
@@ -120,6 +145,8 @@ Session Gate — {MODE}
   [ok]  "Ce qui a été fait": 3/5
   [ok]  "Prochaine étape" present
   [ok]  LESSONS.md exists and is non-empty
+  [ok]  COT plan block present in 2026-03-16-001-...-plan.md
+  [--]  LESSONS.md has only 2 entries (< 3) — consider running /lesson
 
   1 issue found. Fix before continuing.
 ```
