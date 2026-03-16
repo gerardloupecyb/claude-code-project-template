@@ -7,9 +7,9 @@
 
 ## État du projet
 
-**Statut :** [x] En démarrage  [ ] En cours  [ ] Bloqué  [ ] Terminé
-**Dernière session :** 2026-03-13
-**Prochaine étape :** Définir le premier objectif concret du projet
+**Statut :** [ ] En démarrage  [x] En cours  [ ] Bloqué  [ ] Terminé
+**Dernière session :** 2026-03-16
+**Prochaine étape :** Implémenter Change 6 — hook scripts (pre-compact.sh, session-start.sh) + settings.json + update init-project.sh
 
 ---
 
@@ -20,6 +20,19 @@ Template de projet Claude Code avec skills personnalisés (session-gate, context
 ---
 
 ## Ce qui a été fait
+
+### 2026-03-16 — Context management improvements (7/10 changes done)
+
+- Plan créé + deepened avec 7 agents parallèles (14 gaps identifiés, 12 corrections intégrées)
+- Branch `feat/context-management-improvements` créée, 5 commits incrémentaux
+- Change 9: markers pre-compact dans MEMORY.md.template
+- Change 5: CARL RULE_6 (tool routing) + RULE_7 (MCP discipline) dans domain.template
+- Change 1: .claude/rules/tool-routing.md créé + flywheel extrait (CLAUDE.md 505→435 lignes)
+- Change 2: Rule #4 COT 2-of-5 triggers + <plan> XML + précédence Override>Skip>Triggers
+- Change 3: /context-checkpoint skill créé
+- Change 8: context-manager SKILL.md mis à jour (hooks, /context-checkpoint, refs #1-#8)
+- Change 4: session-gate Checks 9 (COT docs/plans/) + 10 (LESSONS quality)
+- **RESTANT:** Change 6 (hooks + init-project.sh), Change 10 (CARL GLOBAL doc), Validation
 
 ### 2026-03-13 — Initialisation
 
@@ -33,6 +46,12 @@ Template de projet Claude Code avec skills personnalisés (session-gate, context
 
 | Décision | Raison | Date |
 |----------|--------|------|
+| CARL RULE_6/7 (pas 8/9) | Dernier actif = RULE_5, séquentiel | 2026-03-16 |
+| Check 9 cible docs/plans/ (pas PLAN.md) | PLAN.md n'existe pas dans le template | 2026-03-16 |
+| trap exit 0 (pas set -euo pipefail) | Hooks doivent toujours exit 0 | 2026-03-16 |
+| 4 matchers SessionStart | resume + clear ajoutés en plus de startup + compact | 2026-03-16 |
+| git add scopé MEMORY+LESSONS only | Eviter staging de fichiers en cours d'écriture | 2026-03-16 |
+| Flywheel extrait vers .claude/rules/ | CLAUDE.md 505 lignes dépasse le budget 200 d'Anthropic | 2026-03-16 |
 
 ---
 
