@@ -10,6 +10,7 @@
 - GSD                    → exécution, subagents frais, parallélisme
 - Compound Engineering   → planning riche, review, capitalisation
 - CARL                   → règles dynamiques selon contexte (domaine `{{CARL_DOMAIN}}`)
+- Discipline outils      → voir `.claude/rules/tool-routing.md`
 
 ## MCP actifs
 
@@ -28,7 +29,8 @@
 
 | Fichier | Rôle | Géré par | Mis à jour quand |
 |---------|------|----------|-----------------|
-| memory/MEMORY.md | Contexte métier : décisions actives, prochaine étape, blocages | Template (sessions) | Début et fin de chaque session |
+| memory/MEMORY.md | Contexte métier : prochaine étape, blocages, pointeur vers DECISIONS.md | Template (sessions) | Début et fin de chaque session |
+| DECISIONS.md | Registre ADR-light des décisions architecturales et métier (cap ~25 actives) | Closure protocol | Quand une décision est prise pendant l'exécution |
 | LESSONS.md | Cache chaud des leçons apprises (cap 50), format quand/faire/parce que | `/lesson` | Après chaque fix non-trivial |
 | STATE.md | Position technique : phase active, wave courante, tasks complétées, milestone | GSD (automatique) | Automatiquement par GSD à chaque commande |
 | .carl/{{CARL_DOMAIN}} | Règles critiques CARL, injectées automatiquement | `/lesson` (promotion) | Quand leçon critique ou répétée |
@@ -101,6 +103,13 @@ Closure n'est pas un skill — c'est une checklist mécanique :
 3. Logger les déviations dans la table "Déviations d'exécution" de MEMORY.md
 4. Proposer `/lesson` si un fix non-trivial a été résolu
 5. Lancer les tests existants si un test runner est configuré (ex: `npm test`, `pytest`, `rspec`). Si des tests échouent, corriger AVANT de passer à `/gsd:verify-work`.
+6. Quality score — ajouter dans le SUMMARY.md de la phase :
+   - AC coverage: X/Y AC satisfaits
+   - Deviations: N déviations loguées pendant l'exécution
+   - Verdict: CLEAN (0 déviations ET tous les AC satisfaits) | ROUGH (tout le reste)
+   - Si ROUGH : proposer `/lesson` avec focus "pourquoi le plan n'a pas tenu"
+     (remplace la proposition `/lesson` du step 4 pour cette session)
+7. Si des décisions ont été prises pendant l'exécution et ne sont pas dans DECISIONS.md : proposer l'ajout au format DEC-NNN
 
 ### Workflow détaillé par phase de projet
 
@@ -138,16 +147,17 @@ Phase capitalisation :
 
 ### Règle #1 — Début de session : charger avant de coder
 
-Au démarrage de chaque session, Claude doit TOUJOURS :
+Le hook SessionStart injecte automatiquement `memory/MEMORY.md` et `LESSONS.md` au démarrage,
+après compaction, resume et /clear. Lecture manuelle = fallback si hook absent.
 
-1. Lire `memory/MEMORY.md` → état courant, où on en est, décisions actives
-2. Lire `LESSONS.md` → leçons apprises, à appliquer immédiatement
+1. MEMORY.md → état courant, où on en est, décisions actives (auto-injecté par hook)
+2. LESSONS.md → leçons apprises, à appliquer immédiatement (auto-injecté par hook)
 3. CARL charge `{{CARL_DOMAIN}}` automatiquement selon contexte détecté
 
-C'est tout. Ne pas charger Supermemory ni docs/solutions/ au démarrage —
+Ne pas charger Supermemory ni docs/solutions/ au démarrage —
 ces sources sont consultées uniquement lors de la planification (voir Règle de consultation).
 
-Ne jamais commencer à planifier ou coder avant d'avoir lu MEMORY.md et LESSONS.md.
+Ne jamais commencer à planifier ou coder avant que MEMORY.md et LESSONS.md soient en contexte.
 En début de session, vider la section "Déviations d'exécution" de MEMORY.md (données de la session précédente).
 Optionnellement, lancer `/session-gate start` pour valider l'état de MEMORY.md.
 
@@ -176,16 +186,12 @@ Optionnellement, lancer `/project-sync` pour synchroniser l'état avec les outil
 ### Règle #3 — Sessions longues : checkpoints de contexte
 
 Quand le contexte commence à se dégrader (réponses moins précises,
-Claude répète des questions déjà répondues, ou après ~60-70% du contexte utilisé) :
+Claude répète des questions déjà répondues) :
 
-Signal d'alerte : Claude annonce "Contexte à [X]% — checkpoint recommandé"
+Signal d'alerte : Claude annonce "Contexte potentiellement saturé — checkpoint recommandé"
 
-Checkpoint :
-
-1. Résumer l'état actuel en moins de 200 mots dans MEMORY.md
-2. Lister les décisions prises depuis le début de session
-3. Identifier la prochaine tâche clairement
-4. Ouvrir une nouvelle session avec MEMORY.md comme contexte initial
+Utiliser `/context-checkpoint` pour automatiser cette procédure (résumé MEMORY.md,
+décisions, prochaine étape, puis proposition `/lesson` si fix non-trivial).
 
 Ne pas continuer une session dégradée — la qualité se dégrade exponentiellement.
 Une coupure propre avec MEMORY.md à jour vaut mieux qu'une heure de contexte pourri.
@@ -194,24 +200,30 @@ Une coupure propre avec MEMORY.md à jour vaut mieux qu'une heure de contexte po
 
 ### Règle #4 — Chain of thought : externaliser avant d'exécuter
 
-Pour toute tâche complexe (logique métier, architecture, debug difficile),
-Claude doit externaliser son raisonnement AVANT de coder.
+**Trigger : obligatoire quand 2+ de ces conditions sont vraies :**
+1. Change touche plus de 1 fichier
+2. Implémentation estimée > 50 LOC
+3. Décision entre 2+ approches
+4. Change affecte une interface partagée (API, schema, event bus, domaine CARL)
+5. Opération destructive ou irréversible (migration, delete, force-push)
 
-Format obligatoire pour les tâches complexes :
+**Override (toujours trigger) :** chaîne de > 3 tool calls, spawn Agent, demande explicite de plan.
+**Skip (jamais de COT) :** fix single-file < 50 LOC, formatting/renaming pur, plan déjà fourni par l'utilisateur.
+**Précédence :** Override > Skip > 2-of-5.
 
+Format obligatoire (greppable via `grep -q "<plan>"`) :
+
+```xml
+<plan>
+  <problem>Ce qui change et pourquoi</problem>
+  <files>Liste des fichiers touchés</files>
+  <approach>Stratégie choisie (2-3 phrases)</approach>
+  <rejected>Alternative écartée et raison</rejected>
+  <risks>Ce qui pourrait casser</risks>
+</plan>
 ```
-## Raisonnement
-Problème : [ce qu'on résout exactement]
-Contraintes : [limites connues]
-Options considérées :
-  A) [option] — avantage / inconvénient
-  B) [option] — avantage / inconvénient
-Choix : [option retenue] parce que [raison courte]
-Risques : [ce qui pourrait mal tourner]
-```
 
-Ce bloc va dans le PLAN.md GSD ou en commentaire dans le code si court.
-Ne jamais sauter cette étape sur des décisions d'architecture ou de logique métier.
+Ce bloc va dans `docs/plans/` ou en commentaire dans le code si court.
 
 ---
 
@@ -351,80 +363,7 @@ Produit un fichier complet dans docs/solutions/.
 
 ## Flywheel — instructions post /ce:compound
 
-### Étape 1 — Classifier le pattern appris
-
-**Ponctuel**
-→ Spécifique à ce projet, peu probable ailleurs
-→ Action : docs/solutions/ seulement
-
-**Réutilisable**
-→ S'applique sur plusieurs projets du même domaine
-→ Action : docs/solutions/ + domaine CARL
-
-**Cross-projet**
-→ Change ta façon de travailler en général
-→ Action : docs/solutions/ + domaine CARL + Supermemory
-
----
-
-### Étape 2 — Documenter dans docs/solutions/
-
-Toujours, quelle que soit la classification.
-Créer `docs/solutions/{domaine}/{pattern}.md` :
-
-```markdown
-# [Titre du pattern]
-## Contexte
-## Problème
-## Solution (+ code si applicable)
-## Anti-patterns
-## Règle distillée — "Toujours X quand Y."
-## Classification : ponctuel / réutilisable / cross-projet
-## Référence — session source : [date]
-```
-
-Domaines disponibles : {{SOLUTION_DOMAINS}}
-
----
-
-### Étape 3 — Si réutilisable ou cross-projet : domaine CARL (AUTOMATISÉ)
-
-Après avoir documenté dans docs/solutions/, Claude DOIT proposer l'ajout CARL :
-
-1. Identifier le numéro de la prochaine règle disponible dans `.carl/{{CARL_DOMAIN}}`
-2. Formuler la règle distillée (1-2 lignes, actionnable, format `{DOMAIN_UPPER}_RULE_{N}=...`)
-3. Présenter la règle à l'utilisateur pour validation
-4. Si validé, ajouter dans `.carl/{{CARL_DOMAIN}}`
-5. Si le pattern concerne un sous-domaine distinct avec 3+ règles → proposer un nouveau domaine
-
-Ne PAS attendre que l'utilisateur pense à demander l'ajout CARL.
-La proposition est automatique dès que la classification est "réutilisable" ou "cross-projet".
-
----
-
-### Étape 4 — Si cross-projet : Supermemory (AUTOMATISÉ)
-
-Après l'étape CARL, si classification = cross-projet, Claude DOIT proposer la sauvegarde Supermemory :
-
-1. Formuler l'entrée au format de la Règle #5 (tag + contexte + problème + solution + règle)
-2. Présenter à l'utilisateur pour validation
-3. Si validé, sauvegarder via MCP supermemory
-
-Ne PAS attendre que l'utilisateur pense à demander la sauvegarde Supermemory.
-La proposition est automatique dès que la classification est "cross-projet".
-
----
-
-### Étape 5 — Commit
-
-Inclure dans le même commit :
-
-- Code produit
-- `memory/MEMORY.md` mis à jour
-- `docs/solutions/{domaine}/{pattern}.md` si nouveau
-- `.carl/{{CARL_DOMAIN}}` si enrichi
-
-Message : `feat: [ce qui a été construit] / docs: pattern {nom} → {domaine}`
+Voir `.claude/rules/flywheel-workflow.md` pour le workflow complet (étapes 1-5 : classification, documentation, CARL, Supermemory, commit).
 
 ---
 
@@ -434,10 +373,11 @@ Avant de planifier (que ce soit `/ce:plan`, `/gsd:plan-phase`, ou `/gsd:discuss-
 Claude doit compléter le contexte de session (Règle #1) avec les sources de planification :
 
 1. LESSONS.md est déjà chargé (Règle #1) → leçons récentes, applicables immédiatement
-2. `recall` Supermemory avec les mots-clés du domaine → leçons archivées + cross-projet
-3. Si besoin de plus de détail OU Supermemory indisponible :
+2. Lire DECISIONS.md → décisions actives qui peuvent contraindre le plan
+3. `recall` Supermemory avec les mots-clés du domaine → leçons archivées + cross-projet
+4. Si besoin de plus de détail OU Supermemory indisponible :
    lancer un agent `Explore` sur `docs/solutions/` → patterns complets avec code
-4. Intégrer tout ça dans le plan → ne pas redécouvrir
+5. Intégrer tout ça dans le plan → ne pas redécouvrir
 
 MEMORY.md, LESSONS.md et CARL sont déjà chargés par la Règle #1 — ne pas recharger.
 Cette séquence s'applique à TOUTES les commandes de planification, pas seulement `/ce:plan`.

@@ -20,8 +20,16 @@
 
 {{CARL_DOMAIN_UPPER}}_RULE_5=DEVIATION LOGGING: If execution diverges from the plan — task skipped, scope changed, different approach taken, or a file in the plan's Boundaries section touched — log the deviation and reason in MEMORY.md under "Déviations d'exécution" BEFORE proceeding. New implementation files created as part of completing a planned task are NOT deviations. Never silently drift from the plan.
 
+# --- CONTEXT DISCIPLINE ---
+
+{{CARL_DOMAIN_UPPER}}_RULE_6=TOOL_ROUTING: Use Glob (file search) and Grep (content search) over Bash(find/grep). Reserve Bash for: git, mkdir, rm, mv, npm install, pip install, echo, printf. For large files, unknown-size output, or web content: use Agent or dedicated tools — never raw Bash. See .claude/rules/tool-routing.md.
+
+{{CARL_DOMAIN_UPPER}}_RULE_7=MCP_DISCIPLINE: NEVER call list_*/query MCP tools without explicit limit/filter. Hardcoded limits: ms365 list_mail ($top=20,+$select), quickbooks query (MAXRESULTS 25), airtable list_records (maxRecords:20), azure resources (scope by resource group). No native limit available: delegate to subagent with explicit return contract (max 10 rows, named columns). After claude mcp add, update .claude/rules/tool-routing.md discipline table.
+
+# --- PLANNING DISCIPLINE ---
+
+{{CARL_DOMAIN_UPPER}}_RULE_8=PLANNING RECALL: Before any /gsd:plan-phase, /gsd:discuss-phase, or /ce:plan, run recall on Supermemory with the RECALL keywords from .carl/manifest. Also read DECISIONS.md for active decisions that may constrain the plan. Skip recall only if Supermemory unavailable. This is NOT optional — it prevents rediscovering solved problems.
+
 # --- PROJECT-SPECIFIC RULES (add below) ---
 
-# {{CARL_DOMAIN_UPPER}}_RULE_6=
-# {{CARL_DOMAIN_UPPER}}_RULE_7=
-# {{CARL_DOMAIN_UPPER}}_RULE_8=
+# {{CARL_DOMAIN_UPPER}}_RULE_9=

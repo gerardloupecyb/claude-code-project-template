@@ -7,9 +7,9 @@
 
 ## État du projet
 
-**Statut :** [x] En démarrage  [ ] En cours  [ ] Bloqué  [ ] Terminé
-**Dernière session :** 2026-03-13
-**Prochaine étape :** Définir le premier objectif concret du projet
+**Statut :** [ ] En démarrage  [x] En cours  [ ] Bloqué  [ ] Terminé
+**Dernière session :** 2026-03-16
+**Prochaine étape :** Implémenter plan Layer 2 retention gaps (DECISIONS.md, closure quality score, /project-bootstrap, session-gate checks 11-13, CARL RULE_8)
 
 ---
 
@@ -20,6 +20,15 @@ Template de projet Claude Code avec skills personnalisés (session-gate, context
 ---
 
 ## Ce qui a été fait
+
+### 2026-03-16 — Context management improvements (10/10 DONE)
+
+- Plan créé + deepened avec 7 agents parallèles (14 gaps identifiés, 12 corrections intégrées)
+- Branch `feat/context-management-improvements`, 7 commits incrémentaux
+- Changes 1-5, 8-9: rules, COT, skills, session-gate checks 9-10, CARL RULE_6/7
+- Change 6: hooks pre-compact.sh + session-start.sh + settings.json + init-project.sh updated
+- Change 10: GLOBAL_RULE_9 step 6 (MCP discipline auto-update) dans ~/.carl/global + blueprint
+- Validation: test project généré, toutes les AC vérifiées, cleanup OK
 
 ### 2026-03-13 — Initialisation
 
@@ -33,6 +42,12 @@ Template de projet Claude Code avec skills personnalisés (session-gate, context
 
 | Décision | Raison | Date |
 |----------|--------|------|
+| CARL RULE_6/7 (pas 8/9) | Dernier actif = RULE_5, séquentiel | 2026-03-16 |
+| Check 9 cible docs/plans/ (pas PLAN.md) | PLAN.md n'existe pas dans le template | 2026-03-16 |
+| trap exit 0 (pas set -euo pipefail) | Hooks doivent toujours exit 0 | 2026-03-16 |
+| 4 matchers SessionStart | resume + clear ajoutés en plus de startup + compact | 2026-03-16 |
+| git add scopé MEMORY+LESSONS only | Eviter staging de fichiers en cours d'écriture | 2026-03-16 |
+| Flywheel extrait vers .claude/rules/ | CLAUDE.md 505 lignes dépasse le budget 200 d'Anthropic | 2026-03-16 |
 
 ---
 

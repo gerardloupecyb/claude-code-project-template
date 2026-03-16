@@ -68,6 +68,10 @@ mkdir -p "${PROJECT_DIR}/.claude/skills/pre-flight"
 mkdir -p "${PROJECT_DIR}/.claude/skills/session-gate"
 mkdir -p "${PROJECT_DIR}/.claude/skills/project-sync"
 mkdir -p "${PROJECT_DIR}/.claude/skills/lesson"
+mkdir -p "${PROJECT_DIR}/.claude/skills/context-checkpoint"
+mkdir -p "${PROJECT_DIR}/.claude/skills/project-bootstrap"
+mkdir -p "${PROJECT_DIR}/.claude/hooks"
+mkdir -p "${PROJECT_DIR}/.claude/rules"
 mkdir -p "${PROJECT_DIR}/.carl"
 mkdir -p "${PROJECT_DIR}/.planning"
 mkdir -p "${PROJECT_DIR}/docs/solutions"
@@ -89,6 +93,30 @@ cp "${TEMPLATE_DIR}/.claude/skills/project-sync/SKILL.md" \
    "${PROJECT_DIR}/.claude/skills/project-sync/SKILL.md"
 cp "${TEMPLATE_DIR}/.claude/skills/lesson/SKILL.md" \
    "${PROJECT_DIR}/.claude/skills/lesson/SKILL.md"
+cp "${TEMPLATE_DIR}/.claude/skills/context-checkpoint/SKILL.md" \
+   "${PROJECT_DIR}/.claude/skills/context-checkpoint/SKILL.md"
+cp "${TEMPLATE_DIR}/.claude/skills/project-bootstrap/SKILL.md" \
+   "${PROJECT_DIR}/.claude/skills/project-bootstrap/SKILL.md"
+
+# Copy hook scripts
+echo "→ Installing hooks..."
+cp "${TEMPLATE_DIR}/.claude/hooks/pre-compact.sh" \
+   "${PROJECT_DIR}/.claude/hooks/pre-compact.sh"
+cp "${TEMPLATE_DIR}/.claude/hooks/session-start.sh" \
+   "${PROJECT_DIR}/.claude/hooks/session-start.sh"
+chmod +x "${PROJECT_DIR}/.claude/hooks/"*.sh
+
+# Copy rules
+echo "→ Installing rules..."
+cp "${TEMPLATE_DIR}/.claude/rules/tool-routing.md" \
+   "${PROJECT_DIR}/.claude/rules/tool-routing.md"
+cp "${TEMPLATE_DIR}/.claude/rules/flywheel-workflow.md" \
+   "${PROJECT_DIR}/.claude/rules/flywheel-workflow.md"
+
+# Create settings.json with hook configuration
+echo "→ Creating .claude/settings.json..."
+cp "${TEMPLATE_DIR}/.claude/settings.json" \
+   "${PROJECT_DIR}/.claude/settings.json"
 
 # Generate CLAUDE.md from template
 echo "→ Generating CLAUDE.md..."
@@ -108,6 +136,11 @@ sed -e "s|{{PROJECT_NAME}}|${PROJECT_NAME}|g" \
 echo "→ Generating LESSONS.md..."
 sed -e "s|{{PROJECT_NAME}}|${PROJECT_NAME}|g" \
     "${TEMPLATE_DIR}/LESSONS.md.template" > "${PROJECT_DIR}/LESSONS.md"
+
+# Generate DECISIONS.md from template
+echo "→ Generating DECISIONS.md..."
+sed -e "s|{{PROJECT_NAME}}|${PROJECT_NAME}|g" \
+    "${TEMPLATE_DIR}/DECISIONS.md.template" > "${PROJECT_DIR}/DECISIONS.md"
 
 # Generate integrations.md from template
 echo "→ Generating .claude/integrations.md..."
@@ -148,12 +181,13 @@ echo "  Created:"
 echo "    • CLAUDE.md              (edit: Stack, MCP, Skills, Domaines)"
 echo "    • memory/MEMORY.md       (edit: Contexte, Stack, Liens)"
 echo "    • LESSONS.md             (ready to use — capture via /lesson)"
-echo "    • .claude/skills/context-manager/SKILL.md  (ready to use)"
-echo "    • .claude/skills/pre-flight/SKILL.md       (ready to use)"
-echo "    • .claude/skills/session-gate/SKILL.md     (ready to use)"
-echo "    • .claude/skills/project-sync/SKILL.md    (ready to use)"
-echo "    • .claude/skills/lesson/SKILL.md          (ready to use)"
-echo "    • .claude/integrations.md                 (edit: set linear/gsd/supermemory true/false)"
+echo "    • DECISIONS.md           (ready to use — ADR register for architectural decisions)"
+echo "    • .claude/skills/         (7 skills: context-manager, pre-flight, session-gate,"
+echo "                               project-sync, lesson, context-checkpoint, project-bootstrap)"
+echo "    • .claude/hooks/          (pre-compact.sh + session-start.sh)"
+echo "    • .claude/rules/          (tool-routing.md + flywheel-workflow.md)"
+echo "    • .claude/settings.json   (hook configuration)"
+echo "    • .claude/integrations.md (edit: set linear/gsd/supermemory true/false)"
 echo "    • .carl/manifest         (ready to use)"
 echo "    • .carl/${CARL_DOMAIN}   (add project-specific rules)"
 echo "    • docs/ + todos/ + src/  (empty, ready)"
@@ -164,4 +198,5 @@ echo "    2. Replace remaining {{PLACEHOLDER}} values in CLAUDE.md and MEMORY.md
 echo "    3. Add project-specific CARL rules in .carl/${CARL_DOMAIN}"
 echo "    4. Create docs/solutions/ subdirectories for your domains"
 echo "    5. Add project-specific skills in .claude/skills/"
+echo "    6. Run /project-bootstrap to inject cross-project lessons from Supermemory"
 echo ""
