@@ -40,24 +40,7 @@
 | .claude/integrations.md | Outils externes actifs (Linear, GSD, Supermemory) | Setup manuel | Au setup du projet ou changement d'outils |
 | Auto memory (Claude) | Notes implicites de Claude (read-only, supplémentaire) | Claude auto | Consulté par `ce:compound` comme source additionnelle |
 
-### Séparation des fichiers d'état
-
-Ces fichiers coexistent sans se chevaucher :
-
-- **STATE.md** = le GPS technique. Où on est dans le roadmap GSD (phase, wave, task).
-  Géré automatiquement par GSD. Ne PAS éditer manuellement.
-  Ne contient PAS de décisions métier ni de contexte de session.
-
-- **MEMORY.md** = le journal de bord. Contexte métier, décisions prises et pourquoi,
-  prochaine étape humaine, blocages.
-  Géré manuellement par Claude en début/fin de session.
-  Ne contient PAS de position technique GSD ni de leçons (→ LESSONS.md).
-
-- **LESSONS.md** = le cache chaud des leçons. Format quand/faire/parce que, cap 50.
-  Géré par `/lesson`. Lu automatiquement à chaque session.
-  Ne contient PAS d'état de session (→ MEMORY.md) ni de patterns détaillés (→ Supermemory/docs/solutions/).
-
-En début de session, lire les trois : MEMORY.md pour le contexte, LESSONS.md pour les leçons, STATE.md pour la position.
+Séparation détaillée des fichiers → voir `.claude/rules/state-files-guide.md`
 
 ---
 
@@ -101,51 +84,21 @@ Si un fichier `docs/brainstorms/*-brainstorm.md` existe avec une date < 7 jours,
 `/gsd:plan-phase` et `/gsd:discuss-phase` DOIVENT le lire AVANT de commencer.
 Le brainstorm contient les décisions de design déjà validées — ne pas les re-questionner.
 
-### Protocole closure (obligatoire après chaque exécution)
+### Protocole closure
 
-Closure n'est pas un skill — c'est une checklist mécanique :
+Obligatoire après chaque exécution → voir `.claude/rules/closure-protocol.md`
 
-1. Écrire `.planning/{phase}-{N}-SUMMARY.md` :
-   - Planifié vs réalisé (ce qui a divergé du plan et pourquoi)
-   - Décisions prises pendant l'exécution
-   - Items différés (ce qui n'a pas été fait et pourquoi)
-2. Mettre à jour `memory/MEMORY.md` (Règle #2)
-3. Logger les déviations dans la table "Déviations d'exécution" de MEMORY.md
-4. Proposer `/lesson` si un fix non-trivial a été résolu
-5. Lancer les tests existants si un test runner est configuré (ex: `npm test`, `pytest`, `rspec`). Si des tests échouent, corriger AVANT de passer à `/gsd:verify-work`.
-6. Quality score — ajouter dans le SUMMARY.md de la phase :
-   - AC coverage: X/Y AC satisfaits
-   - Deviations: N déviations loguées pendant l'exécution
-   - Verdict: CLEAN (0 déviations ET tous les AC satisfaits) | ROUGH (tout le reste)
-   - Si ROUGH : proposer `/lesson` avec focus "pourquoi le plan n'a pas tenu"
-     (remplace la proposition `/lesson` du step 4 pour cette session)
-7. Si des décisions ont été prises pendant l'exécution et ne sont pas dans DECISIONS.md : proposer l'ajout au format DEC-NNN
-
-### Workflow détaillé par phase de projet
+### Décisions d'exécution (gates)
 
 ```
-Phase amont (requirements → plan) :
-  /ce:brainstorm ou /gsd:new-project
-  → /gsd:discuss-phase (capturer les décisions)
-  → /gsd:plan-phase (research + plan + verify loop)
-  → /pre-flight (4 agents parallèles : archi, sécu, perf, flows)
-     GO        → /gsd:execute-phase
-     COND. GO  → user confirme ou corrige
-     NO-GO     → corriger le plan, re-run /gsd:plan-phase
+Pre-flight :
+  GO        → /gsd:execute-phase
+  COND. GO  → user confirme ou corrige
+  NO-GO     → corriger le plan, re-run /gsd:plan-phase
 
-Phase exécution :
-  /gsd:execute-phase (waves parallèles, commits atomiques)
-    → lire ## Boundaries du PLAN.md avant la première wave
-    → quality checks auto-injectés via .claude/rules/execution-quality.md
-    → /gsd:autonomous SI plan GO + 0 finding HIGH au pre-flight (skip sinon)
-  → closure (checklist ci-dessus — écrire SUMMARY.md, MAJ MEMORY.md)
-  → /lesson (si fix non-trivial découvert)
-  → /gsd:verify-work (UAT goal-backward — vérifie les AC)
-  → /ce:review (15 agents review spécialisés)
-  → /gsd:review --all SI >3 fichiers OU touche sécurité/auth OU CLI externe dispo (skip sinon)
-
-Phase capitalisation :
-  /ce:compound → flywheel (classifier → documenter → CARL → Supermemory)
+Exécution :
+  /gsd:autonomous SI plan GO + 0 finding HIGH au pre-flight (skip sinon)
+  /gsd:review --all SI >3 fichiers OU touche sécurité/auth OU CLI externe dispo (skip sinon)
 ```
 
 ### Distinction `.planning/` vs `docs/`
@@ -160,55 +113,27 @@ Phase capitalisation :
 
 ### Règle #1 — Début de session : charger avant de coder
 
-Le hook SessionStart injecte automatiquement `memory/MEMORY.md` et `LESSONS.md` au démarrage,
-après compaction, resume et /clear. Lecture manuelle = fallback si hook absent.
-
-1. MEMORY.md → état courant, où on en est, décisions actives (auto-injecté par hook)
-2. LESSONS.md → leçons apprises, à appliquer immédiatement (auto-injecté par hook)
-3. CARL charge `{{CARL_DOMAIN}}` automatiquement selon contexte détecté
-
-Ne pas charger Supermemory ni docs/solutions/ au démarrage —
-ces sources sont consultées uniquement lors de la planification (voir Règle de consultation).
-
-Ne jamais commencer à planifier ou coder avant que MEMORY.md et LESSONS.md soient en contexte.
-En début de session, vider la section "Déviations d'exécution" de MEMORY.md (données de la session précédente).
-Optionnellement, lancer `/session-gate start` pour valider l'état de MEMORY.md.
+Le hook SessionStart injecte MEMORY.md et LESSONS.md automatiquement.
+CARL charge `{{CARL_DOMAIN}}` selon contexte. Ne pas charger Supermemory au démarrage.
+Ne jamais planifier ou coder avant que MEMORY.md et LESSONS.md soient en contexte.
+En début de session, vider "Déviations d'exécution" de MEMORY.md.
 
 ---
 
 ### Règle #2 — Fin de session : mettre à jour avant de fermer
 
-Avant de fermer la session, Claude doit mettre à jour `memory/MEMORY.md` :
-
-- Ce qui a été fait (résumé 3-5 lignes max)
-- Décisions prises et leur raison courte
-- Prochaine étape claire (une seule, actionnable)
-- Blocages ou questions ouvertes
-
-Plafonnement : garder uniquement les 5 dernières entrées dans "Ce qui a été fait".
-Supprimer les entrées plus anciennes (l'historique complet reste dans Git).
-
-Si la session a résolu un problème non-trivial → proposer `/lesson` pour capturer la leçon.
-Si un pattern lourd nécessite du détail (code, anti-patterns) → déclencher le flywheel complet (`/ce:compound`).
-Commiter MEMORY.md et LESSONS.md avec le code dans le même commit.
-Optionnellement, lancer `/session-gate end` avant le commit pour vérifier que MEMORY.md est à jour.
-Optionnellement, lancer `/project-sync` pour synchroniser l'état avec les outils externes (Linear, GSD).
+Mettre à jour `memory/MEMORY.md` : fait (3-5 lignes), décisions, prochaine étape, blocages.
+Garder 5 dernières entrées "Ce qui a été fait" (historique dans Git).
+Si fix non-trivial → `/lesson`. Si pattern lourd → `/ce:compound`.
+Commiter MEMORY.md et LESSONS.md avec le code.
 
 ---
 
 ### Règle #3 — Sessions longues : checkpoints de contexte
 
-Quand le contexte commence à se dégrader (réponses moins précises,
-Claude répète des questions déjà répondues) :
-
-Signal d'alerte : Claude annonce "Contexte potentiellement saturé — checkpoint recommandé"
-
-Utiliser `/context-checkpoint` pour automatiser cette procédure (résumé MEMORY.md,
-décisions, prochaine étape, puis proposition `/lesson` si fix non-trivial).
-
-Ne pas continuer une session dégradée — la qualité se dégrade exponentiellement.
-Une coupure propre avec MEMORY.md à jour vaut mieux qu'une heure de contexte pourri.
-Alternative : GSD propose un context monitor intégré — voir doc GSD si pre-compact.sh s'avère insuffisant.
+Signal d'alerte : "Contexte potentiellement saturé — checkpoint recommandé"
+Utiliser `/context-checkpoint` pour résumer et sauvegarder l'état.
+Ne pas continuer une session dégradée — coupure propre > heure de contexte pourri.
 
 ---
 
@@ -250,65 +175,18 @@ Ce bloc va dans `docs/plans/` ou en commentaire dans le code si court.
 
 ### Règle #5 — Supermemory : archive principale par projet
 
-Supermemory sert de **source de vérité pour les leçons archivées**, organisées par projet.
-Les leçons y arrivent via `/lesson migrate` (quand LESSONS.md atteint le cap 50).
-
-Deux types de contenu dans Supermemory :
-
-**Leçons projet** (via `/lesson migrate`) :
-```
-[lesson:{domaine}] Titre court
-Quand: situation précise
-Faire: action concrète
-Parce que: raison courte
-Projet: {{PROJECT_NAME}}
-Date: YYYY-MM-DD
-```
-
-**Leçons cross-projet** (via flywheel `/ce:compound`) :
-```
-[tag:{domaine}] Titre court et précis
-Contexte : dans quel projet/situation découvert
-Problème : ce qui se passait avant
-Solution : ce qui fonctionne
-Règle : "Toujours X quand Y." — une phrase actionnable
-Réf : chemin fichier ou URL si applicable
-```
-
-Tags standards :
-
-- `[lesson:{domaine}]`        → leçon projet migrée depuis LESSONS.md
-- `[skill:{domaine}]`         → règle technique réutilisable
-- `[decision:architecture]`   → choix structurant cross-projets
-- `[decision:stack]`          → choix de librairie ou outil
-- `[lesson:error]`            → erreur à ne pas répéter
-- `[convention:workflow]`     → façon de travailler à retenir
-- `[context:preference]`      → préférence personnelle sur comment travailler
-
-Ne pas sauvegarder directement dans Supermemory — passer par `/lesson` (rapide) ou `/ce:compound` (complet).
-Ne pas stocker de code ou credentials dans Supermemory.
+Supermemory = source de vérité pour les leçons archivées, organisées par projet.
+Les leçons y arrivent via `/lesson migrate` (cap LESSONS.md atteint) ou `/ce:compound` (flywheel).
+Formats, tags et règles d'usage → voir `.claude/rules/supermemory-protocol.md`
 
 ---
 
 ### Règle #6 — CARL : charger le bon domaine au bon moment
 
-CARL charge les domaines automatiquement selon le contexte détecté.
-Ne pas charger manuellement sauf si CARL ne l'a pas fait et que c'est nécessaire.
-
-Quand enrichir un domaine CARL existant :
-
-- Après /ce:compound, si pattern classifié "réutilisable"
-- Ajouter dans `.carl/{{CARL_DOMAIN}}` (ne pas créer de doublon)
-- Une règle distillée = une ou deux lignes max (concis, actionnable)
-
-Quand créer un nouveau domaine CARL :
-
-- Minimum 3 règles distinctes sur un même sous-domaine avant de créer
-- Nommer sans tirets : `{domaine}expert` (ex: `googleadsexpert`)
-- Ajouter les RECALL keywords dans `.carl/manifest`
-
-Note : les domaines CARL (`.carl/`) sont distincts des skills Claude Code (`.claude/skills/`).
-CARL = règles injectées dynamiquement par hook. Skills = prompts invocables par /commande.
+CARL charge automatiquement selon contexte. Ne pas charger manuellement sauf si nécessaire.
+Enrichir `.carl/{{CARL_DOMAIN}}` après `/ce:compound` si pattern "réutilisable" (1-2 lignes max).
+Nouveau domaine : min 3 règles, nommer sans tirets (`{domaine}expert`), ajouter keywords dans manifest.
+Les domaines CARL (`.carl/`) ≠ skills Claude Code (`.claude/skills/`).
 
 ---
 
@@ -325,135 +203,40 @@ Ne jamais :
 - Modifier un domaine CARL sans que la leçon ait été capturée d'abord dans LESSONS.md
 - Créer un domaine CARL avec moins de 3 règles distinctes
 - Ignorer LESSONS.md lors de la planification — c'est la première source à consulter
+- Documenter du code standard et trivial
+- Dupliquer une leçon existante dans LESSONS.md au lieu de mettre à jour
 
 ---
 
 ### Règle #8 — Structure des plans : critères d'acceptation et frontières
 
-Tout plan créé par `/gsd:plan-phase` ou `/ce:plan` doit inclure :
-
-#### Critères d'acceptation (BDD)
-
-Format obligatoire Given/When/Then pour tout plan :
-
-```
-AC-1: Given [contexte], When [action], Then [résultat attendu]
-AC-2: Given [contexte], When [action], Then [résultat attendu]
-```
-
-Chaque tâche doit référencer quel AC elle satisfait (ex: "→ satisfait AC-1").
-Les critères doivent être déclaratifs (comportement attendu), pas impératifs (étapes mécaniques).
-Les critères servent de référence pour `/gsd:verify-work` (UAT goal-backward).
-
-Règles pour écrire de bons AC :
-
-- Un seul comportement par AC (ne pas combiner plusieurs vérifications)
-- Le "Then" doit être vérifiable par lecture de fichier ou exécution de commande
-- Pas de détails d'implémentation dans le "Then" (tester le comportement, pas le code)
-
-#### Frontières — tous les plans
-
-Lister explicitement les fichiers et répertoires qui ne doivent PAS être modifiés :
-
-```
-## Boundaries
-- CLAUDE.md (ne pas modifier)
-- .carl/ (ne pas modifier sauf si flywheel)
-- [autres fichiers protégés selon contexte]
-```
-
-Les frontières protègent contre les modifications accidentelles pendant l'exécution.
-Si une tâche nécessite de modifier un fichier listé en frontière,
-le signaler comme déviation dans MEMORY.md avant de procéder.
+Tout plan doit inclure des AC (BDD Given/When/Then) et des Boundaries.
+Détails, formats et règles → voir `.claude/rules/plan-structure.md`
 
 ---
 
 ## Capture des leçons — deux chemins
 
-### Chemin rapide — `/lesson` (80% des cas)
+**Rapide — `/lesson`** : format quand/faire/parce que → LESSONS.md. Si critique → promotion CARL. Cap 50 → `/lesson migrate`.
 
-Après un fix non-trivial, Claude propose une leçon au format quand/faire/parce que.
-L'utilisateur confirme (oui/non). La leçon va dans LESSONS.md.
-Si critique ou répétée → promotion CARL proposée automatiquement.
-Si cap 50 atteint → `/lesson migrate` vers Supermemory + docs/solutions/.
-
-### Chemin complet — `/ce:compound` (patterns lourds)
-
-Pour les patterns qui nécessitent du détail (code, anti-patterns, raisonnement long).
-Produit un fichier complet dans docs/solutions/.
-
-## Flywheel — instructions post /ce:compound
-
-Voir `.claude/rules/flywheel-workflow.md` pour le workflow complet (étapes 1-5 : classification, documentation, CARL, Supermemory, commit).
+**Complet — `/ce:compound`** : patterns lourds avec code/anti-patterns → docs/solutions/ + flywheel (voir `.claude/rules/flywheel-workflow.md`).
 
 ---
 
 ## Règle de consultation — début de chaque planification
 
-Avant de planifier (que ce soit `/ce:plan`, `/gsd:plan-phase`, ou `/gsd:discuss-phase`),
-Claude doit compléter le contexte de session (Règle #1) avec les sources de planification :
-
-1. LESSONS.md est déjà chargé (Règle #1) → leçons récentes, applicables immédiatement
-2. Lire DECISIONS.md → décisions actives qui peuvent contraindre le plan
-3. `recall` Supermemory avec les mots-clés du domaine → leçons archivées + cross-projet
-4. Si besoin de plus de détail OU Supermemory indisponible :
-   lancer un agent `Explore` sur `docs/solutions/` → patterns complets avec code
-5. Intégrer tout ça dans le plan → ne pas redécouvrir
-
-MEMORY.md, LESSONS.md et CARL sont déjà chargés par la Règle #1 — ne pas recharger.
-Cette séquence s'applique à TOUTES les commandes de planification, pas seulement `/ce:plan`.
+Avant `/ce:plan`, `/gsd:plan-phase` ou `/gsd:discuss-phase` :
+1. LESSONS.md déjà chargé → leçons applicables
+2. DECISIONS.md → contraintes actives
+3. `recall` Supermemory → leçons archivées + cross-projet
+4. Si besoin de détail : agent `Explore` sur `docs/solutions/`
 
 ---
 
-## Règle de coordination — GSD ↔ Compound
+## Coordination GSD ↔ Compound
 
-GSD et Compound Engineering produisent des artifacts complémentaires.
-Ils doivent lire les outputs de l'autre pour éviter la duplication.
-
-### GSD lit les outputs Compound
-
-Lors de `/gsd:plan-phase` et `/gsd:discuss-phase` :
-- Consulter `docs/solutions/` (output de `/ce:compound`) pour les patterns connus
-- Consulter `docs/plans/` (output de `/ce:plan`) si un plan Compound existe déjà
-- Consulter `docs/brainstorms/` si un brainstorm a précédé la phase
-
-### Compound lit les outputs GSD
-
-Lors de `/ce:review` après exécution GSD :
-- Lire `.planning/{phase}-VERIFICATION.md` comme contexte pour la review
-- Lire `.planning/{phase}-{N}-SUMMARY.md` pour comprendre ce qui a été construit
-
-Lors de `/ce:compound` :
-- Lire `.planning/{phase}-PREFLIGHT.md` si pre-flight a été exécuté
-  → Les findings pre-flight résolus sont des patterns à capitaliser
-
-### Fichiers partagés
-
-| Fichier | Producteur | Consommateurs |
-|---------|-----------|---------------|
-| `LESSONS.md` | `/lesson` | Toutes les sessions (lu au démarrage), planification |
-| `docs/solutions/` | `/lesson migrate`, `/ce:compound` | Agent Explore (fallback ou profondeur) |
-| `docs/plans/` | `/ce:plan` | `/gsd:discuss-phase` |
-| `.planning/{phase}-PLAN.md` | `/gsd:plan-phase` | `/pre-flight`, `/gsd:execute-phase` |
-| `.planning/{phase}-PREFLIGHT.md` | `/pre-flight` | `/ce:compound` |
-| `.planning/{phase}-VERIFICATION.md` | `/gsd:verify-work` | `/ce:review` |
-| `.planning/{phase}-{N}-SUMMARY.md` | `/gsd:execute-phase` + closure | `/ce:review`, `/ce:compound` |
-| `memory/MEMORY.md` | Toutes les sessions | Toutes les sessions, `/session-gate` |
-| `STATE.md` | GSD (position technique) | GSD, `/pre-flight` |
-| Supermemory (projet) | `/lesson migrate` | `recall` à la planification |
-
----
-
-## Ce que les agents ne font PAS
-
-- Commencer sans lire MEMORY.md et LESSONS.md
-- Modifier un domaine CARL sans leçon capturée d'abord dans LESSONS.md
-- Sauvegarder directement dans Supermemory (passer par `/lesson migrate` ou `/ce:compound`)
-- Documenter du code standard et trivial
-- Dupliquer une leçon existante dans LESSONS.md au lieu de mettre à jour
-- Stocker des données sensibles dans MEMORY.md, LESSONS.md ou docs/solutions/
-- Créer un domaine CARL avec moins de 3 règles distinctes
-- Continuer une session dont le contexte est dégradé
+GSD et CE produisent des artifacts complémentaires et doivent lire les outputs de l'autre.
+Table des fichiers partagés et protocole de lecture → voir `.claude/rules/gsd-ce-coordination.md`
 
 ---
 
