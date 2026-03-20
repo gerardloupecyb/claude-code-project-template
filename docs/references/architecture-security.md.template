@@ -1,0 +1,65 @@
+# L1 — Architecture & Security Reference
+
+> Constraints, auth decisions, topology, and security rules.
+> Read BEFORE planning any new feature or choosing an auth/security approach.
+
+---
+
+## Architecture Decisions
+
+<!-- Add architecture decisions that constrain implementation.
+     For full ADR records, see DECISIONS.md. This file captures the quick-reference view. -->
+
+| Decision | Choice | Constraint | Date |
+|----------|--------|------------|------|
+| {{ARCH_DECISION_1}} | {{CHOICE_1}} | {{CONSTRAINT_1}} | {{DATE}} |
+
+---
+
+## Security Rules
+
+<!-- Project-wide security constraints. -->
+
+| Rule | Scope | Rationale |
+|------|-------|-----------|
+| No hardcoded credentials | All code | .env + secrets manager only |
+| {{SECURITY_RULE_1}} | {{SCOPE}} | {{RATIONALE}} |
+
+---
+
+## Auth & Identity
+
+<!-- Authentication method, providers, token strategy. -->
+
+| Component | Provider | Method | Notes |
+|-----------|----------|--------|-------|
+| {{AUTH_COMPONENT}} | {{PROVIDER}} | {{METHOD}} | {{NOTES}} |
+
+---
+
+## Deployment Topology
+
+<!-- Environments, regions, DR strategy. -->
+
+| Environment | Location | Purpose | Notes |
+|-------------|----------|---------|-------|
+| {{ENV_NAME}} | {{REGION}} | {{PURPOSE}} | {{NOTES}} |
+
+---
+
+## Compliance & Data Residency
+
+<!-- Regulatory constraints that affect architecture choices. -->
+
+- {{COMPLIANCE_REQUIREMENT_1}}
+
+---
+
+## Update Rules
+
+| Event | Section to update |
+|-------|-------------------|
+| New auth provider added | Auth & Identity |
+| New environment/region | Deployment Topology |
+| New compliance requirement | Compliance & Data Residency |
+| Architecture decision made | Architecture Decisions + DECISIONS.md |
