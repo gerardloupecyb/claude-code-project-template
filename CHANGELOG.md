@@ -4,6 +4,60 @@ Toutes les modifications notables de ce projet sont documentees dans ce fichier.
 Format base sur [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning selon [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] — 2026-03-20
+
+Reference files system — documentation technique structuree en 4 couches.
+
+### Added
+
+#### 4-Layer Reference System (`docs/references/`)
+- `architecture-security.md` (L1) — auth decisions, topology, compliance, security rules
+- `coding-patterns.md` (L2) — error handling, retry, tests, naming, logging conventions
+- `services-and-access.md` (L3) — servers, Docker, secrets, SPs, MCPs, APIs, systemd
+- `codebase-context.md` (L3) — modules, schemas, interfaces, config, entry points
+- `Reference-files-index-routing.md` — routing decision tree + staleness detection
+
+#### `/reference-audit` skill (8e skill)
+- Auto-population par scan du codebase (Dockerfile, .env, package.json, MCP configs)
+- Cross-reference MCP : `tool-routing.md` ↔ `services-and-access.md`
+- Detection de staleness via `Last verified: YYYY-MM-DD` footer
+- Modes: `--dry-run`, `--populate`, `--check`
+
+#### CARL RULE_9 — Reference Files Discipline
+- Routing automatique vers le bon layer (L1/L2/L3) selon la tache
+- Enforce la co-mise-a-jour dans le meme commit
+- Detection de staleness : corriger avant de travailler
+
+#### Session-gate 13 → 15 checks
+- Check 14 : staleness des fichiers de reference (Last verified > 30 jours)
+- Check 15 : cross-reference MCP sync (tool-routing ↔ services-and-access)
+
+#### Execution quality — layer awareness
+- Les agents GSD lisent le bon layer de reference avant de toucher l'infra ou le code
+- Skip heuristic si `docs/references/` n'existe pas ou contient des placeholders
+
+### Changed
+- `init-project.sh` : genere `docs/references/` + copie le skill reference-audit
+- `CLAUDE.md.template` : nouvelle "Regle de reference" + table des fichiers
+- `docs/GUIDE.md` : section 13 (reference files), 15 sections total, 8 skills, 10 regles CARL
+- Rules projet-specifiques commencent a RULE_10 (au lieu de RULE_9)
+- `execution-quality.md` : nouvelle section "Reference Layer Awareness"
+
+---
+
+## [2.1.0] — 2026-03-16
+
+Execution quality hybridation — ce-work patterns injectes via rules.
+
+### Added
+- `.claude/rules/execution-quality.md` — 3 patterns : system-wide test check, post-deploy monitoring, commit heuristics
+- Hybridation GSD x ce-work via `.claude/rules/` (pas remplacement)
+
+### Changed
+- `CLAUDE.md.template` — section outils actifs mise a jour
+
+---
+
 ## [2.0.0] — 2026-03-16
 
 Release majeure — systeme de retention complet, hooks, quality score.
