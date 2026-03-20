@@ -1,0 +1,45 @@
+# Reference Files — Index & Routing
+
+> Source de verite pour savoir QUEL fichier lire QUAND.
+> Mis a jour dans le meme commit que tout changement de reference.
+
+---
+
+## The 4-Layer System
+
+| Layer | File | Purpose | Read when... |
+|-------|------|---------|--------------|
+| L1 — Architecture/Security | architecture-security.md | Rules, constraints, auth decisions, topology | Planning a new feature, choosing auth method, security review, DR questions |
+| L2 — Coding Patterns | coding-patterns.md | Language skeletons, retry/error, test patterns, naming | Writing/reviewing code in project languages |
+| L3 — Infra Endpoints | services-and-access.md | Servers, Docker, secrets, SPs, MCPs, API keys | Any infra work (SSH, Docker, secrets, MCP config, deploy) |
+| L3 — Codebase Context | codebase-context.md | Module exports, schemas, key file inventory | Calling shared modules, modifying schemas, touching core interfaces |
+| L4 — Task Instructions | .claude/skills/ + .carl/ | System prompts, quality gates, CARL rules | Delegating to agents, planning, execution |
+
+---
+
+## Routing Decision Tree
+
+**Architecture or security question** → L1
+**Writing or reviewing code** → L2 + L4
+**Calling shared modules or modifying schemas** → L3 (codebase-context)
+**SSH / Docker / secrets / MCP / deploy** → L3 (services-and-access)
+**Delegating to agents or planning** → L4 (via CARL rules + skills)
+
+---
+
+## Staleness Detection Rule
+
+If a name, endpoint, secret, or ID in any L1-L3 file doesn't match reality
+(actual infra, actual codebase, actual config) → the file is stale.
+**Fix it before proceeding with work that depends on it.**
+
+---
+
+## Maintenance Rule
+
+When content in any L1-L3 file changes, update this index if the routing table is affected.
+Reference file updates MUST be committed alongside the infra/code change they document.
+
+---
+
+_Last verified: {{DATE}}_

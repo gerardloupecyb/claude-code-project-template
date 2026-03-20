@@ -30,6 +30,22 @@ For any change touching production runtime code, document in SUMMARY.md or commi
 
 If no runtime impact: add one line — `No monitoring needed: [reason]`
 
+## Reference Layer Awareness
+
+When a task modifies infrastructure or shared code, consult the appropriate reference layer BEFORE starting:
+
+| Task type | Reference to read | Path |
+|-----------|------------------|------|
+| Infra change (Docker, secrets, deploy, MCP) | L3 Services | `docs/references/services-and-access.md` |
+| Shared module or schema change | L3 Codebase | `docs/references/codebase-context.md` |
+| Architecture or security decision | L1 Architecture | `docs/references/architecture-security.md` |
+| Writing code in project languages | L2 Patterns | `docs/references/coding-patterns.md` |
+
+**After completing the task:** update the reference file in the SAME commit.
+If the reference file contradicts what you found in the codebase, fix it first.
+
+**Skip heuristic:** If `docs/references/` doesn't exist or files contain only `{{` placeholders, skip reference checks.
+
 ## Commit Quality Heuristics
 
 | Commit when... | Don't commit when... |

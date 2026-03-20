@@ -37,6 +37,7 @@
 | .carl/{{CARL_DOMAIN}} | Règles critiques CARL, injectées automatiquement | `/lesson` (promotion) | Quand leçon critique ou répétée |
 | Supermemory (projet) | Archive principale des leçons, cherchable via `recall` | `/lesson migrate` | Quand LESSONS.md atteint le cap |
 | docs/solutions/ | Backup local git des leçons migrées + patterns détaillés | `/lesson migrate` | Copie locale lors de la migration |
+| docs/references/ | 4-layer reference system: architecture, patterns, services, codebase | Manuel + CARL RULE_9 | Avec chaque changement infra/code documenté |
 | .claude/integrations.md | Outils externes actifs (Linear, GSD, Supermemory) | Setup manuel | Au setup du projet ou changement d'outils |
 
 ### Séparation des fichiers d'état
@@ -383,6 +384,18 @@ Claude doit compléter le contexte de session (Règle #1) avec les sources de pl
 
 MEMORY.md, LESSONS.md et CARL sont déjà chargés par la Règle #1 — ne pas recharger.
 Cette séquence s'applique à TOUTES les commandes de planification, pas seulement `/ce:plan`.
+
+### Règle de référence — fichiers techniques
+
+Avant de coder ou modifier l'infra, consulter `docs/references/Reference-files-index-routing.md` pour le routing :
+- **Architecture/sécurité** → L1 (`architecture-security.md`)
+- **Écrire/reviewer du code** → L2 (`coding-patterns.md`)
+- **Infra/secrets/Docker/MCP/API** → L3 (`services-and-access.md`)
+- **Modules partagés/schemas** → L3 (`codebase-context.md`)
+
+Mettre à jour le fichier de référence dans le MÊME commit que le changement qu'il documente.
+Si un fichier de référence contredit la réalité (secret stale, endpoint changé) → corriger AVANT de travailler.
+Utiliser `/reference-audit` périodiquement pour auto-peupler les fichiers de référence et valider la synchronisation MCP.
 
 ---
 

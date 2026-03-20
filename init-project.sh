@@ -70,6 +70,7 @@ mkdir -p "${PROJECT_DIR}/.claude/skills/project-sync"
 mkdir -p "${PROJECT_DIR}/.claude/skills/lesson"
 mkdir -p "${PROJECT_DIR}/.claude/skills/context-checkpoint"
 mkdir -p "${PROJECT_DIR}/.claude/skills/project-bootstrap"
+mkdir -p "${PROJECT_DIR}/.claude/skills/reference-audit"
 mkdir -p "${PROJECT_DIR}/.claude/hooks"
 mkdir -p "${PROJECT_DIR}/.claude/rules"
 mkdir -p "${PROJECT_DIR}/.carl"
@@ -77,6 +78,7 @@ mkdir -p "${PROJECT_DIR}/.planning"
 mkdir -p "${PROJECT_DIR}/docs/solutions"
 mkdir -p "${PROJECT_DIR}/docs/plans"
 mkdir -p "${PROJECT_DIR}/docs/brainstorms"
+mkdir -p "${PROJECT_DIR}/docs/references"
 mkdir -p "${PROJECT_DIR}/memory"
 mkdir -p "${PROJECT_DIR}/todos"
 mkdir -p "${PROJECT_DIR}/src"
@@ -97,6 +99,8 @@ cp "${TEMPLATE_DIR}/.claude/skills/context-checkpoint/SKILL.md" \
    "${PROJECT_DIR}/.claude/skills/context-checkpoint/SKILL.md"
 cp "${TEMPLATE_DIR}/.claude/skills/project-bootstrap/SKILL.md" \
    "${PROJECT_DIR}/.claude/skills/project-bootstrap/SKILL.md"
+cp "${TEMPLATE_DIR}/.claude/skills/reference-audit/SKILL.md" \
+   "${PROJECT_DIR}/.claude/skills/reference-audit/SKILL.md"
 
 # Copy hook scripts
 echo "→ Installing hooks..."
@@ -112,6 +116,17 @@ cp "${TEMPLATE_DIR}/.claude/rules/tool-routing.md" \
    "${PROJECT_DIR}/.claude/rules/tool-routing.md"
 cp "${TEMPLATE_DIR}/.claude/rules/flywheel-workflow.md" \
    "${PROJECT_DIR}/.claude/rules/flywheel-workflow.md"
+cp "${TEMPLATE_DIR}/.claude/rules/execution-quality.md" \
+   "${PROJECT_DIR}/.claude/rules/execution-quality.md"
+
+# Generate reference files from templates
+echo "→ Generating reference files..."
+for ref_template in "${TEMPLATE_DIR}"/docs/references/*.md.template; do
+    ref_name=$(basename "$ref_template" .template)
+    sed -e "s|{{PROJECT_NAME}}|${PROJECT_NAME}|g" \
+        -e "s|{{PROJECT_ROOT}}|${PROJECT_DIR}|g" \
+        "$ref_template" > "${PROJECT_DIR}/docs/references/${ref_name}"
+done
 
 # Create settings.json with hook configuration
 echo "→ Creating .claude/settings.json..."
@@ -171,6 +186,7 @@ touch "${PROJECT_DIR}/.planning/.gitkeep"
 touch "${PROJECT_DIR}/docs/solutions/.gitkeep"
 touch "${PROJECT_DIR}/docs/plans/.gitkeep"
 touch "${PROJECT_DIR}/docs/brainstorms/.gitkeep"
+touch "${PROJECT_DIR}/docs/references/.gitkeep"
 touch "${PROJECT_DIR}/todos/.gitkeep"
 touch "${PROJECT_DIR}/src/.gitkeep"
 
@@ -182,21 +198,24 @@ echo "    • CLAUDE.md              (edit: Stack, MCP, Skills, Domaines)"
 echo "    • memory/MEMORY.md       (edit: Contexte, Stack, Liens)"
 echo "    • LESSONS.md             (ready to use — capture via /lesson)"
 echo "    • DECISIONS.md           (ready to use — ADR register for architectural decisions)"
-echo "    • .claude/skills/         (7 skills: context-manager, pre-flight, session-gate,"
-echo "                               project-sync, lesson, context-checkpoint, project-bootstrap)"
+echo "    • .claude/skills/         (8 skills: context-manager, pre-flight, session-gate,"
+echo "                               project-sync, lesson, context-checkpoint, project-bootstrap,"
+echo "                               reference-audit)"
 echo "    • .claude/hooks/          (pre-compact.sh + session-start.sh)"
 echo "    • .claude/rules/          (tool-routing.md + flywheel-workflow.md)"
 echo "    • .claude/settings.json   (hook configuration)"
 echo "    • .claude/integrations.md (edit: set linear/gsd/supermemory true/false)"
 echo "    • .carl/manifest         (ready to use)"
 echo "    • .carl/${CARL_DOMAIN}   (add project-specific rules)"
+echo "    • docs/references/        (5 reference files: architecture, coding, services, codebase, index)"
 echo "    • docs/ + todos/ + src/  (empty, ready)"
 echo ""
 echo "  Next steps:"
 echo "    1. cd \"${PROJECT_DIR}\""
 echo "    2. Replace remaining {{PLACEHOLDER}} values in CLAUDE.md and MEMORY.md"
 echo "    3. Add project-specific CARL rules in .carl/${CARL_DOMAIN}"
-echo "    4. Create docs/solutions/ subdirectories for your domains"
-echo "    5. Add project-specific skills in .claude/skills/"
-echo "    6. Run /project-bootstrap to inject cross-project lessons from Supermemory"
+echo "    4. Fill docs/references/ files with project-specific infra, patterns, and architecture"
+echo "    5. Create docs/solutions/ subdirectories for your domains"
+echo "    6. Add project-specific skills in .claude/skills/"
+echo "    7. Run /project-bootstrap to inject cross-project lessons from Supermemory"
 echo ""

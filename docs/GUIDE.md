@@ -19,8 +19,9 @@
 10. [Workflows de developpement](#10-workflows)
 11. [Quality score et closure](#11-quality-score)
 12. [Session-gate — 13 checks](#12-session-gate)
-13. [Gestion du contexte long](#13-contexte-long)
-14. [FAQ et troubleshooting](#14-faq)
+13. [Reference files — 4 couches](#13-reference-files)
+14. [Gestion du contexte long](#14-contexte-long)
+15. [FAQ et troubleshooting](#15-faq)
 
 ---
 
@@ -160,7 +161,7 @@ Claude devient imprecis, repete des questions → checkpoint :
 ---
 
 <a id="4-les-7-skills"></a>
-## 4. Les 7 skills inclus
+## 4. Les 8 skills inclus
 
 Chaque skill est un fichier `.claude/skills/{nom}/SKILL.md` — une instruction specialisee que Claude charge quand tu l'invoques.
 
@@ -241,6 +242,21 @@ Les checks sont mecaniques (pas de jugement) et advisory (jamais bloquants).
 → Produit un rapport GO / CONDITIONAL GO / NO-GO
 ```
 
+### /reference-audit — Auto-population des fichiers de reference
+
+**Quand l'utiliser :** Apres le setup initial, ou periodiquement pour verifier la coherence.
+
+```
+/reference-audit           → Full: detect, populate, cross-reference, staleness
+/reference-audit --dry-run → Report only, no modifications
+/reference-audit --populate → Auto-populate seulement
+/reference-audit --check   → Cross-reference + staleness seulement
+```
+
+Scanne le codebase pour detecter les artifacts d'infrastructure (Dockerfile, .env, package.json,
+MCP settings) et pre-remplit les fichiers `docs/references/`. Verifie aussi la synchronisation
+MCP entre `tool-routing.md` et `services-and-access.md`.
+
 ### /context-manager — Reference contextuelle
 
 **Quand l'utiliser :** Se charge automatiquement quand tu parles de contexte, memoire, ou sessions.
@@ -294,7 +310,7 @@ Se declenche sur **4 evenements** : `startup`, `compact`, `resume`, `clear`.
 3. Les regles sont injectees dans le prompt avant que Claude ne reponde
 4. Claude suit les regles sans que tu aies a les rappeler
 
-### Les 9 regles du template
+### Les 10 regles du template
 
 | Rule | Nom | Ce qu'elle fait |
 |------|-----|-----------------|
@@ -307,12 +323,13 @@ Se declenche sur **4 evenements** : `startup`, `compact`, `resume`, `clear`.
 | 6 | Tool Routing | Utiliser Glob/Grep au lieu de Bash find/grep |
 | 7 | MCP Discipline | Toujours utiliser des limites sur les appels MCP |
 | 8 | Planning Recall | Recall Supermemory + lire DECISIONS.md avant de planifier |
+| 9 | Reference Files | Router vers le bon fichier de reference (L1-L3) + staleness detection |
 
 ### Ajouter des regles projet
 
 ```
-# Dans .carl/{domaine}, decommenter RULE_9 :
-MONWORKFLOW_RULE_9=Description de ma regle specifique.
+# Dans .carl/{domaine}, decommenter RULE_10 :
+MONWORKFLOW_RULE_10=Description de ma regle specifique.
 ```
 
 ---
@@ -553,11 +570,11 @@ Plan mediocre → ROUGH → /lesson "plan trop vague"
 ---
 
 <a id="12-session-gate"></a>
-## 12. Session-gate — 13 checks
+## 12. Session-gate — 15 checks
 
 Session-gate est un validateur mecanique qui verifie l'etat de MEMORY.md. Tous les checks sont **advisory** — ils ne bloquent jamais la session.
 
-### Les 13 checks
+### Les 15 checks
 
 | # | Check | Mode | Type |
 |---|-------|------|------|
@@ -574,6 +591,8 @@ Session-gate est un validateur mecanique qui verifie l'etat de MEMORY.md. Tous l
 | 11 | DECISIONS.md existe et non vide | START, END | `[ok]`/`[!!]` |
 | 12 | Decisions actives > 30 jours | START | `[--]` info |
 | 13 | Age derniere lecon capturee | START | `[--]` info |
+| 14 | Reference files staleness (Last verified) | START | `[--]` info |
+| 15 | MCP cross-reference sync (tool-routing ↔ services-and-access) | START, END | `[--]` info |
 
 ### Legende
 
@@ -583,8 +602,43 @@ Session-gate est un validateur mecanique qui verifie l'etat de MEMORY.md. Tous l
 
 ---
 
-<a id="13-contexte-long"></a>
-## 13. Gestion du contexte long
+<a id="13-reference-files"></a>
+## 13. Reference files — systeme de reference en 4 couches
+
+Le template inclut un systeme de fichiers de reference dans `docs/references/` pour documenter l'architecture, les patterns de code, l'infrastructure, et le codebase.
+
+### Les 4 couches
+
+| Couche | Fichier | Quand le lire |
+|--------|---------|---------------|
+| L1 — Architecture/Securite | `architecture-security.md` | Planifier une feature, choisir une approche auth/securite |
+| L2 — Coding Patterns | `coding-patterns.md` | Ecrire ou reviewer du code |
+| L3 — Infra/Services | `services-and-access.md` | SSH, Docker, secrets, MCP, deploy, API keys |
+| L3 — Codebase | `codebase-context.md` | Appeler des modules partages, modifier des schemas |
+
+Le fichier `Reference-files-index-routing.md` sert d'index et de decision tree pour savoir quel fichier lire.
+
+### CARL RULE_9 — routing automatique
+
+La regle CARL `RULE_9` enforce la consultation du bon fichier de reference avant de commencer le travail. Claude route automatiquement vers le bon layer selon la tache.
+
+### Regle de mise a jour
+
+Les fichiers de reference doivent etre mis a jour **dans le meme commit** que le changement qu'ils documentent :
+
+- Nouveau secret cree → ajouter dans `services-and-access.md`
+- Nouveau MCP ajoute → `services-and-access.md` + `.claude/rules/tool-routing.md`
+- Schema modifie → `codebase-context.md`
+- Decision d'architecture → `architecture-security.md` + `DECISIONS.md`
+
+### Detection de staleness
+
+Si un nom de secret, un endpoint, ou un ID dans un fichier de reference ne correspond plus a la realite → le fichier est stale. Corriger AVANT tout travail qui en depend.
+
+---
+
+<a id="14-contexte-long"></a>
+## 14. Gestion du contexte long
 
 ### Le probleme
 
@@ -622,8 +676,8 @@ Protection 4 : MCP discipline (CARL RULE_7)
 
 ---
 
-<a id="14-faq"></a>
-## 14. FAQ et troubleshooting
+<a id="15-faq"></a>
+## 15. FAQ et troubleshooting
 
 ### "Claude ne lit pas MEMORY.md au demarrage"
 
