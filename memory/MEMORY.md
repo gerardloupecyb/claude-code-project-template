@@ -95,3 +95,14 @@ Pattern découvert : injecter des quality patterns cross-workflow via `.claude/r
 ## Liens utiles
 
 - Projet local : /Users/gerardvinou/Claude code/Claude Projects/project-template-v2
+
+<!-- pre-compact snapshot -->
+**Snapshot pre-compaction** (2026-03-21 03:43)
+
+- **Prochaine etape:** ** Implémenter plan Layer 2 retention gaps (DECISIONS.md, closure quality score, /project-bootstrap, session-gate checks 11-13, CARL RULE_8) — voir docs/plans/2026-03-16-002
+- **Derniers commits:**
+  - c24fea5 docs: add /project-sync upgrade instructions to README
+  - 205f749 merge: resolve conflicts with master (CHANGELOG + README version badge)
+  - 1e96da1 feat: add multi-LLM task router — Opus orchestrator + Codex executor
+
+<!-- /pre-compact snapshot -->
