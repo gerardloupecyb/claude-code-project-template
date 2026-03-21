@@ -1,0 +1,16 @@
+# CARL Domain: N8NAUTOMATION
+# n8n Workflow Automation — Mandatory skill loading and routing
+#
+# Triggers when user prompt mentions n8n, workflow automation, expressions, nodes, etc.
+# Instructs Claude to load the appropriate n8n skill BEFORE any work.
+# 3 specialized n8n skills in .claude/skills/n8n-*/ — route to the most specific one.
+
+N8NAUTOMATION_RULE_0="These rules apply when working with n8n workflow automation. They enforce mandatory skill loading with correct routing across 3 specialized n8n skills in .claude/skills/. Load the most specific skill BEFORE any recommendation, code, or configuration."
+
+N8NAUTOMATION_RULE_1="SKILL ROUTING — LOAD BEFORE WORKING: (1) Workflow design/architecture/MCP tools → n8n-workflow-architect. (2) Node config/expressions/validation → n8n-node-expert. (3) Code nodes (JS/Python) → n8n-code-nodes. Invoke via Skill tool IMMEDIATELY — do not answer first then load."
+
+N8NAUTOMATION_RULE_2="CODE NODE SANDBOX LIMITATIONS: n8n Code nodes run in an isolated task runner sandbox. No fetch(), no crypto, no $helpers.httpRequest() in v2.0+. For HTTP calls use HTTP Request nodes. For HMAC/crypto use native webhook auth or pre-webhook HTTP nodes. Never write Code node logic that assumes network or crypto access."
+
+N8NAUTOMATION_RULE_3="CREDENTIAL PATTERNS: (1) httpHeaderAuth credentials require authentication='genericCredentialType' + genericAuthType='httpHeaderAuth' on HTTP Request nodes — NOT manual headers. (2) OAuth2 microsoftOAuth2Api = authorization code flow (requires refreshToken) — for client_credentials use inline token fetch via HTTP Request node. (3) Webhook nodes via MCP MUST include webhookId field. (4) crypto.randomUUID() unavailable in sandbox — use Math.random() UUID pattern."
+
+N8NAUTOMATION_RULE_4="INFRA CONTEXT: Adapt this rule to your n8n deployment. Common setup: Docker Compose + reverse proxy + PostgreSQL. If using $env in Code nodes, set N8N_BLOCK_ENV_ACCESS_IN_NODE=false. Document your infra details in a reference file and READ before any n8n infra work."
