@@ -56,3 +56,28 @@ If the reference file contradicts what you found in the codebase, fix it first.
 | About to attempt risky/uncertain changes | Would need a "WIP" commit message |
 
 **Heuristic:** "Can I write a commit message that describes a complete, valuable change? If yes, commit. If the message would be 'WIP', wait."
+
+## Simplify As You Go
+
+After completing every 2-3 tasks (or at a natural phase boundary like backend → frontend), review recently changed files:
+
+1. Consolidate duplicated patterns into shared helpers
+2. Extract repeated logic that emerged across tasks
+3. Remove dead code introduced by earlier iterations
+
+**Skip heuristic:** If all tasks touch different files with no shared logic, skip. Only simplify when cross-task patterns are visible.
+
+**Timing:** Do NOT simplify after every single task — early patterns may look duplicated but diverge intentionally in later tasks. Wait for a cluster.
+
+## Reviewer Agents (Post-Phase, Optional)
+
+After completing all tasks in a phase, consider launching reviewer agents for complex or risky changes:
+
+| Change type | Reviewer agent |
+|-------------|---------------|
+| Security-sensitive (auth, payments, secrets) | `security-sentinel` |
+| Database migrations or data transforms | `data-integrity-guardian` |
+| Architecture changes (new services, API contracts) | `architecture-strategist` |
+| Performance-critical paths | `performance-oracle` |
+
+**Skip heuristic:** Skip if changes are leaf-node, < 50 LOC, or purely additive (new file, no existing code modified). Only invoke when the change could break things you can't see from the diff alone.
