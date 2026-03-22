@@ -126,6 +126,8 @@ cp "${TEMPLATE_DIR}/.claude/rules/execution-quality.md" \
    "${PROJECT_DIR}/.claude/rules/execution-quality.md"
 cp "${TEMPLATE_DIR}/.claude/rules/model-routing.md" \
    "${PROJECT_DIR}/.claude/rules/model-routing.md"
+cp "${TEMPLATE_DIR}/.claude/rules/workflow-automation.md" \
+   "${PROJECT_DIR}/.claude/rules/workflow-automation.md"
 
 # Generate reference files from templates
 echo "→ Generating reference files..."
