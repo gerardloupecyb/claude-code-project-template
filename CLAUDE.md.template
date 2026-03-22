@@ -13,6 +13,7 @@
 - Discipline outils      → voir `.claude/rules/tool-routing.md`
 - Routing modèles        → voir `.claude/rules/model-routing.md`
 - Quality checks exécution → voir `.claude/rules/execution-quality.md`
+- Transitions automatiques → voir `.claude/rules/workflow-automation.md`
 
 ## MCP actifs
 
