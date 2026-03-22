@@ -71,6 +71,8 @@ mkdir -p "${PROJECT_DIR}/.claude/skills/lesson"
 mkdir -p "${PROJECT_DIR}/.claude/skills/context-checkpoint"
 mkdir -p "${PROJECT_DIR}/.claude/skills/project-bootstrap"
 mkdir -p "${PROJECT_DIR}/.claude/skills/reference-audit"
+mkdir -p "${PROJECT_DIR}/.claude/skills/project-template-sync"
+mkdir -p "${PROJECT_DIR}/.claude/skills/task-router"
 mkdir -p "${PROJECT_DIR}/.claude/hooks"
 mkdir -p "${PROJECT_DIR}/.claude/rules"
 mkdir -p "${PROJECT_DIR}/.carl"
@@ -101,6 +103,10 @@ cp "${TEMPLATE_DIR}/.claude/skills/project-bootstrap/SKILL.md" \
    "${PROJECT_DIR}/.claude/skills/project-bootstrap/SKILL.md"
 cp "${TEMPLATE_DIR}/.claude/skills/reference-audit/SKILL.md" \
    "${PROJECT_DIR}/.claude/skills/reference-audit/SKILL.md"
+cp "${TEMPLATE_DIR}/.claude/skills/project-template-sync/SKILL.md" \
+   "${PROJECT_DIR}/.claude/skills/project-template-sync/SKILL.md"
+cp "${TEMPLATE_DIR}/.claude/skills/task-router/SKILL.md" \
+   "${PROJECT_DIR}/.claude/skills/task-router/SKILL.md"
 
 # Copy hook scripts
 echo "→ Installing hooks..."
@@ -118,6 +124,8 @@ cp "${TEMPLATE_DIR}/.claude/rules/flywheel-workflow.md" \
    "${PROJECT_DIR}/.claude/rules/flywheel-workflow.md"
 cp "${TEMPLATE_DIR}/.claude/rules/execution-quality.md" \
    "${PROJECT_DIR}/.claude/rules/execution-quality.md"
+cp "${TEMPLATE_DIR}/.claude/rules/model-routing.md" \
+   "${PROJECT_DIR}/.claude/rules/model-routing.md"
 
 # Generate reference files from templates
 echo "→ Generating reference files..."
@@ -198,9 +206,10 @@ echo "    • CLAUDE.md              (edit: Stack, MCP, Skills, Domaines)"
 echo "    • memory/MEMORY.md       (edit: Contexte, Stack, Liens)"
 echo "    • LESSONS.md             (ready to use — capture via /lesson)"
 echo "    • DECISIONS.md           (ready to use — ADR register for architectural decisions)"
-echo "    • .claude/skills/         (8 skills: context-manager, pre-flight, session-gate,"
-echo "                               project-sync, lesson, context-checkpoint, project-bootstrap,"
-echo "                               reference-audit)"
+echo "    • .claude/skills/         (10 skills: context-manager, pre-flight, session-gate,"
+echo "                               project-sync, project-template-sync, lesson,"
+echo "                               context-checkpoint, project-bootstrap, reference-audit,"
+echo "                               task-router)"
 echo "    • .claude/hooks/          (pre-compact.sh + session-start.sh)"
 echo "    • .claude/rules/          (tool-routing.md + flywheel-workflow.md)"
 echo "    • .claude/settings.json   (hook configuration)"
@@ -213,9 +222,10 @@ echo ""
 echo "  Next steps:"
 echo "    1. cd \"${PROJECT_DIR}\""
 echo "    2. Replace remaining {{PLACEHOLDER}} values in CLAUDE.md and MEMORY.md"
-echo "    3. Add project-specific CARL rules in .carl/${CARL_DOMAIN}"
-echo "    4. Fill docs/references/ files with project-specific infra, patterns, and architecture"
-echo "    5. Create docs/solutions/ subdirectories for your domains"
-echo "    6. Add project-specific skills in .claude/skills/"
-echo "    7. Run /project-bootstrap to inject cross-project lessons from Supermemory"
+echo "    3. Run /setup to configure review agents (generates compound-engineering.local.md)"
+echo "    4. Add project-specific CARL rules in .carl/${CARL_DOMAIN}"
+echo "    5. Fill docs/references/ files with project-specific infra, patterns, and architecture"
+echo "    6. Create docs/solutions/ subdirectories for your domains"
+echo "    7. Add project-specific skills in .claude/skills/"
+echo "    8. Run /project-bootstrap to inject cross-project lessons from Supermemory"
 echo ""
