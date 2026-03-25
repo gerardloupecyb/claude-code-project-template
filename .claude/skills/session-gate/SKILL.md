@@ -14,9 +14,9 @@ Read-only, advisory, stateless. Never modify files. Never block the session.
 
 | Command | Mode | Checks |
 |---|---|---|
-| `/session-gate start` | START | 1, 2, 3, 4, 5, 8, 11, 12, 13 |
-| `/session-gate end` | END | 1, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16 |
-| `/session-gate` (no arg) | BOTH | All 16 |
+| `/session-gate start` | START | 1, 2, 3, 4, 5, 8, 11, 12, 13, 14, 15 |
+| `/session-gate end` | END | 1, 4, 5, 6, 7, 8, 9, 10, 11, 15, 16, 17, 18 |
+| `/session-gate` (no arg) | BOTH | All 18 |
 
 ---
 
@@ -35,7 +35,7 @@ Skip all remaining checks.
 
 ---
 
-## The 16 Checks
+## The 18 Checks
 
 Run each applicable check. Use `Read` and `Grep` tools on memory/MEMORY.md
 and `Bash` for git status. All checks are mechanical — no semantic judgment.
@@ -176,7 +176,45 @@ Extract the most recent date.
 
 Skip this check if Check 8 failed (file missing or empty).
 
-### Check 14 — Relative dates in MEMORY.md (END) — informational
+### Check 14 — Reference files staleness (START) — informational
+
+If `docs/references/` directory exists, scan each `.md` file in it.
+For each file:
+1. Find the line matching `_Last verified: ` (italic markdown)
+2. Extract the YYYY-MM-DD date (reject literal `{{DATE}}` as unpopulated template)
+3. Calculate days since that date
+
+Report per file:
+- If date > 30 days ago: `[--] {filename} last verified N days ago — consider /reference-audit`
+- If date is `{{DATE}}` or not parsable: `[--] {filename} has no verification date — run /reference-audit`
+- If date <= 30 days: skip (no report needed)
+
+If `docs/references/` doesn't exist: skip this check entirely (not applicable).
+
+### Check 15 — MCP cross-reference sync (START, END) — informational
+
+Cross-reference MCP entries between `.claude/rules/tool-routing.md` and
+`docs/references/services-and-access.md`.
+
+1. Read `.claude/rules/tool-routing.md`. In the "Discipline MCP" table,
+   extract MCP names from column 1 (pattern: `mcp__*` or backtick-wrapped).
+   Strip backticks. Collect into set A.
+
+2. Read `docs/references/services-and-access.md`. In the "MCP Servers" table,
+   extract MCP names from column 1. Strip backticks. Collect into set B.
+   If file doesn't exist or table has only `{{` placeholders: skip this check.
+
+3. Compute:
+   - In A but not in B: MCPs in tool-routing without reference documentation
+   - In B but not in A: MCPs in reference without routing discipline
+
+Report:
+- If any desyncs found: `[--] MCP desync: {N} in tool-routing without reference, {M} in reference without routing — run /reference-audit`
+- If no desyncs: skip (no report needed)
+
+Skip this check if either file doesn't exist or contains only template placeholders.
+
+### Check 16 — Relative dates in MEMORY.md (END) — informational
 
 Scan all content in memory/MEMORY.md for relative date expressions.
 Match these patterns (case-insensitive, word boundaries):
@@ -193,7 +231,7 @@ Exclude the literal word "aujourd'hui" / "today" (acceptable in context of curre
   List each match with line context (truncated to 60 chars).
 - If no matches: skip (not applicable)
 
-### Check 15 — Duplicate "Ce qui a été fait" headings (END) — informational
+### Check 17 — Duplicate "Ce qui a été fait" headings (END) — informational
 
 Find the section matching (case-insensitive) `Ce qui a été fait`.
 Extract all `###` headings within that section (stop at the next `## ` heading).
@@ -204,7 +242,7 @@ Compare headings: two headings are duplicates if they match exactly
 - If duplicates found: `[--] "Ce qui a été fait" has duplicate entries: "{heading}" — merge them`
 - If no duplicates: skip (not applicable)
 
-### Check 16 — Open blockers reminder (END) — informational
+### Check 18 — Open blockers reminder (END) — informational
 
 Find the section matching (case-insensitive) `Blocages et questions ouvertes`.
 Count lines matching `- [ ]` (unchecked items) within that section

@@ -30,6 +30,10 @@
 
 {{CARL_DOMAIN_UPPER}}_RULE_8=PLANNING RECALL: Before any /gsd:plan-phase, /gsd:discuss-phase, or /ce:plan, run recall on Supermemory with the RECALL keywords from .carl/manifest. Also read DECISIONS.md for active decisions that may constrain the plan. Skip recall only if Supermemory unavailable. This is NOT optional — it prevents rediscovering solved problems.
 
+# --- REFERENCE FILES DISCIPLINE ---
+
+{{CARL_DOMAIN_UPPER}}_RULE_9=REFERENCE FILES: Before starting work, route to the correct reference file via docs/references/Reference-files-index-routing.md. L1 (architecture-security.md) for arch/security decisions. L2 (coding-patterns.md) for writing/reviewing code. L3 (services-and-access.md) for infra/secrets/Docker/MCP/API keys. L3 (codebase-context.md) for shared modules/schemas/interfaces. Update reference files in the SAME commit as the infra/code change they document. If a reference file contradicts reality (stale secret, wrong endpoint), fix it BEFORE proceeding.
+
 # --- PROJECT-SPECIFIC RULES (add below) ---
 
-# {{CARL_DOMAIN_UPPER}}_RULE_9=
+# {{CARL_DOMAIN_UPPER}}_RULE_10=
