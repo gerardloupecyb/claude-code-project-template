@@ -15,8 +15,8 @@ Read-only, advisory, stateless. Never modify files. Never block the session.
 | Command | Mode | Checks |
 |---|---|---|
 | `/session-gate start` | START | 1, 2, 3, 4, 5, 8, 11, 12, 13, 14, 15 |
-| `/session-gate end` | END | 1, 4, 5, 6, 7, 8, 9, 10, 11, 15 |
-| `/session-gate` (no arg) | BOTH | All 15 |
+| `/session-gate end` | END | 1, 4, 5, 6, 7, 8, 9, 10, 11, 15, 16, 17, 18 |
+| `/session-gate` (no arg) | BOTH | All 18 |
 
 ---
 
@@ -35,7 +35,7 @@ Skip all remaining checks.
 
 ---
 
-## The 15 Checks
+## The 18 Checks
 
 Run each applicable check. Use `Read` and `Grep` tools on memory/MEMORY.md
 and `Bash` for git status. All checks are mechanical — no semantic judgment.
@@ -213,6 +213,45 @@ Report:
 - If no desyncs: skip (no report needed)
 
 Skip this check if either file doesn't exist or contains only template placeholders.
+
+### Check 16 — Relative dates in MEMORY.md (END) — informational
+
+Scan all content in memory/MEMORY.md for relative date expressions.
+Match these patterns (case-insensitive, word boundaries):
+
+- French: `hier`, `avant-hier`, `la semaine dernière`, `le mois dernier`,
+  `la semaine passée`, `le mois passé`
+- English: `yesterday`, `last week`, `last month`
+
+Exclude matches inside HTML comments (`<!-- ... -->`).
+Exclude matches in section headers (lines starting with `#`).
+Exclude the literal word "aujourd'hui" / "today" (acceptable in context of current session).
+
+- If matches found: `[--] MEMORY.md contains N relative date(s) — convert to absolute (YYYY-MM-DD)`
+  List each match with line context (truncated to 60 chars).
+- If no matches: skip (not applicable)
+
+### Check 17 — Duplicate "Ce qui a été fait" headings (END) — informational
+
+Find the section matching (case-insensitive) `Ce qui a été fait`.
+Extract all `###` headings within that section (stop at the next `## ` heading).
+
+Compare headings: two headings are duplicates if they match exactly
+(after trimming whitespace).
+
+- If duplicates found: `[--] "Ce qui a été fait" has duplicate entries: "{heading}" — merge them`
+- If no duplicates: skip (not applicable)
+
+### Check 18 — Open blockers reminder (END) — informational
+
+Find the section matching (case-insensitive) `Blocages et questions ouvertes`.
+Count lines matching `- [ ]` (unchecked items) within that section
+(stop at the next `## ` heading or `---`).
+
+Exclude lines containing `Aucun blocage` (template default).
+
+- If count > 0: `[--] N open blocker(s) remain — verify if still relevant after this session`
+- If count == 0: skip (not applicable)
 
 ---
 

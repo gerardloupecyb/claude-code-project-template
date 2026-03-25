@@ -16,6 +16,9 @@ Chaque tool call a un coût. Toujours utiliser le bon outil.
 | Investigation multi-fichiers | `Agent` retourne résumé 200 mots max | Lire tous les fichiers en main session |
 | MCP retournant > 20 lignes | Extraire champs utiles seulement | Ré-énoncer la réponse MCP complète |
 | Playwright browser_snapshot | TOUJOURS passer `filename` param | Sans filename = ~135K tokens |
+| Trouver une fonction/classe | `Grep` regex par langage → résultat ciblé | `Read` du fichier entier pour chercher |
+| Lire une seule fonction | `Grep` pour la ligne → `Read(offset, limit:30)` | `Read` du fichier complet |
+| Impact d'un changement | `Grep` refs → `Grep` importeurs (2 degrés max) | Lire manuellement chaque fichier |
 
 ## Coûts de référence
 
@@ -37,6 +40,7 @@ Chaque tool call a un coût. Toujours utiliser le bon outil.
 - Ne jamais faire `browser_snapshot()` sans `filename` param
 - Réponses prose : max ~500 mots sauf demande explicite
 - Plans, specs, blocs de code > 50 lignes : écrire dans un fichier, retourner le chemin
+- Ne jamais `Read` un fichier entier pour trouver une fonction — `Grep` d'abord, `Read(offset, limit)` ensuite
 
 ## Discipline MCP — limit parameters par outil
 
