@@ -203,23 +203,23 @@ Méthodologie de micro-exécution pour tâches complexes DANS une phase GSD. SPA
 
 | Déclencheur | Quand | Contexte |
 |-------------|-------|----------|
-| Automatique | `/gsd:execute-phase` invoque SPARC en interne | PLAN.md + AC passés automatiquement |
-| Manuel | `/sparc "description"` directement | SPARC demande le contexte à l'utilisateur |
+| Après /prepare-phase | L'utilisateur lance `/sparc` après le pre-flight GO | PLAN.md + AC dans .planning/ |
+| Standalone | `/sparc "description"` directement | SPARC demande le contexte à l'utilisateur |
 
-SPARC est invoqué explicitement par l'utilisateur (`/sparc "description"`) ou par `/prepare-phase` en séquence.
 **SPARC ne wrappe PAS /gsd:execute-phase** — c'est un skill template indépendant.
-Claude affiche "Exécution via SPARC (5 phases)" — l'utilisateur voit le flow.
+L'utilisateur invoque `/sparc` explicitement. Claude affiche "Exécution via SPARC (5 phases)".
 
 **Positionnement dans le workflow :**
 
 ```
-GSD macro :  discuss → plan → pre-flight → execute-phase
-                                              │ (wrappé par le template)
-SPARC micro :                                 ├── Phase 1 Spec
-                                              ├── Phase 2 Pseudo
-                                              ├── Phase 3 Arch (dual-agent)
-                                              ├── Phase 4 Refine (impl + tests)
-                                              └── Phase 5 Complete (dual review)
+GSD macro :  /prepare-phase → pre-flight GO
+                                │
+User :                          └── /sparc "description"
+                                      ├── Phase 1 Spec
+                                      ├── Phase 2 Pseudo
+                                      ├── Phase 3 Arch (dual-agent)
+                                      ├── Phase 4 Refine (impl + tests)
+                                      └── Phase 5 Complete (dual review)
 ```
 
 #### Phase 1 — Specification
