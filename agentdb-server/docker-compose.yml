@@ -1,0 +1,50 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.9.0
+    restart: unless-stopped
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - agentdb_internal
+
+  embedding:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.5
+    restart: unless-stopped
+    command: --model-id nomic-ai/nomic-embed-text-v1.5 --port 80
+    volumes:
+      - embedding_cache:/data
+    networks:
+      - agentdb_internal
+
+  agentdb-api:
+    build: ./agentdb-api
+    restart: unless-stopped
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      EMBEDDING_URL: http://embedding:80
+      AGENTDB_API_KEY: ${AGENTDB_API_KEY}
+      PORT: 3100
+    networks:
+      - agentdb_internal
+      - traefik_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.agentdb.rule=Host(`${AGENTDB_HOST}`)"
+      - "traefik.http.routers.agentdb.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.agentdb.tls=true"
+      - "traefik.http.routers.agentdb.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}"
+      - "traefik.http.services.agentdb.loadbalancer.server.port=3100"
+    depends_on:
+      - qdrant
+      - embedding
+
+volumes:
+  qdrant_data:
+  embedding_cache:
+
+networks:
+  agentdb_internal:
+    driver: bridge
+  traefik_net:
+    external: true
+    name: ${TRAEFIK_NETWORK:-n8n_default}
