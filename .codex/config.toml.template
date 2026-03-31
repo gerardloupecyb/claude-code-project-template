@@ -1,0 +1,26 @@
+# Codex Plugin Configuration — {{PROJECT_NAME}}
+# Copy to .codex/config.toml and fill in project-specific values.
+# .codex/config.toml is gitignored (contains project paths).
+# .codex/config.toml.template is versioned.
+
+[project]
+name = "{{PROJECT_NAME}}"
+
+[review]
+# Review gate: runs /codex:adversarial-review before allowing commits.
+# OFF by default — enable manually with /codex:setup --enable-review-gate
+review_gate_enabled = false
+
+# Base branch for adversarial review diff
+base_branch = "main"
+
+[sparc]
+# Codex is invoked in SPARC Phase 4 (Codex rescue option) and Phase 5 (dual review).
+# These are opt-in: user chooses in Phase 4, Phase 5 runs automatically.
+phase4_rescue_enabled = true
+phase5_adversarial_enabled = true
+
+[preflight]
+# Codex adversarial review runs automatically after the 5 Claude agents.
+# Non-blocking: if Codex unavailable, pre-flight proceeds normally.
+adversarial_enabled = true

@@ -11,6 +11,18 @@
         ]
       }
     ],
+    "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-agent.sh",
+            "timeout": 3000
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "matcher": "startup",

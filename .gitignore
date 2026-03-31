@@ -1,0 +1,24 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Claude workspace (session-scoped, not versioned)
+.claude/workspace/
+
+# AgentDB — local config (project-specific, not secrets but gitignored per plan)
+.agentdb/config.json
+.agentdb/*.sqlite
+.agentdb/sync-errors.log
+# agentdb-server VPS secrets
+agentdb-server/.env
+
+# Node.js — MCP client dependencies (installed locally per project)
+.claude/mcp/agentdb/node_modules/
+node_modules/
+
+# Codex config (project-local)
+.codex/config.toml
+
+# OS
+.DS_Store

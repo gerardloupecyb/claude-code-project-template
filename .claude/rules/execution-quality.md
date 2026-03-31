@@ -40,3 +40,20 @@ If no runtime impact: add one line — `No monitoring needed: [reason]`
 | About to attempt risky/uncertain changes | Would need a "WIP" commit message |
 
 **Heuristic:** "Can I write a commit message that describes a complete, valuable change? If yes, commit. If the message would be 'WIP', wait."
+
+## Decision Tracking
+
+When making an architectural decision during execution (choice of pattern, library,
+data model, API design, or rejection of an alternative), propose a DECISIONS.md
+entry BEFORE continuing implementation:
+
+| Field | Content |
+|-------|---------|
+| Decision | What was decided |
+| Alternatives | What was considered and rejected |
+| Rationale | Why this choice |
+| Scope | What this affects |
+| Date | Today |
+
+Skip for trivial decisions (variable naming, formatting, imports).
+Only track decisions a colleague joining next week would need to know.

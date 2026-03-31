@@ -12,10 +12,14 @@
 - CARL                   → règles dynamiques selon contexte (domaine `{{CARL_DOMAIN}}`)
 - Discipline outils      → voir `.claude/rules/tool-routing.md`
 - Quality checks exécution → voir `.claude/rules/execution-quality.md`
+- SPARC                  → micro-exécution dans une phase GSD
+- Swarm patterns         → conventions multi-agent, voir `.claude/rules/swarm-patterns.md`
+- Codex plugin           → cross-model review + délégation implémentation
+- AgentDB                → mémoire sémantique self-hosted (remplace Supermemory)
 
 ## MCP actifs
 
-- Supermemory            → mémoire cross-projet, cross-session
+- AgentDB                → mémoire sémantique self-hosted
 - Context7               → documentation librairies en temps réel
 - {{MCP_EXTRA_1}}
 - {{MCP_EXTRA_2}}
@@ -35,9 +39,9 @@
 | LESSONS.md | Cache chaud des leçons apprises (cap 50), format quand/faire/parce que | `/lesson` | Après chaque fix non-trivial |
 | STATE.md | Position technique : phase active, wave courante, tasks complétées, milestone | GSD (automatique) | Automatiquement par GSD à chaque commande |
 | .carl/{{CARL_DOMAIN}} | Règles critiques CARL, injectées automatiquement | `/lesson` (promotion) | Quand leçon critique ou répétée |
-| Supermemory (projet) | Archive principale des leçons, cherchable via `recall` | `/lesson migrate` | Quand LESSONS.md atteint le cap |
+| AgentDB (projet) | Archive principale des leçons, cherchable via `agentdb_search` | `/lesson migrate` | Quand LESSONS.md atteint le cap |
 | docs/solutions/ | Backup local git des leçons migrées + patterns détaillés | `/lesson migrate` | Copie locale lors de la migration |
-| .claude/integrations.md | Outils externes actifs (Linear, GSD, Supermemory) | Setup manuel | Au setup du projet ou changement d'outils |
+| .claude/integrations.md | Outils externes actifs (Linear, GSD, AgentDB) | Setup manuel | Au setup du projet ou changement d'outils |
 
 ### Cohérence mémoire — `/memory-consolidate`
 
@@ -64,7 +68,7 @@ Ces fichiers coexistent sans se chevaucher :
 
 - **LESSONS.md** = le cache chaud des leçons. Format quand/faire/parce que, cap 50.
   Géré par `/lesson`. Lu automatiquement à chaque session.
-  Ne contient PAS d'état de session (→ MEMORY.md) ni de patterns détaillés (→ Supermemory/docs/solutions/).
+  Ne contient PAS d'état de session (→ MEMORY.md) ni de patterns détaillés (→ AgentDB/docs/solutions/).
 
 En début de session, lire les trois : MEMORY.md pour le contexte, LESSONS.md pour les leçons, STATE.md pour la position.
 
@@ -72,27 +76,29 @@ En début de session, lire les trois : MEMORY.md pour le contexte, LESSONS.md po
 
 ## Workflows — choisir le bon parcours
 
-### Parcours rapide — tâche claire, scope connu
+### Parcours phase GSD — feature ou fix dans une phase planifiée
 
 ```
-/gsd:plan-phase → /pre-flight → /gsd:execute-phase
+/prepare-phase {N}
+→ /sparc "description de la tâche"
 → closure → /lesson → /gsd:verify-work → /ce:review
 ```
 
-### Parcours standard — feature à planifier
+### Parcours tâche isolée — hors phase GSD
 
 ```
 /ce:brainstorm (si requirements flous)
-→ /gsd:discuss-phase (optionnel — capturer les décisions)
-→ /gsd:plan-phase → /pre-flight → /gsd:execute-phase
-→ closure → /lesson → /gsd:verify-work → /ce:review → /ce:compound
+→ /ce:plan
+→ /ce:work
+→ closure → /lesson → /ce:review → /ce:compound
 ```
 
-### Parcours complet — grosse feature multi-phases
+### Parcours grosse feature — multi-phases
 
 ```
 /ce:brainstorm → /ce:plan
-→ /gsd:discuss-phase → /gsd:plan-phase → /pre-flight → /gsd:execute-phase
+→ /prepare-phase {N} (pour chaque phase)
+→ /sparc "description"
 → closure → /lesson → /gsd:verify-work → /ce:review → /ce:compound
 ```
 
@@ -129,16 +135,15 @@ Closure n'est pas un skill — c'est une checklist mécanique :
 ```
 Phase amont (requirements → plan) :
   /ce:brainstorm ou /gsd:new-project
-  → /gsd:discuss-phase (capturer les décisions)
-  → /gsd:plan-phase (research + plan + verify loop)
-  → /pre-flight (4 agents parallèles : archi, sécu, perf, flows)
-     GO        → /gsd:execute-phase
+  → /prepare-phase {N}
+     (enchaîne : discuss-phase → plan-phase → deepen? → pre-flight)
+     GO        → /sparc "description de la tâche"
      COND. GO  → user confirme ou corrige
      NO-GO     → corriger le plan, re-run /gsd:plan-phase
 
 Phase exécution :
-  /gsd:execute-phase (waves parallèles, commits atomiques)
-    → lire ## Boundaries du PLAN.md avant la première wave
+  /sparc "description" (spec → pseudo → archi+critic → refinement → completion)
+    → lire ## Boundaries du PLAN.md avant de commencer
     → quality checks auto-injectés via .claude/rules/execution-quality.md
   → closure (checklist ci-dessus — écrire SUMMARY.md, MAJ MEMORY.md)
   → /lesson (si fix non-trivial découvert)
@@ -146,7 +151,7 @@ Phase exécution :
   → /ce:review (15 agents review spécialisés)
 
 Phase capitalisation :
-  /ce:compound → flywheel (classifier → documenter → CARL → Supermemory)
+  /ce:compound → flywheel (classifier → documenter → CARL → AgentDB)
 ```
 
 ### Distinction `.planning/` vs `docs/`
@@ -193,7 +198,7 @@ après compaction, resume et /clear. Lecture manuelle = fallback si hook absent.
 2. LESSONS.md → leçons apprises, à appliquer immédiatement (auto-injecté par hook)
 3. CARL charge `{{CARL_DOMAIN}}` automatiquement selon contexte détecté
 
-Ne pas charger Supermemory ni docs/solutions/ au démarrage —
+Ne pas charger AgentDB ni docs/solutions/ au démarrage —
 ces sources sont consultées uniquement lors de la planification (voir Règle de consultation).
 
 Ne jamais commencer à planifier ou coder avant que MEMORY.md et LESSONS.md soient en contexte.
@@ -267,12 +272,12 @@ Ce bloc va dans `docs/plans/` ou en commentaire dans le code si court.
 
 ---
 
-### Règle #5 — Supermemory : archive principale par projet
+### Règle #5 — AgentDB : archive principale par projet
 
-Supermemory sert de **source de vérité pour les leçons archivées**, organisées par projet.
+AgentDB sert de **source de vérité pour les leçons archivées**, organisées par projet.
 Les leçons y arrivent via `/lesson migrate` (quand LESSONS.md atteint le cap 50).
 
-Deux types de contenu dans Supermemory :
+Deux types de contenu dans AgentDB :
 
 **Leçons projet** (via `/lesson migrate`) :
 ```
@@ -304,8 +309,8 @@ Tags standards :
 - `[convention:workflow]`     → façon de travailler à retenir
 - `[context:preference]`      → préférence personnelle sur comment travailler
 
-Ne pas sauvegarder directement dans Supermemory — passer par `/lesson` (rapide) ou `/ce:compound` (complet).
-Ne pas stocker de code ou credentials dans Supermemory.
+Ne pas sauvegarder directement dans AgentDB — passer par `/lesson` (rapide) ou `/ce:compound` (complet).
+Ne pas stocker de code ou credentials dans AgentDB.
 
 ---
 
@@ -337,9 +342,9 @@ Ne jamais :
 
 - Commencer une session sans lire MEMORY.md et LESSONS.md
 - Continuer une session dont le contexte est clairement dégradé
-- Sauvegarder dans Supermemory sans tag structuré
-- Sauvegarder directement dans Supermemory — passer par `/lesson migrate` ou `/ce:compound`
-- Stocker des credentials ou données clients dans MEMORY.md, LESSONS.md, docs/ ou Supermemory
+- Sauvegarder dans AgentDB sans tag structuré
+- Sauvegarder directement dans AgentDB — passer par `/lesson migrate` ou `/ce:compound`
+- Stocker des credentials ou données clients dans MEMORY.md, LESSONS.md, docs/ ou AgentDB
 - Mélanger l'état courant (MEMORY.md) avec les leçons (LESSONS.md)
 - Modifier un domaine CARL sans que la leçon ait été capturée d'abord dans LESSONS.md
 - Créer un domaine CARL avec moins de 3 règles distinctes
@@ -394,7 +399,7 @@ le signaler comme déviation dans MEMORY.md avant de procéder.
 Après un fix non-trivial, Claude propose une leçon au format quand/faire/parce que.
 L'utilisateur confirme (oui/non). La leçon va dans LESSONS.md.
 Si critique ou répétée → promotion CARL proposée automatiquement.
-Si cap 50 atteint → `/lesson migrate` vers Supermemory + docs/solutions/.
+Si cap 50 atteint → `/lesson migrate` vers AgentDB + docs/solutions/.
 
 ### Chemin complet — `/ce:compound` (patterns lourds)
 
@@ -403,7 +408,7 @@ Produit un fichier complet dans docs/solutions/.
 
 ## Flywheel — instructions post /ce:compound
 
-Voir `.claude/rules/flywheel-workflow.md` pour le workflow complet (étapes 1-5 : classification, documentation, CARL, Supermemory, commit).
+Voir `.claude/rules/flywheel-workflow.md` pour le workflow complet (étapes 1-5 : classification, documentation, CARL, AgentDB, commit).
 
 ---
 
@@ -414,8 +419,8 @@ Claude doit compléter le contexte de session (Règle #1) avec les sources de pl
 
 1. LESSONS.md est déjà chargé (Règle #1) → leçons récentes, applicables immédiatement
 2. Lire DECISIONS.md → décisions actives qui peuvent contraindre le plan
-3. `recall` Supermemory avec les mots-clés du domaine → leçons archivées + cross-projet
-4. Si besoin de plus de détail OU Supermemory indisponible :
+3. `agentdb_search` avec les mots-clés du domaine → leçons archivées + cross-projet
+4. Si besoin de plus de détail OU AgentDB indisponible :
    lancer un agent `Explore` sur `docs/solutions/` → patterns complets avec code
 5. Intégrer tout ça dans le plan → ne pas redécouvrir
 
@@ -460,7 +465,7 @@ Lors de `/ce:compound` :
 | `memory/MEMORY.md` | Toutes les sessions | Toutes les sessions, `/session-gate`, `/memory-consolidate` |
 | `DECISIONS.md` | Closure protocol | `/memory-consolidate` (cohérence), planification |
 | `STATE.md` | GSD (position technique) | GSD, `/pre-flight` |
-| Supermemory (projet) | `/lesson migrate` | `recall` à la planification |
+| AgentDB (projet) | `/lesson migrate` | `agentdb_search` à la planification |
 
 ---
 
@@ -468,7 +473,7 @@ Lors de `/ce:compound` :
 
 - Commencer sans lire MEMORY.md et LESSONS.md
 - Modifier un domaine CARL sans leçon capturée d'abord dans LESSONS.md
-- Sauvegarder directement dans Supermemory (passer par `/lesson migrate` ou `/ce:compound`)
+- Sauvegarder directement dans AgentDB (passer par `/lesson migrate` ou `/ce:compound`)
 - Documenter du code standard et trivial
 - Dupliquer une leçon existante dans LESSONS.md au lieu de mettre à jour
 - Stocker des données sensibles dans MEMORY.md, LESSONS.md ou docs/solutions/
@@ -479,7 +484,7 @@ Lors de `/ce:compound` :
 
 ## Domaines actifs
 
-| Domaine | docs/solutions/ | Domaine CARL | Tag Supermemory |
-|---------|----------------|--------------|-----------------|
+| Domaine | docs/solutions/ | Domaine CARL | Tag AgentDB |
+|---------|----------------|--------------|-------------|
 | {{DOMAIN_1}} | {{DOMAIN_1_FOLDER}}/ | {{CARL_DOMAIN}} | [skill:{{DOMAIN_1_TAG}}] |
 | {{DOMAIN_2}} | {{DOMAIN_2_FOLDER}}/ | {{CARL_DOMAIN}} | [skill:{{DOMAIN_2_TAG}}] |

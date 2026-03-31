@@ -1,0 +1,36 @@
+# Bounded Contexts — {{PROJECT_NAME}}
+
+> Defines project domains and their boundaries.
+> Referenced by pre-flight (Agent 5 Critic) and SPARC (Phase 3 Architecture).
+> Update when a new domain emerges or a boundary changes.
+> If not filled in, agents ignore this file (no content = no constraint).
+
+---
+
+## Contexts
+
+### {{CONTEXT_1}}
+
+- **Responsibility:** {{description}}
+- **Core entities:** {{list}}
+- **Exposed interfaces:** {{APIs, events, services}}
+
+### {{CONTEXT_2}}
+
+- **Responsibility:** {{description}}
+- **Core entities:** {{list}}
+- **Exposed interfaces:** {{APIs, events, services}}
+
+---
+
+## Boundary Rules
+
+- A context MUST NOT directly access entities from another context
+- Cross-context communication via: {{events / APIs / service objects}}
+- If a violation is detected: refactor the code or document an explicit exception here
+
+## Known Exceptions
+
+| Violation | Justification | Tracked since |
+|-----------|---------------|---------------|
+| — | — | — |

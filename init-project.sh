@@ -70,6 +70,8 @@ mkdir -p "${PROJECT_DIR}/.claude/skills/project-sync"
 mkdir -p "${PROJECT_DIR}/.claude/skills/lesson"
 mkdir -p "${PROJECT_DIR}/.claude/skills/context-checkpoint"
 mkdir -p "${PROJECT_DIR}/.claude/skills/project-bootstrap"
+mkdir -p "${PROJECT_DIR}/.claude/skills/memory-consolidate"
+mkdir -p "${PROJECT_DIR}/.claude/skills/template-sync"
 mkdir -p "${PROJECT_DIR}/.claude/hooks"
 mkdir -p "${PROJECT_DIR}/.claude/rules"
 mkdir -p "${PROJECT_DIR}/.carl"
@@ -77,8 +79,16 @@ mkdir -p "${PROJECT_DIR}/.planning"
 mkdir -p "${PROJECT_DIR}/docs/solutions"
 mkdir -p "${PROJECT_DIR}/docs/plans"
 mkdir -p "${PROJECT_DIR}/docs/brainstorms"
+mkdir -p "${PROJECT_DIR}/docs/architecture"
 mkdir -p "${PROJECT_DIR}/memory"
-mkdir -p "${PROJECT_DIR}/todos"
+mkdir -p "${PROJECT_DIR}/todos/pending"
+mkdir -p "${PROJECT_DIR}/todos/complete"
+mkdir -p "${PROJECT_DIR}/todos/done"
+mkdir -p "${PROJECT_DIR}/.claude/skills/sparc"
+mkdir -p "${PROJECT_DIR}/.claude/skills/todo"
+mkdir -p "${PROJECT_DIR}/.claude/skills/prepare-phase"
+mkdir -p "${PROJECT_DIR}/.codex"
+mkdir -p "${PROJECT_DIR}/.claude/workspace"
 mkdir -p "${PROJECT_DIR}/src"
 
 # Copy skills (universal, no modifications needed)
@@ -97,6 +107,16 @@ cp "${TEMPLATE_DIR}/.claude/skills/context-checkpoint/SKILL.md" \
    "${PROJECT_DIR}/.claude/skills/context-checkpoint/SKILL.md"
 cp "${TEMPLATE_DIR}/.claude/skills/project-bootstrap/SKILL.md" \
    "${PROJECT_DIR}/.claude/skills/project-bootstrap/SKILL.md"
+cp "${TEMPLATE_DIR}/.claude/skills/memory-consolidate/SKILL.md" \
+   "${PROJECT_DIR}/.claude/skills/memory-consolidate/SKILL.md"
+cp "${TEMPLATE_DIR}/.claude/skills/template-sync/SKILL.md" \
+   "${PROJECT_DIR}/.claude/skills/template-sync/SKILL.md"
+cp "${TEMPLATE_DIR}/.claude/skills/sparc/SKILL.md" \
+   "${PROJECT_DIR}/.claude/skills/sparc/SKILL.md"
+cp "${TEMPLATE_DIR}/.claude/skills/todo/SKILL.md" \
+   "${PROJECT_DIR}/.claude/skills/todo/SKILL.md"
+cp "${TEMPLATE_DIR}/.claude/skills/prepare-phase/SKILL.md" \
+   "${PROJECT_DIR}/.claude/skills/prepare-phase/SKILL.md"
 
 # Copy hook scripts
 echo "→ Installing hooks..."
@@ -104,6 +124,8 @@ cp "${TEMPLATE_DIR}/.claude/hooks/pre-compact.sh" \
    "${PROJECT_DIR}/.claude/hooks/pre-compact.sh"
 cp "${TEMPLATE_DIR}/.claude/hooks/session-start.sh" \
    "${PROJECT_DIR}/.claude/hooks/session-start.sh"
+cp "${TEMPLATE_DIR}/.claude/hooks/pre-agent.sh" \
+   "${PROJECT_DIR}/.claude/hooks/pre-agent.sh"
 chmod +x "${PROJECT_DIR}/.claude/hooks/"*.sh
 
 # Copy rules
@@ -112,11 +134,29 @@ cp "${TEMPLATE_DIR}/.claude/rules/tool-routing.md" \
    "${PROJECT_DIR}/.claude/rules/tool-routing.md"
 cp "${TEMPLATE_DIR}/.claude/rules/flywheel-workflow.md" \
    "${PROJECT_DIR}/.claude/rules/flywheel-workflow.md"
+cp "${TEMPLATE_DIR}/.claude/rules/execution-quality.md" \
+   "${PROJECT_DIR}/.claude/rules/execution-quality.md"
+cp "${TEMPLATE_DIR}/.claude/rules/swarm-patterns.md" \
+   "${PROJECT_DIR}/.claude/rules/swarm-patterns.md"
 
 # Create settings.json with hook configuration
 echo "→ Creating .claude/settings.json..."
 cp "${TEMPLATE_DIR}/.claude/settings.json" \
    "${PROJECT_DIR}/.claude/settings.json"
+
+# Copy .gitignore
+echo "→ Creating .gitignore..."
+cp "${TEMPLATE_DIR}/.gitignore" "${PROJECT_DIR}/.gitignore"
+
+# Copy architecture template
+echo "→ Installing architecture templates..."
+cp "${TEMPLATE_DIR}/docs/architecture/contexts.md.template" \
+   "${PROJECT_DIR}/docs/architecture/contexts.md"
+
+# Copy Codex config template
+echo "→ Installing Codex config template..."
+cp "${TEMPLATE_DIR}/.codex/config.toml.template" \
+   "${PROJECT_DIR}/.codex/config.toml"
 
 # Generate CLAUDE.md from template
 echo "→ Generating CLAUDE.md..."
@@ -171,7 +211,9 @@ touch "${PROJECT_DIR}/.planning/.gitkeep"
 touch "${PROJECT_DIR}/docs/solutions/.gitkeep"
 touch "${PROJECT_DIR}/docs/plans/.gitkeep"
 touch "${PROJECT_DIR}/docs/brainstorms/.gitkeep"
-touch "${PROJECT_DIR}/todos/.gitkeep"
+touch "${PROJECT_DIR}/todos/pending/.gitkeep"
+touch "${PROJECT_DIR}/todos/complete/.gitkeep"
+touch "${PROJECT_DIR}/todos/done/.gitkeep"
 touch "${PROJECT_DIR}/src/.gitkeep"
 
 echo ""
@@ -182,21 +224,32 @@ echo "    • CLAUDE.md              (edit: Stack, MCP, Skills, Domaines)"
 echo "    • memory/MEMORY.md       (edit: Contexte, Stack, Liens)"
 echo "    • LESSONS.md             (ready to use — capture via /lesson)"
 echo "    • DECISIONS.md           (ready to use — ADR register for architectural decisions)"
-echo "    • .claude/skills/         (7 skills: context-manager, pre-flight, session-gate,"
-echo "                               project-sync, lesson, context-checkpoint, project-bootstrap)"
-echo "    • .claude/hooks/          (pre-compact.sh + session-start.sh)"
-echo "    • .claude/rules/          (tool-routing.md + flywheel-workflow.md)"
+echo "    • .claude/skills/         (13 skills: context-manager, pre-flight, session-gate,"
+echo "                               project-sync, lesson, context-checkpoint, project-bootstrap,"
+echo "                               memory-consolidate, template-sync, sparc, todo, prepare-phase)"
+echo "    • .claude/hooks/          (pre-compact.sh + session-start.sh + pre-agent.sh)"
+echo "    • .claude/rules/          (tool-routing.md + flywheel-workflow.md +"
+echo "                               execution-quality.md + swarm-patterns.md)"
 echo "    • .claude/settings.json   (hook configuration)"
-echo "    • .claude/integrations.md (edit: set linear/gsd/supermemory true/false)"
+echo "    • .claude/integrations.md (edit: set linear/gsd/agentdb true/false)"
+echo "    • .gitignore              (workspace/, agentdb, codex config excluded)"
+echo "    • docs/architecture/      (contexts.md — fill bounded contexts)"
+echo "    • .codex/config.toml      (Codex integration — review gates + SPARC phases)"
+echo "    • todos/                  (pending/ complete/ done/ — managed via /todo)"
 echo "    • .carl/manifest         (ready to use)"
 echo "    • .carl/${CARL_DOMAIN}   (add project-specific rules)"
-echo "    • docs/ + todos/ + src/  (empty, ready)"
+echo "    • docs/ + src/           (empty, ready)"
 echo ""
 echo "  Next steps:"
 echo "    1. cd \"${PROJECT_DIR}\""
 echo "    2. Replace remaining {{PLACEHOLDER}} values in CLAUDE.md and MEMORY.md"
 echo "    3. Add project-specific CARL rules in .carl/${CARL_DOMAIN}"
 echo "    4. Create docs/solutions/ subdirectories for your domains"
-echo "    5. Add project-specific skills in .claude/skills/"
-echo "    6. Run /project-bootstrap to inject cross-project lessons from Supermemory"
+echo "    5. Fill in docs/architecture/contexts.md with your bounded contexts"
+echo "    6. Run /project-bootstrap to inject cross-project lessons from AgentDB"
+echo ""
+echo "  Codex integration (manual install required):"
+echo "    npm install -g @openai/codex   # or: brew install codex"
+echo "    codex login"
+echo "    Review .codex/config.toml to enable/disable review gates"
 echo ""

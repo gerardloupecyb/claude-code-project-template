@@ -41,9 +41,9 @@ If no plan files found, inform the user and suggest running `/gsd:plan-phase` fi
 
 ---
 
-## Execution — launch 4 agents in parallel
+## Execution — 4 parallel agents + 1 sequential critic
 
-Launch ALL four agents simultaneously using the Agent tool. Each agent
+Launch Agents 1-4 simultaneously using the Agent tool. Each agent
 receives the plan content + requirements + context as input.
 
 ### Agent 1: Architecture Strategist
@@ -98,6 +98,25 @@ Review the plan for:
 - Incomplete state transitions
 - Flows that dead-end without user feedback
 
+### Agent 5: Architecture Critic (sequential — waits for Agent 1 output)
+
+```
+role: critic (ref: .claude/rules/swarm-patterns.md)
+model: Opus (tier 3)
+```
+
+Receives: Agent 1 (Architecture Strategist) output + original plan.
+Skip if plan is trivial (Agent 1 returned no findings).
+
+Mission: actively challenge Agent 1's proposals:
+- Are alternatives explored?
+- Is there over-engineering?
+- Are tradeoffs explicit?
+- Are hidden costs identified?
+- Is this the simplest design that satisfies the ACs?
+
+If `docs/architecture/contexts.md` exists: verify the plan respects bounded contexts.
+
 ---
 
 ## Output — Pre-Flight Report
@@ -135,6 +154,13 @@ After all 4 agents complete, synthesize their findings into a structured report.
 - {finding 1 — severity: LOW/MEDIUM/HIGH/CRITICAL}
 - {finding 2}
 
+### Architecture Challenge
+- {Agent 1 proposal} → {Critic challenge} → {Resolution}
+- {Agent 1 proposal} → {Critic challenge} → {Resolution}
+
+### Design Verdict
+{Summary: which design retained, why, which critic reservations are valid}
+
 ## Verdict Rationale
 
 {Why GO/CONDITIONAL/NO-GO}
@@ -169,6 +195,26 @@ After all 4 agents complete, synthesize their findings into a structured report.
 
 Save the report to `.planning/milestones/{milestone}/{phase}-PREFLIGHT.md`
 (or `.planning/{phase}-PREFLIGHT.md` if no milestone structure exists).
+
+---
+
+## Codex Cross-Model Challenge (automatic, non-blocking)
+
+After the 5 agents + synthesis, launch automatically:
+
+```bash
+/codex:adversarial-review --background --base main
+```
+
+The Codex review challenges the **plan** (not code — none exists yet).
+Integrate findings in the report under a "Cross-Model Challenge" section:
+
+```markdown
+### Cross-Model Challenge
+{Codex findings on plan design, tradeoffs, risks}
+```
+
+If Codex is not installed: skip silently. Never block pre-flight on Codex availability.
 
 ---
 

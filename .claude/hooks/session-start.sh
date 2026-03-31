@@ -6,6 +6,11 @@
 
 trap 'exit 0' EXIT
 
+# Reset agent spawn log (for session-gate Check 19)
+PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+mkdir -p "${PROJECT_ROOT}/.claude/workspace" 2>/dev/null
+> "${PROJECT_ROOT}/.claude/workspace/agent-log.txt" 2>/dev/null
+
 # Read source from stdin JSON
 SOURCE=$(read -t 2 STDIN_DATA 2>/dev/null && echo "$STDIN_DATA" | python3 -c "import json,sys; print(json.load(sys.stdin).get('source','unknown'))" 2>/dev/null || echo "unknown")
 
