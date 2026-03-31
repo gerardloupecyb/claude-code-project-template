@@ -39,6 +39,16 @@
 | docs/solutions/ | Backup local git des leçons migrées + patterns détaillés | `/lesson migrate` | Copie locale lors de la migration |
 | .claude/integrations.md | Outils externes actifs (Linear, GSD, Supermemory) | Setup manuel | Au setup du projet ou changement d'outils |
 
+### Cohérence mémoire — `/memory-consolidate`
+
+`/memory-consolidate` vérifie la cohérence **sémantique** entre les fichiers mémoire (MEMORY.md ↔ DECISIONS.md ↔ LESSONS.md ↔ codebase).
+Complément de `/session-gate` qui vérifie la structure. Read-only, advisory.
+
+- `/memory-consolidate quick` : dates relatives, doublons, blocages stale (aussi dans session-gate END checks 14-16)
+- `/memory-consolidate` : full — ajoute stack drift, LESSONS.md dedup/staleness, cohérence décisions, patterns
+
+Quand lancer : avant reprise après longue pause, avant milestone, quand LESSONS.md approche du cap.
+
 ### Séparation des fichiers d'état
 
 Ces fichiers coexistent sans se chevaucher :
@@ -100,17 +110,19 @@ Closure n'est pas un skill — c'est une checklist mécanique :
    - Planifié vs réalisé (ce qui a divergé du plan et pourquoi)
    - Décisions prises pendant l'exécution
    - Items différés (ce qui n'a pas été fait et pourquoi)
-2. Mettre à jour `memory/MEMORY.md` (Règle #2)
-3. Logger les déviations dans la table "Déviations d'exécution" de MEMORY.md
-4. Proposer `/lesson` si un fix non-trivial a été résolu
-5. Lancer les tests existants si un test runner est configuré (ex: `npm test`, `pytest`, `rspec`). Si des tests échouent, corriger AVANT de passer à `/gsd:verify-work`.
-6. Quality score — ajouter dans le SUMMARY.md de la phase :
+2. Lancer `/memory-consolidate quick` (ou s'appuyer sur session-gate END checks 14-16) pour identifier
+   les incohérences à corriger pendant la mise à jour de MEMORY.md
+3. Mettre à jour `memory/MEMORY.md` (Règle #2) — intégrer les findings de `/memory-consolidate quick`
+4. Logger les déviations dans la table "Déviations d'exécution" de MEMORY.md
+5. Proposer `/lesson` si un fix non-trivial a été résolu
+6. Lancer les tests existants si un test runner est configuré (ex: `npm test`, `pytest`, `rspec`). Si des tests échouent, corriger AVANT de passer à `/gsd:verify-work`.
+7. Quality score — ajouter dans le SUMMARY.md de la phase :
    - AC coverage: X/Y AC satisfaits
    - Deviations: N déviations loguées pendant l'exécution
    - Verdict: CLEAN (0 déviations ET tous les AC satisfaits) | ROUGH (tout le reste)
    - Si ROUGH : proposer `/lesson` avec focus "pourquoi le plan n'a pas tenu"
-     (remplace la proposition `/lesson` du step 4 pour cette session)
-7. Si des décisions ont été prises pendant l'exécution et ne sont pas dans DECISIONS.md : proposer l'ajout au format DEC-NNN
+     (remplace la proposition `/lesson` du step 5 pour cette session)
+8. Si des décisions ont été prises pendant l'exécution et ne sont pas dans DECISIONS.md : proposer l'ajout au format DEC-NNN
 
 ### Workflow détaillé par phase de projet
 
@@ -142,6 +154,21 @@ Phase capitalisation :
 - `.planning/` = plans GSD **éphémères** (par phase, par wave). Géré par GSD automatiquement.
 - `docs/plans/` = plans CE **persistants** (stratégiques, cross-phases). Output de `/ce:plan`.
 - `docs/brainstorms/` = brainstorms CE **persistants**. Output de `/ce:brainstorm`.
+
+### Métadonnées documentaires
+
+Tous les documents persistants dans `docs/` doivent commencer par un frontmatter YAML.
+
+Conventions par dossier :
+- `docs/plans/` → frontmatter obligatoire avec `title`, `type`, `status`, `date`
+- `docs/brainstorms/` → frontmatter obligatoire avec `date`, `topic`
+- `docs/architecture/` → frontmatter obligatoire avec `title`, `type`, `status`, `date`
+
+Règles :
+- Le frontmatter ouvre et ferme avec `---`
+- Les dates sont en format `YYYY-MM-DD`
+- `docs/architecture/` utilise `status: current` ou `status: target`
+- Si un document d'architecture décrit un état cible non encore livré, le préciser aussi dans le contenu
 
 ---
 
@@ -180,6 +207,7 @@ Supprimer les entrées plus anciennes (l'historique complet reste dans Git).
 Si la session a résolu un problème non-trivial → proposer `/lesson` pour capturer la leçon.
 Si un pattern lourd nécessite du détail (code, anti-patterns) → déclencher le flywheel complet (`/ce:compound`).
 Commiter MEMORY.md et LESSONS.md avec le code dans le même commit.
+Optionnellement, lancer `/memory-consolidate quick` avant la mise à jour pour identifier dates relatives, doublons et blocages stale.
 Optionnellement, lancer `/session-gate end` avant le commit pour vérifier que MEMORY.md est à jour.
 Optionnellement, lancer `/project-sync` pour synchroniser l'état avec les outils externes (Linear, GSD).
 
@@ -419,7 +447,8 @@ Lors de `/ce:compound` :
 | `.planning/{phase}-PREFLIGHT.md` | `/pre-flight` | `/ce:compound` |
 | `.planning/{phase}-VERIFICATION.md` | `/gsd:verify-work` | `/ce:review` |
 | `.planning/{phase}-{N}-SUMMARY.md` | `/gsd:execute-phase` + closure | `/ce:review`, `/ce:compound` |
-| `memory/MEMORY.md` | Toutes les sessions | Toutes les sessions, `/session-gate` |
+| `memory/MEMORY.md` | Toutes les sessions | Toutes les sessions, `/session-gate`, `/memory-consolidate` |
+| `DECISIONS.md` | Closure protocol | `/memory-consolidate` (cohérence), planification |
 | `STATE.md` | GSD (position technique) | GSD, `/pre-flight` |
 | Supermemory (projet) | `/lesson migrate` | `recall` à la planification |
 

@@ -15,8 +15,8 @@ Read-only, advisory, stateless. Never modify files. Never block the session.
 | Command | Mode | Checks |
 |---|---|---|
 | `/session-gate start` | START | 1, 2, 3, 4, 5, 8, 11, 12, 13 |
-| `/session-gate end` | END | 1, 4, 5, 6, 7, 8, 9, 10, 11 |
-| `/session-gate` (no arg) | BOTH | All 13 |
+| `/session-gate end` | END | 1, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17 |
+| `/session-gate` (no arg) | BOTH | All 17 |
 
 ---
 
@@ -35,7 +35,7 @@ Skip all remaining checks.
 
 ---
 
-## The 13 Checks
+## The 17 Checks
 
 Run each applicable check. Use `Read` and `Grep` tools on memory/MEMORY.md
 and `Bash` for git status. All checks are mechanical — no semantic judgment.
@@ -175,6 +175,70 @@ Extract the most recent date.
 - If <= 14 days or no entries: skip (not applicable)
 
 Skip this check if Check 8 failed (file missing or empty).
+
+### Check 14 — Relative dates in MEMORY.md (END) — informational
+
+Scan all content in memory/MEMORY.md for relative date expressions.
+Match these patterns (case-insensitive, word boundaries):
+
+- French: `hier`, `avant-hier`, `la semaine dernière`, `le mois dernier`,
+  `la semaine passée`, `le mois passé`
+- English: `yesterday`, `last week`, `last month`
+
+Exclude matches inside HTML comments (`<!-- ... -->`).
+Exclude matches in section headers (lines starting with `#`).
+Exclude the literal word "aujourd'hui" / "today" (acceptable in context of current session).
+
+- If matches found: `[--] MEMORY.md contains N relative date(s) — convert to absolute (YYYY-MM-DD)`
+  List each match with line context (truncated to 60 chars).
+- If no matches: skip (not applicable)
+
+### Check 15 — Duplicate "Ce qui a été fait" headings (END) — informational
+
+Find the section matching (case-insensitive) `Ce qui a été fait`.
+Extract all `###` headings within that section (stop at the next `## ` heading).
+
+Compare headings: two headings are duplicates if they match exactly
+(after trimming whitespace).
+
+- If duplicates found: `[--] "Ce qui a été fait" has duplicate entries: "{heading}" — merge them`
+- If no duplicates: skip (not applicable)
+
+### Check 16 — Open blockers reminder (END) — informational
+
+Find the section matching (case-insensitive) `Blocages et questions ouvertes`.
+Count lines matching `- [ ]` (unchecked items) within that section
+(stop at the next `## ` heading or `---`).
+
+Exclude lines containing `Aucun blocage` (template default).
+
+- If count > 0: `[--] N open blocker(s) remain — verify if still relevant after this session`
+- If count == 0: skip (not applicable)
+
+### Check 17 — Persistent docs frontmatter (END) — informational
+
+Run `git diff --name-only HEAD` and collect modified files matching:
+- `docs/plans/*.md`
+- `docs/brainstorms/*.md`
+- `docs/architecture/*.md`
+
+If none were modified: skip (not applicable).
+
+For each modified file:
+1. Verify the file starts with a frontmatter block:
+   - first line is `---`
+   - a closing `---` exists before the first markdown heading
+2. Verify required keys by path:
+   - `docs/plans/*.md` → `title:`, `type:`, `status:`, `date:`
+   - `docs/brainstorms/*.md` → `date:`, `topic:`
+   - `docs/architecture/*.md` → `title:`, `type:`, `status:`, `date:`
+
+Output:
+- `[ok] <file> has valid frontmatter`
+- `[!!] <file> missing frontmatter`
+- `[!!] <file> missing required key(s): <list>`
+
+This check is mechanical only. Do not validate semantic quality.
 
 ---
 

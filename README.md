@@ -372,6 +372,12 @@ Ne pas melanger les deux : CARL = injection automatique, skills = invocation exp
 - Frontmatter YAML obligatoire avec `name` et `description`
 - Description = triggers pour le chargement automatique
 
+### Nommage docs persistants
+
+- `docs/plans/*.md` → frontmatter YAML obligatoire : `title`, `type`, `status`, `date`
+- `docs/brainstorms/*.md` → frontmatter YAML obligatoire : `date`, `topic`
+- `docs/architecture/*.md` → frontmatter YAML obligatoire : `title`, `type`, `status`, `date`
+
 ## Credits
 
 - [CARL](https://github.com/ChristopherKahler/carl) par Christopher Kahler — injection dynamique de regles
