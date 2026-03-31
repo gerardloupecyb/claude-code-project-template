@@ -1123,7 +1123,50 @@ Ne pas implémenter avant validation en usage réel.
 - A18 : CLAUDE.md.template + init-project.sh (attend Phase 3 + B5)
 - init-project.sh --upgrade (spec à définir pendant implémentation)
 
-### Dépendances
+### Parallelization rule — Track B AgentDB
+
+Track B (AgentDB) peut etre developpe en parallele du Track A, a condition que les interfaces suivantes soient figees avant demarrage :
+
+- Contrat `local-first`
+- `.agentdb/config.json` non versionne, `.agentdb/config.json.template` versionne
+- `agentdb_store` ecrit localement puis sync le VPS
+- Retry queue obligatoire pour les syncs echouees
+- Fallback `scripts/agentdb-reindex.sh`
+- Auth v1 scoped par projet (pas de JWT/RBAC complet tant que non specifie)
+- Codex pre-flight non bloquant
+
+**Scope autorise en parallele :**
+- `.claude/mcp/agentdb/`
+- `.agentdb/config.json.template`
+- `.gitignore`
+- `scripts/agentdb-reindex.sh`
+- Documentation AgentDB dediee
+
+**Hors scope tant que Track A n'est pas fige :**
+- Redirection des skills `/lesson`, `/ce:compound`, `/project-bootstrap` (B5)
+- Mise a jour finale de `CLAUDE.md.template` (A18)
+- Integration dans le flow GSD/SPARC/pre-flight
+
+**Raison :** Permet de paralleliser l'infra memoire sans creer de couplage premature avec le workflow d'execution.
+
+**Prompt de lancement Track B :**
+```
+Developpe Track B AgentDB en parallele comme chantier autonome.
+Contraintes figees :
+- local-first
+- .agentdb/config.json gitignored, .agentdb/config.json.template versionne
+- agentdb_store ecrit local puis sync VPS
+- retry queue obligatoire
+- fallback reindex/documente
+- ne modifie pas le flow GSD/SPARC ni les skills metier
+
+Scope: .claude/mcp/agentdb/, .agentdb/config.json.template, .gitignore,
+       scripts/agentdb-reindex.sh, documentation AgentDB minimale
+
+Livrer: contrat API, MCP client, format entries, retry/reindex, AC verifiables
+```
+
+### Dependances
 
 ```
 Phase 1 (contrat) ← bloque Phase 3 (skills)
