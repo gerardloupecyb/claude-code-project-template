@@ -99,8 +99,34 @@ Définitions des rôles référencés par SPARC et pre-flight :
 | Tier | Modèle | Quand | Exemples |
 |------|--------|-------|----------|
 | 1 | Haiku | Tâche simple, < 30% complexité | Recherche, formatting, grep, rename |
-| 2 | Sonnet | Implémentation standard | Feature, bugfix, refactor, tests |
-| 3 | Opus | Décisions critiques, architecture | Design, sécurité, dual-agent, SPARC arch |
+| 2 | Sonnet | Implémentation standard (défaut) | Feature, bugfix, refactor, tests |
+| 3 | Opus | Escalade: arbitrage, sécurité, décisions coûteuses | Design critique, contradictions, bounded contexts |
+
+#### Section 3b — Model routing SPARC (refinement Codex review)
+
+SPARC ne doit pas utiliser Opus par defaut pour toutes les phases.
+Sonnet = modele par defaut. Opus = escalade pour arbitrage et decisions difficiles a inverser.
+
+**Routing par phase :**
+
+| Phase | Agent | Modele | Raison |
+|-------|-------|--------|--------|
+| 1 Spec | spec-writer | Sonnet | Execution standard |
+| 2 Pseudo | logic-planner | Sonnet | Execution standard |
+| 3 Arch | architect | Opus | Decision structurelle |
+| 3 Arch | critic | Opus | Challenge doit etre au meme niveau que la proposition |
+| 4 Refine | implementation | Sonnet | Code standard |
+| 5 Complete | review standard | Sonnet | Review ordinaire |
+| 5 Complete | review critique | Opus | Si securite, contradiction, ou bounded context |
+
+**Escalade vers Opus obligatoire si :**
+- Le sujet touche auth, securite, permissions, donnees sensibles
+- Bounded contexts ou API boundaries sont en jeu
+- Architect et critic se contredisent sans resolution evidente
+- 2e verdict NO-GO sur la meme tache
+- La decision est couteuse a inverser (schema, contrat API, modele de donnees, orchestration)
+
+**Raison :** Opus partout alourdit le flow sans gain proportionnel. Sonnet couvre l'execution standard; Opus est reserve aux moments ou la qualite d'arbitrage compte plus que la vitesse.
 
 #### Section 4 — Limites
 
