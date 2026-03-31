@@ -1328,7 +1328,7 @@ Pour chaque gros livrable, définir pendant l'implémentation :
 - API key par projet (pas globale) — stockée dans `.agentdb/config.json` via env var `$AGENTDB_API_KEY`
 - Namespace isolation : un projet ne peut pas query le namespace d'un autre (sauf `global`)
 - Namespace `global` : write nécessite classification "cross-projet" explicite
-- Pas de données sensibles dans les entries — même politique que docs/solutions/
+- Pas de données sensibles dans les entries — voir Data classification policy (cross-cutting concerns)
 - Journalisation : le VPS logge chaque request (timestamp, namespace, action, entry_id)
 - Rétention : pas de purge automatique. Suppression manuelle via `agentdb_delete` ou cleanup des entries/ git-tracked
 - API key rotation : changer la clé dans l'env var + restart du MCP client
@@ -1365,6 +1365,99 @@ Pour chaque gros livrable, définir pendant l'implémentation :
 | `/codex:adversarial-review` | Oui — review read-only | Même résultat (ou différent si code a changé) |
 | SPARC Phase 1-3 | Non — produit de nouveaux fichiers | Écraser les fichiers workspace existants |
 | `/pre-flight` | Oui — écrase le rapport existant | Nouveau PREFLIGHT.md remplace l'ancien |
+
+### Prompt contract for subagents (MEDIUM)
+
+Les roles et la topologie ne suffisent pas. Chaque appel de subagent doit suivre un contrat minimal pour reduire la derive et ameliorer la synthese des outputs.
+
+**Format obligatoire du prompt de subagent :**
+- `Objective` — ce que l'agent doit produire
+- `Inputs` — fichiers, plans, contexte, artefacts a lire
+- `Constraints` — limites, bounded contexts, regles a respecter
+- `Expected output` — format de sortie attendu
+- `Stop condition` — quand l'agent doit s'arreter ou escalader
+
+**Exemple minimal :**
+
+```
+Objective: Challenge the proposed architecture for hidden complexity.
+Inputs: PLAN.md, sparc-spec.md, sparc-pseudo.md
+Constraints: Respect docs/architecture/contexts.md if present. No implementation.
+Expected output: 3-5 findings max, each with severity + rationale + alternative.
+Stop condition: If inputs are missing or contradictory, report the blocker instead of guessing.
+```
+
+**Application :**
+- Pre-flight agents (5 agents)
+- SPARC Phase 1-3 (spec, pseudo, arch)
+- SPARC Phase 5 review agents
+- Toute orchestration definie dans swarm-patterns.md
+
+**Raison :** swarm-patterns.md definit la structure, mais pas la qualite du contrat d'appel. Sans ce format, les agents derivent et produisent des outputs difficiles a synthetiser.
+
+**Action :** Ajouter ce contrat dans swarm-patterns.md (A1). Referencer depuis pre-flight/SKILL.md (A2) et sparc/SKILL.md (A3).
+
+### Workspace artifact lifecycle (MEDIUM)
+
+Le plan cree plusieurs artefacts temporaires dans `.claude/workspace/`. Leur cycle de vie doit etre defini pour eviter le bruit, les collisions, et la relecture d'artefacts obsoletes.
+
+**Artefacts concernes :**
+- `.claude/workspace/sparc-spec.md`
+- `.claude/workspace/sparc-pseudo.md`
+- `.claude/workspace/sparc-arch.md`
+- `.claude/workspace/agent-log.txt`
+- autres fichiers `{task-id}-{agent}.md`
+
+**Regles :**
+- Les artefacts SPARC sont temporaires par tache, pas des sources de verite long terme
+- Les artefacts doivent etre ecrases lors d'une relance de la meme tache
+- Les logs de session (`agent-log.txt`) sont reset au session start
+- Les artefacts non necessaires apres cloture doivent etre nettoyes ou archives explicitement
+- `.claude/workspace/` est gitignored
+- Les artefacts utilises comme handoff doivent inclure un nom stable ou un `task-id`
+
+**Source de verite long terme :**
+- plan strategique → `docs/plans/`
+- etat d'execution GSD → `.planning/`
+- memoire semantique → `.agentdb/entries/`
+- decisions → `DECISIONS.md`
+- architecture → `docs/architecture/`
+
+**Raison :** Sans regles de lifecycle, le workspace devient une zone grise ou les agents peuvent relire des outputs perimes ou confondre temporaire et persistant.
+
+**Action :** Ajouter note de lifecycle dans swarm-patterns.md (A1). `.claude/workspace/` au `.gitignore`. Documenter reset `agent-log.txt` dans session-start.sh (A8).
+
+### Data classification policy (HIGH)
+
+Le systeme introduit deux surfaces de sortie externes ou persistantes : Codex et AgentDB. Une politique minimale de classification est necessaire pour eviter la fuite d'informations sensibles.
+
+**Autorises dans AgentDB :**
+- patterns generiques
+- lecons reutilisables
+- anti-patterns
+- decisions techniques non sensibles
+- extraits de code minimaux et generiques
+
+**Interdits dans AgentDB :**
+- credentials, secrets, tokens
+- donnees client identifiantes
+- donnees de production sensibles
+- URLs internes privees si elles revelent l'architecture
+- contenus contractuels ou legaux non publics
+
+**Codex plugin :**
+- Documenter quelles donnees de plan/code peuvent etre envoyees
+- Ajouter un mecanisme projet pour desactiver Codex si necessaire
+- Rendre explicite qu'un projet peut etre marque "no external review"
+
+**Mecanisme recommande :**
+- Flag projet dans `.codex/config.toml` pour desactiver Codex si requis
+- Rappel explicite dans `CLAUDE.md.template`
+- Meme politique de sensibilite pour `docs/solutions/` et `.agentdb/entries/`
+
+**Raison :** Sans classification claire, les agents vont naturellement pousser trop d'information dans les systemes les plus pratiques.
+
+**Action :** Ajouter la politique dans CLAUDE.md.template (A18). Referencer dans la doc AgentDB (B2). Ajouter note dans la section Codex plugin (A10).
 
 ---
 

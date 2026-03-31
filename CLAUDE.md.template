@@ -170,6 +170,16 @@ Règles :
 - `docs/architecture/` utilise `status: current` ou `status: target`
 - Si un document d'architecture décrit un état cible non encore livré, le préciser aussi dans le contenu
 
+### Classification des données
+
+Ne jamais envoyer ni stocker dans Codex, AgentDB, `docs/solutions/` ou artefacts de workspace :
+- secrets, tokens, credentials
+- données client identifiantes
+- données de production sensibles
+- informations internes non nécessaires à la tâche
+
+Si un projet exige zéro revue externe, désactiver Codex au niveau projet.
+
 ---
 
 ## Gestion du contexte et de la mémoire

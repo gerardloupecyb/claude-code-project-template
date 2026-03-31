@@ -317,6 +317,16 @@ Si Claude skip pre-flight :
 
 ---
 
+### Workspace temporaire
+
+`.claude/workspace/` contient uniquement des artefacts temporaires d'orchestration
+(spec, pseudo, syntheses, logs de session). Ce repertoire n'est PAS une source de
+verite long terme et doit rester gitignored. Les artefacts sont ecrases a chaque
+relance de la meme tache. Voir Data classification policy dans le plan pour les
+restrictions de contenu.
+
+---
+
 ## 6. Memoire — architecture AgentDB
 
 ### Layers de memoire
