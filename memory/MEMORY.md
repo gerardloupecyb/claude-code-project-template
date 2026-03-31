@@ -8,8 +8,8 @@
 ## État du projet
 
 **Statut :** [ ] En démarrage  [x] En cours  [ ] Bloqué  [ ] Terminé
-**Dernière session :** 2026-03-16
-**Prochaine étape :** Implémenter plan Layer 2 retention gaps (DECISIONS.md, closure quality score, /project-bootstrap, session-gate checks 11-13, CARL RULE_8) — voir docs/plans/2026-03-16-002
+**Dernière session :** 2026-03-31
+**Prochaine étape :** Définir le prochain milestone — template v2 est feature-complete (Layer 1 + Layer 2 tous implémentés). Candidats : tests d'intégration multi-projets, sync template-sync skill, ou nouveau milestone.
 
 ---
 
@@ -37,6 +37,13 @@ Template de projet Claude Code avec skills personnalisés (session-gate, context
 - Change 6: hooks pre-compact.sh + session-start.sh + settings.json + init-project.sh updated
 - Change 10: GLOBAL_RULE_9 step 6 (MCP discipline auto-update) dans ~/.carl/global + blueprint
 - Validation: test project généré, toutes les AC vérifiées, cleanup OK
+
+### 2026-03-31 — DECISIONS.md créé pour ce projet
+
+- Plan 2026-03-16-002 était déjà complété (status: completed-lean)
+- DECISIONS.md manquait car projet créé avant la mise à jour du template
+- Créé DECISIONS.md avec 7 décisions migrées depuis MEMORY.md (DEC-001 à DEC-007)
+- Session-gate vérifié : 17 checks, CARL RULE_8 actif, /project-bootstrap existe
 
 ### 2026-03-13 — Initialisation
 
@@ -95,3 +102,19 @@ Pattern découvert : injecter des quality patterns cross-workflow via `.claude/r
 ## Liens utiles
 
 - Projet local : /Users/gerardvinou/Claude code/Claude Projects/project-template-v2
+
+<!-- pre-compact snapshot -->
+**Snapshot pre-compaction** (2026-03-31 19:18)
+
+- **Prochaine etape:** tests d'intégration multi-projets, sync template-sync skill, ou nouveau milestone.
+- **Derniers commits:**
+  - ba3c56b docs(01): context for swarm-patterns phase from plan document
+  - 89028b6 docs: initialize requirements, roadmap, and state
+  - c1576a3 chore: add project config
+- **Fichiers modifies:**
+  -  M .carl/domain.template
+  -  M .claude/hooks/session-start.sh
+  -  M .claude/rules/execution-quality.md
+  -  M .claude/settings.json
+  -  M .claude/skills/pre-flight/SKILL.md
+<!-- /pre-compact snapshot -->
