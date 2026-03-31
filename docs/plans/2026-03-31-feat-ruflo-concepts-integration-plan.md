@@ -180,8 +180,9 @@ Méthodologie de micro-exécution pour tâches complexes DANS une phase GSD. SPA
 | Automatique | `/gsd:execute-phase` invoque SPARC en interne | PLAN.md + AC passés automatiquement |
 | Manuel | `/sparc "description"` directement | SPARC demande le contexte à l'utilisateur |
 
-Le template wrappe `/gsd:execute-phase` pour invoquer SPARC automatiquement.
-Claude affiche "Exécution via SPARC (5 phases)" — l'utilisateur voit le flow, apprend que `/sparc` existe, et peut l'appeler directement ensuite.
+SPARC est invoqué explicitement par l'utilisateur (`/sparc "description"`) ou par `/prepare-phase` en séquence.
+**SPARC ne wrappe PAS /gsd:execute-phase** — c'est un skill template indépendant.
+Claude affiche "Exécution via SPARC (5 phases)" — l'utilisateur voit le flow.
 
 **Positionnement dans le workflow :**
 
@@ -1021,11 +1022,10 @@ Reprend A9 + ajouts A10-A14.
 ```markdown
 ### Parcours phase GSD (SPARC toujours)
 
-/prepare-phase → /gsd:execute-phase (wrappe SPARC) → /gsd:verify-work
+/prepare-phase → /sparc "description" → /gsd:verify-work
 
-Note : /gsd:execute-phase invoque SPARC automatiquement. L'utilisateur peut
-aussi appeler /sparc directement. Il n'y a pas de parcours "sans SPARC" dans
-une phase GSD.
+Note : /sparc est invoque explicitement apres /prepare-phase.
+/gsd:execute-phase n'est PAS wrappe — SPARC est un skill template independant.
 
 ### Parcours tâche isolée (hors phase GSD)
 
@@ -1048,56 +1048,89 @@ CE:work pour les tâches structurées hors phase
 
 ---
 
-## Ordre d'implémentation
+## Ordre d'implémentation (révisé après deepen + triage Codex)
 
-### Track A (séquentiel)
+Principe : réduire le risque d'implémenter vite quelque chose qu'il faudrait re-défaire.
+
+### Phase 1 — Stabiliser le contrat d'orchestration
+
+Rien n'est implémenté tant que le contrat workflow n'est pas figé.
+
+- Retirer l'idée de wrapper /gsd:execute-phase (finding archi HIGH)
+- Fixer le parcours officiel dans workflow-architecture.md :
+  - Phase GSD : /prepare-phase puis SPARC via séquencement explicite
+  - Hors phase : CE:work
+  - Quick fix : /gsd:fast
+- Aligner le plan (A3, A14) avec le nouveau contrat
+
+### Phase 2 — AgentDB fiable et sûr (Track B, parallélisable)
+
+AgentDB peut être développé en parallèle de Phase 1/3 (repo séparé pour le serveur VPS).
+
+- B1 : VPS setup (docker-compose, API, config.json gitignored/template only)
+- B2 : MCP thin client (local-first + retry queue)
+- B3 : Format entries
+- B4 : Reindex script + fallback (Agent Explore sur entries/)
+- B5 : Skills update (redirection Supermemory → AgentDB)
+- B6 : Cross-projet namespace (scope=global enforcement)
+- B7 : Deprecation Supermemory
+
+Sécurité v1 : clé par projet + contrôle namespace côté API. JWT/RBAC en v2 si besoin.
+
+### Phase 3 — Skills/rules/hooks template (Track A, séquentiel)
+
+Dépend de Phase 1 (contrat figé). Peut commencer en parallèle de Phase 2.
+
+- A1 : swarm-patterns.md (fondation, < 80 lignes)
+- A2 : Pre-flight enrichi (Agent 5 Critic)
+- A3 : SPARC skill (invoqué en séquence par /prepare-phase, pas en wrappant GSD)
+- A6 : ADR auto-tracking (quick win)
+- A7 : DDD léger contexts.md (lazy-load, pas auto-injecté)
+- A10 : Plugin Codex install (config + instructions manuelles)
+- A11 : SPARC Phase 4 option Codex
+- A12 : SPARC Phase 5 dual review
+- A13 : Pre-flight Codex adversarial (non-bloquant, addendum)
+- A4 : CARL rule enforcement pre-flight
+- A5 : Session-gate Check 18 (pre-flight enforcement)
+- A14 : /prepare-phase (orchestrateur séquentiel)
+- A16 : /todo skill CRUD
+- A17 : CARL rule todos (advisory v1, hook strict optionnel)
+- A8 : Hook PreToolUse Agent (log tronqué 60 chars, jq pas python3)
+
+### Phase 4 — UX opératoire
+
+Dépend de Phase 3 (skills fonctionnels).
+
+- A14 enrichi : `--from` flag sur /prepare-phase
+- A5 enrichi : trace d'enforcement dans session-gate report
+- A16 enrichi : prévention doublons /todo (check similarité titre)
+- Doc : annotations "(if Codex installed)" dans workflow-architecture.md
+- Doc : "Getting Started" progressive disclosure dans workflow-architecture.md
+- Doc : CE:work hors phase documenté explicitement
+- A8 enrichi : Session-gate Check 19 (agent spawn audit)
+
+### Phase 5 — Optimisations sous preuve (DEFER)
+
+Ne pas implémenter avant validation en usage réel.
+
+- Agent 5 en parallèle avec Agents 2-4 (redéfinir le rôle d'abord)
+- Changement modèle embedding (bge-small vs nomic — benchmarker d'abord)
+- Réduction budget lignes swarm-patterns.md (60 vs 80)
+- Redéfinition /gsd:quick (sémantique externe, ne pas toucher)
+
+### Phase finale — Documentation et init
+
+- A18 : CLAUDE.md.template + init-project.sh (attend Phase 3 + B5)
+- init-project.sh --upgrade (spec à définir pendant implémentation)
+
+### Dépendances
 
 ```
-A1 swarm-patterns.md            ─── fondation, référencé par tout le reste
-  │
-  ├── A2 Pre-flight enrichi     ─── dépend de A1 (rôle critic)
-  ├── A6 ADR auto-tracking      ─── indépendant, quick win
-  ├── A7 DDD léger              ─── indépendant, quick win
-  └── A10 Plugin Codex install   ─── indépendant
-  │
-  ├── A3 SPARC skill            ─── dépend de A1 (rôles) + A2 (pattern dual-agent)
-  ├── A11 SPARC Phase 4 Codex   ─── dépend de A3 + A10
-  ├── A12 SPARC Phase 5 review  ─── dépend de A3 + A10
-  ├── A13 Pre-flight Codex      ─── dépend de A2 + A10
-  ├── A4 CARL rule              ─── dépend de A2
-  └── A5 Session-gate 17        ─── dépend de A2
-  │
-  ├── A14 /prepare-phase        ─── dépend de A2 + A13 (pre-flight complet)
-  ├── A16 /todo skill           ─── indépendant
-  ├── A17 CARL rule todos       ─── dépend de A16
-  ├── A8 Hook PreToolUse        ─── indépendant
-  └── A18 CLAUDE.md + init      ─── dépend de tout le reste (finalisation)
-```
-
-### Track B (parallèle, autonome)
-
-```
-B1 VPS setup                    ─── fondation infra
-  │
-  B2 MCP thin client            ─── dépend de B1
-  │
-  B3 Format entries              ─── indépendant de B1/B2
-  │
-  B4 Reindex script + fallback   ─── dépend de B2 + B3
-  │
-  B5 Skills update               ─── dépend de B2 (MCP fonctionnel)
-  │
-  B6 Cross-projet                ─── dépend de B1 (namespace Qdrant)
-  │
-  B7 Deprecation Supermemory     ─── dépend de B5 (tout redirigé)
-```
-
-### Dépendances cross-track
-
-```
-A18 (CLAUDE.md.template) attend B5 (skills redirigés)
-  → CLAUDE.md ne peut pas référencer AgentDB avant que les skills fonctionnent
-  → A18 est le DERNIER livrable des deux tracks
+Phase 1 (contrat) ← bloque Phase 3 (skills)
+Phase 2 (AgentDB) ← parallèle, bloque A18 via B5
+Phase 3 (skills)  ← bloque Phase 4 (UX)
+Phase 4 (UX)      ← bloque Phase finale
+Phase 5 (optim)   ← indépendante, sous preuve
 ```
 
 ---
@@ -1263,6 +1296,138 @@ Pour chaque gros livrable, définir pendant l'implémentation :
 | `/codex:adversarial-review` | Oui — review read-only | Même résultat (ou différent si code a changé) |
 | SPARC Phase 1-3 | Non — produit de nouveaux fichiers | Écraser les fichiers workspace existants |
 | `/pre-flight` | Oui — écrase le rapport existant | Nouveau PREFLIGHT.md remplace l'ancien |
+
+---
+
+## Enhancement Summary (ce:deepen-plan 2026-03-31)
+
+**Deepened on:** 2026-03-31
+**Agents used:** architecture-strategist, security-sentinel, performance-oracle, spec-flow-analyzer
+**Agents failed (context overflow):** 4 Explore agents (SPARC, AgentDB, Codex, swarm research)
+**Triage:** Codex cross-model review applied — findings classified as KEEP / REFORMULATE / DEFER
+
+### Architecture Review Insights
+
+**HIGH — SPARC wrapping /gsd:execute-phase creates fragile coupling.** `KEEP`
+GSD is an external plugin subject to updates. Wrapping its entrypoint breaks silently on GSD update.
+**Action:** SPARC should be invoked by /prepare-phase or a sequencing skill that calls GSD then SPARC, never by patching GSD's execute-phase entrypoint. Update A3 and architecture doc accordingly.
+
+**HIGH — AgentDB local-first sync has silent data divergence window.** `KEEP`
+If VPS is down, entries are stored locally but never retried automatically. A colleague searching immediately won't find them.
+**Action:** Add automatic retry queue in the MCP client (file-based pending sync). On next `agentdb_store` or session start, retry pending entries. Update B2.
+
+**MEDIUM — Codex at 2 gates doubles dependency exposure.** `KEEP`
+Pre-flight + SPARC Phase 5 both call Codex adversarial. If Codex rate-limits, both gates degrade.
+**Action:** Pre-flight Codex = truly async/background (append as addendum, never block verdict). SPARC Phase 5 Codex = synchronous. Update A12/A13.
+
+**MEDIUM — 5-layer enforcement needs debug trace.** `KEEP`
+When session-gate catches a violation, no mechanism surfaces which layer should have blocked it.
+**Action:** Add "enforcement trace" field in session-gate report. Update A5.
+
+**LOW — /todo concurrent ID collision.** `KEEP`
+Two sessions could create duplicate IDs.
+**Action:** Use timestamp-based ID fallback (e.g., `YYYYMMDD-HHMMSS-{seq}`). Update A16.
+
+**LOW — No middle ground between SPARC-always and /gsd:fast.** `DEFER`
+/gsd:quick is une commande externe avec une semantique deja definie — ne pas la redefinir.
+Differe jusqu'a validation en usage reel que le manque de middle-ground est un vrai probleme.
+
+### Security Review Insights
+
+**HIGH — .agentdb/config.json must NOT be git-tracked.** `KEEP`
+If a colleague hardcodes the API key, it gets committed.
+**Action:** Gitignore `.agentdb/config.json`. Ship only `.agentdb/config.json.template`. MCP client reads `AGENTDB_API_KEY` from `process.env` directly. Update B2/B3.
+
+**HIGH — Single shared API key with no RBAC.** `REFORMULATE`
+A leaked key gives full read/write/delete access to the namespace + global.
+**v1:** Cle non commitee + cle par projet + controle namespace cote API. Suffisant pour un template partage en equipe.
+**v2 (si besoin reel):** JWT/RBAC par collegue avec scopes namespace. `POST /reindex` et `DELETE` requierent scope "admin".
+
+**HIGH — Namespace isolation is application-level only.** `KEEP`
+Qdrant has no built-in access control. A crafted HTTP request bypasses the MCP client.
+**Action:** Validate namespace claim from API key before every Qdrant operation. Consider separate Qdrant collections per project. Update B1.
+
+**MEDIUM — pre-agent.sh logs full agent description (may contain sensitive data).** `KEEP`
+**Action:** Log only `subagent_type` + first 60 chars of description. Set file permissions to 600. Update A8.
+
+**MEDIUM — Codex sends plan/code to OpenAI — undocumented data flow.** `KEEP`
+**Action:** Document what data is transmitted. Add per-project Codex disable toggle in `.codex/config.toml`. Verify OpenAI's data retention policy. Update A10.
+
+**MEDIUM — CARL rule for todos/ is advisory only.** `REFORMULATE`
+Subagents don't inherit CARL context.
+**v1:** CARL rule (advisory) — suffisant pour la majorite des cas.
+**Option stricte (non defaut):** PreToolUse hook on Write matcher qui bloque les ecritures dans `todos/`. Activable manuellement si le CARL ne suffit pas.
+
+**MEDIUM — Global namespace writable by any project with valid key.** `KEEP`
+**Action:** VPS API enforces `scope=global` parameter + valid project-namespace key for global writes. Update B6.
+
+**LOW — Use jq instead of python3 for JSON parsing in hooks.** `KEEP`
+Simpler, faster, no import overhead.
+
+### Performance Review Insights
+
+**Latency estimates:**
+- /prepare-phase total: **8-15 minutes** wall-clock
+- Pre-flight alone: **2.5-4 minutes** (Agent 5 sequential = bottleneck)
+- AgentDB embedding (CPU VPS): **200-800ms** per call
+- Full lifecycle (prepare + SPARC + closure): **~25-30K tokens**
+
+**Top optimizations (prioritized by impact):**
+
+1. **Parallelize Agent 5 with Agents 2-4.** `DEFER`
+Casse le design ou Agent 5 challenge specifiquement les findings de l'Agent 1.
+A ne pas prendre sans redefinir le role du critic. Differe.
+
+2. **Use bge-small-en-v1.5 (33M) instead of nomic-embed-text-v1.5 (137M).** `DEFER`
+Le gain de latence est plausible mais "quality negligible" n'est pas demontre.
+A valider par benchmark reel sur le VPS avant de changer. Differe.
+
+3. **Codex adversarial truly non-blocking in pre-flight.** `KEEP`
+Append as addendum, don't block verdict. Aligns with architecture review finding. Update A13.
+
+4. **Cap swarm-patterns.md at 60 lines, not 80.** `DEFER`
+Optimisation prematuree. A revalider si le context flooding devient un vrai probleme.
+
+5. **Lazy-load contexts.md only in pre-flight/SPARC Phase 3.** `KEEP`
+Do not auto-inject via rules. Pass explicitly to Agent 5 and SPARC architect/critic. Update A7.
+
+### Spec Completeness Review Insights
+
+**Missing error paths:**
+
+1. `/prepare-phase` — no way to redo just discuss-phase without restarting the full sequence. `KEEP`
+**Action:** Add a `--from` flag: `/prepare-phase 3 --from plan` to resume from a specific step. Update A14.
+
+2. SPARC Phase 3 — no tiebreaker when architect and critic contradict without clear winner. `KEEP`
+**Action:** Claude principal breaks the tie with a documented rationale. Add to SPARC skill. Update A3.
+
+3. SPARC Phase 5 — no max retry count for NO-GO loop. `REFORMULATE`
+Pas un hard cap absolu. Apres 2 NO-GO consecutifs, demander une decision explicite a l'utilisateur (pas auto-loop). Update A3.
+
+4. `agentdb_search` timeout fallback — "keyword search on entries/" is mentioned but no mechanism implements it. `KEEP`
+**Action:** Implement fallback as Agent Explore on `.agentdb/entries/` with grep. Update B2.
+
+**Edge cases unspecified:**
+
+5. Empty project (phase 1, no prior context) — `/prepare-phase` behavior undefined. `KEEP`
+**Action:** If no PLAN.md exists and no phases defined, /prepare-phase starts discuss from scratch. Document. Update A14.
+
+6. Codex not installed — "skip silently" contradicts architecture flow diagram showing Codex as required. `KEEP`
+**Action:** Add explicit "(if Codex installed)" annotation in all architecture flow diagrams. Update workflow-architecture.md.
+
+7. `/todo create` is non-idempotent with no guard against duplicates. `KEEP`
+**Action:** `/todo create` checks title similarity against pending/ before creating. Warn if >80% match. Update A16.
+
+**Onboarding gaps:**
+
+8. No progressive disclosure — new team member must understand GSD+CE+CARL+SPARC+AgentDB+Codex. `KEEP`
+**Action:** Add a "Getting Started" section to workflow-architecture.md: "Day 1: use /prepare-phase + /gsd:execute-phase. Everything else is automatic." Update architecture doc.
+
+9. CE:work has no slash command — user must type prose. Undocumented. `KEEP`
+**Action:** Document in architecture Section 4: "Hors phase: describe the task in prose, Claude uses CE:work automatically."
+
+10. `init-project.sh --upgrade` mentioned but has no spec. `DEFER`
+**Action:** Define during implementation of A18. Not blocking for the plan.
 
 ---
 

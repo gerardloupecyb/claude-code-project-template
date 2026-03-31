@@ -174,28 +174,27 @@ Si NO-GO : retour au plan.
 
 ```
 Dans une phase GSD (defaut) :
-  toi : /gsd:execute-phase {N}
-  → le template wrappe execute-phase pour invoquer SPARC automatiquement
-  → Claude affiche "Execution via SPARC (5 phases)" — l'utilisateur voit le flow
-  → l'utilisateur apprend que /sparc existe et peut l'appeler directement ensuite
-
-Appel direct SPARC (l'utilisateur connait le skill) :
   toi : /sparc "description de la tache"
-  → meme skill, meme comportement, contexte demande a l'utilisateur
+  → /prepare-phase a deja produit le PLAN.md — SPARC le lit automatiquement
+  → Claude affiche "Execution via SPARC (5 phases)"
 
 Hors phase GSD (tache isolee) :
-  toi : utilise CE:work
+  toi : decris la tache en prose, Claude utilise CE:work automatiquement
 
 Quick fix explicite (l'utilisateur shortcute consciemment) :
   toi : /gsd:fast "description"
 ```
 
+**IMPORTANT : SPARC ne wrappe PAS /gsd:execute-phase.**
+SPARC est invoque explicitement par l'utilisateur ou par /prepare-phase en sequence.
+/gsd:execute-phase reste un plugin externe non modifie.
+
 SPARC a deux points d'entree :
 
 | Declencheur | Quand | Contexte |
 |-------------|-------|----------|
-| Automatique | /gsd:execute-phase invoque SPARC en interne | PLAN.md + AC passes par execute-phase |
-| Manuel | /sparc "description" directement | SPARC demande le contexte a l'utilisateur |
+| Apres /prepare-phase | L'utilisateur lance /sparc apres le pre-flight GO | PLAN.md + AC dans .planning/ |
+| Standalone | /sparc "description" directement | SPARC demande le contexte a l'utilisateur |
 
 ### 3.4 SPARC — detail des 5 phases
 
@@ -272,10 +271,10 @@ SPARC a deux points d'entree :
 | SPARC Phase 5 | Valide verdict | Codex adversarial + ce:review |
 | Closure | `/gsd:verify-work` | AgentDB sync, session-gate |
 
-**Total : 2 commandes (`/prepare-phase` + `/gsd:execute-phase`) + 5 confirmations SPARC.**
+**Total : 2 commandes (`/prepare-phase` + `/sparc`) + 5 confirmations SPARC.**
 
-Note : `/gsd:execute-phase` wrappe SPARC automatiquement. Il n'y a pas de parcours
-"phase GSD sans SPARC". L'utilisateur peut aussi appeler `/sparc` directement.
+Note : /sparc est invoque explicitement par l'utilisateur apres /prepare-phase.
+/gsd:execute-phase n'est PAS wrappe — SPARC est un skill template independant.
 
 ### Tache isolee hors phase (CE:work)
 
@@ -550,10 +549,10 @@ toi : /prepare-phase 3
     → pre-flight lance (5 agents Claude + Codex adversarial)
     → Pre-Flight Report : GO
 
-toi : /gsd:execute-phase 3
+toi : /sparc "implement CSV export for reports"
 
   Claude :
-    "Phase 3 — Execution via SPARC (5 phases)
+    "Execution via SPARC (5 phases)
      Tache : implement CSV export for reports
 
      Phase 1/5 — Specification"
