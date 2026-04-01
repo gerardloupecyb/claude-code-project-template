@@ -121,17 +121,17 @@ Pattern découvert : injecter des quality patterns cross-workflow via `.claude/r
 - Projet local : /Users/gerardvinou/Claude code/Claude Projects/project-template-v2
 
 <!-- pre-compact snapshot -->
-**Snapshot pre-compaction** (2026-03-31 21:10)
+**Snapshot pre-compaction** (2026-03-31 21:30)
 
 - **Prochaine etape:** (1) merge feat/agentdb-track-b → master, (2) lancer Track B si prévu, ou (3) tests d'intégration multi-projets via init-project.sh.
 - **Derniers commits:**
+  - 6c0dd6d merge: integrate origin/master — ref files discipline + MCP sync checks
   - 3db3f1f chore: track pre-existing skill files before merge
   - e59ae2c feat: merge feat/agentdb-track-b — Track A (Ruflo concepts) + Track B (AgentDB self-hosted memory)
-  - bf81008 chore(agentdb-mcp): add package-lock.json for reproducible MCP client installs
 - **Fichiers modifies:**
-  - UU .carl/domain.template
-  - A  .carl/n8nautomation
-  - UU .claude/rules/execution-quality.md
-  - A  .claude/rules/model-routing.md
-  - M  .claude/rules/tool-routing.md
+  - ?? .claude/worktrees/
+  - ?? compound-engineering.local.md
+  - ?? docs/brainstorms/2026-03-31-ecc-integration-requirements.md
+  - ?? docs/plans/2026-03-31-002-feat-ecc-integration-tier1-tier2-plan.md
+  - ?? sync-project.sh
 <!-- /pre-compact snapshot -->
