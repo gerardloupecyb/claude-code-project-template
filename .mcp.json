@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "agentdb": {
+      "command": "node",
+      "args": [".claude/mcp/agentdb/index.js"],
+      "env": {
+        "AGENTDB_API_KEY": "${AGENTDB_API_KEY}"
+      }
+    }
+  }
+}

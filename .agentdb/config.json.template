@@ -1,0 +1,6 @@
+{
+  "vps_url": "https://agentdb.srv1235849.hstgr.cloud",
+  "project_namespace": "my-project",
+  "default_scope": "project",
+  "default_min_score": 0.6
+}

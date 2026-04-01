@@ -1,4 +1,5 @@
 {
+  "enabledMcpjsonServers": ["agentdb"],
   "hooks": {
     "PreCompact": [
       {
@@ -7,6 +8,18 @@
           {
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-compact.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-agent.sh",
+            "timeout": 3000
           }
         ]
       }

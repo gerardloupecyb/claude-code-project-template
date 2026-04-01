@@ -30,6 +30,12 @@
 
 {{CARL_DOMAIN_UPPER}}_RULE_8=PLANNING RECALL: Before any /gsd:plan-phase, /gsd:discuss-phase, or /ce:plan, run recall on Supermemory with the RECALL keywords from .carl/manifest. Also read DECISIONS.md for active decisions that may constrain the plan. Skip recall only if Supermemory unavailable. This is NOT optional — it prevents rediscovering solved problems.
 
+# --- EXECUTION ENFORCEMENT ---
+
+{{CARL_DOMAIN_UPPER}}_RULE_9=PREFLIGHT ENFORCEMENT: Never run /gsd:execute-phase without a *-PREFLIGHT.md file for the current phase in .planning/ or .planning/milestones/{milestone}/. If that file is absent in both paths, run /pre-flight first. A NO-GO verdict that has not been addressed must be re-run before execution.
+
+{{CARL_DOMAIN_UPPER}}_RULE_10=TODO DISCIPLINE: Never write directly to todos/ using Write or Edit tools. Always use /todo create|close|done|validate|list. If a subagent must create a todo, it must pass through the /todo skill. Direct Write to todos/ bypasses ID sequencing and breaks /todo validate.
+
 # --- PROJECT-SPECIFIC RULES (add below) ---
 
-# {{CARL_DOMAIN_UPPER}}_RULE_9=
+# {{CARL_DOMAIN_UPPER}}_RULE_11=

@@ -8,18 +8,33 @@
 ## État du projet
 
 **Statut :** [ ] En démarrage  [x] En cours  [ ] Bloqué  [ ] Terminé
-**Dernière session :** 2026-03-16
-**Prochaine étape :** Implémenter plan Layer 2 retention gaps (DECISIONS.md, closure quality score, /project-bootstrap, session-gate checks 11-13, CARL RULE_8) — voir docs/plans/2026-03-16-002
+**Dernière session :** 2026-03-31
+**Prochaine étape :** Track A livré (18/18 deliverables). Décider : (1) merge feat/agentdb-track-b → master, (2) lancer Track B si prévu, ou (3) tests d'intégration multi-projets via init-project.sh.
 
 ---
 
 ## Contexte courant
 
-Template de projet Claude Code avec skills personnalisés (session-gate, context-manager, project-sync, pre-flight) et intégrations CARL/GSD.
+Template de projet Claude Code avec skills personnalisés (session-gate, context-manager, project-sync, pre-flight, SPARC, todo, prepare-phase) et intégrations CARL/GSD/Codex/AgentDB.
 
 ---
 
 ## Ce qui a été fait
+
+### 2026-03-31 — Track A: Ruflo concepts integration (18/18 deliverables) — DONE
+
+- SPARC skill (5 phases: spec→pseudo→arch+critic→refine→complete), Codex rescue + adversarial
+- prepare-phase orchestrator (discuss→plan→deepen?→pre-flight in one command)
+- todo skill (CRUD for todos/ with pending/complete/done subdirs + auto-increment IDs)
+- swarm-patterns.md (8 agent roles, 3 topologies, 3-tier model routing)
+- pre-flight: Agent 5 Architecture Critic (Opus, dual-agent) + Codex adversarial review
+- session-gate: Check 18 (pre-flight detection) + Check 19 (agent spawn audit via pre-agent.sh)
+- domain.template: RULE_9 (pre-flight enforcement) + RULE_10 (todo discipline)
+- execution-quality.md: ADR auto-tracking section added
+- contexts.md.template (DDD bounded contexts), .codex/config.toml.template
+- CLAUDE.md.template: /prepare-phase+/sparc workflows, AgentDB replaces Supermemory throughout
+- init-project.sh: installs 13 skills, 3 hooks, 4 rules, all new templates; todos/ subdirs
+- Committed on feat/agentdb-track-b (commit 627354d)
 
 ### 2026-03-16 — Execution quality hybridation (ce-work x GSD) — DONE
 
@@ -37,6 +52,13 @@ Template de projet Claude Code avec skills personnalisés (session-gate, context
 - Change 6: hooks pre-compact.sh + session-start.sh + settings.json + init-project.sh updated
 - Change 10: GLOBAL_RULE_9 step 6 (MCP discipline auto-update) dans ~/.carl/global + blueprint
 - Validation: test project généré, toutes les AC vérifiées, cleanup OK
+
+### 2026-03-31 — DECISIONS.md créé pour ce projet
+
+- Plan 2026-03-16-002 était déjà complété (status: completed-lean)
+- DECISIONS.md manquait car projet créé avant la mise à jour du template
+- Créé DECISIONS.md avec 7 décisions migrées depuis MEMORY.md (DEC-001 à DEC-007)
+- Session-gate vérifié : 17 checks, CARL RULE_8 actif, /project-bootstrap existe
 
 ### 2026-03-13 — Initialisation
 
@@ -57,6 +79,8 @@ Template de projet Claude Code avec skills personnalisés (session-gate, context
 | git add scopé MEMORY+LESSONS only | Eviter staging de fichiers en cours d'écriture | 2026-03-16 |
 | Flywheel extrait vers .claude/rules/ | CLAUDE.md 505 lignes dépasse le budget 200 d'Anthropic | 2026-03-16 |
 | Quality checks CE via rules, pas remplacement GSD | Hybridation : GSD orchestration + ce-work quality patterns injectés via .claude/rules/execution-quality.md | 2026-03-16 |
+| AgentDB remplace Supermemory dans tout le template | Supermemory est externe/SaaS, AgentDB est self-hosted + mémoire sémantique | 2026-03-31 |
+| Track A sur feat/agentdb-track-b (pas master) | Branche existait déjà — merge à confirmer par l'utilisateur | 2026-03-31 |
 
 ---
 
@@ -95,3 +119,19 @@ Pattern découvert : injecter des quality patterns cross-workflow via `.claude/r
 ## Liens utiles
 
 - Projet local : /Users/gerardvinou/Claude code/Claude Projects/project-template-v2
+
+<!-- pre-compact snapshot -->
+**Snapshot pre-compaction** (2026-03-31 20:58)
+
+- **Prochaine etape:** (1) merge feat/agentdb-track-b → master, (2) lancer Track B si prévu, ou (3) tests d'intégration multi-projets via init-project.sh.
+- **Derniers commits:**
+  - 7eed084 pre-compact snapshot
+  - 44b145e feat(agentdb): Track B — AgentDB self-hosted memory infrastructure
+  - 389dc81 docs: update MEMORY.md — Track A complete, AgentDB replaces Supermemory
+- **Fichiers modifies:**
+  -  M agentdb-server/agentdb-api/package.json
+  -  M agentdb-server/docker-compose.yml
+  - ?? .claude/mcp/agentdb/package-lock.json
+  - ?? .claude/skills/code-xray/
+  - ?? .claude/skills/memory-consolidate/
+<!-- /pre-compact snapshot -->

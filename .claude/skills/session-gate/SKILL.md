@@ -15,8 +15,8 @@ Read-only, advisory, stateless. Never modify files. Never block the session.
 | Command | Mode | Checks |
 |---|---|---|
 | `/session-gate start` | START | 1, 2, 3, 4, 5, 8, 11, 12, 13 |
-| `/session-gate end` | END | 1, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17 |
-| `/session-gate` (no arg) | BOTH | All 17 |
+| `/session-gate end` | END | 1, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18, 19 |
+| `/session-gate` (no arg) | BOTH | All 19 |
 
 ---
 
@@ -239,6 +239,33 @@ Output:
 - `[!!] <file> missing required key(s): <list>`
 
 This check is mechanical only. Do not validate semantic quality.
+
+### Check 18 — Pre-flight enforcement (END)
+
+Look for PLAN files in both possible paths:
+- `.planning/{phase}-*-PLAN.md`
+- `.planning/milestones/{milestone}/{phase}-*-PLAN.md`
+
+If at least one `*-PLAN.md` exists for the current phase:
+  Look for a `*-PREFLIGHT.md` in the SAME directory as the PLAN file.
+  If absent: `[!!] Phase {N} has a PLAN but no PREFLIGHT — /pre-flight was skipped`
+
+If a `*-PREFLIGHT.md` exists, grep `Verdict:` in the file:
+  If contains `NO-GO` and no newer `*-PREFLIGHT.md` (by mtime) contains `GO` or `CONDITIONAL GO`:
+  `[!!] Phase {N} PREFLIGHT verdict was NO-GO and was not re-run after fixes`
+
+If no PLAN files found: skip this check (not applicable to this session).
+This check is mechanical only — file existence and grep, no semantic judgment.
+
+### Check 19 — Agent spawn audit (END) — informational
+
+Read `.claude/workspace/agent-log.txt` if it exists.
+Count the number of lines (= agent spawns this session, reset at start).
+
+`[--] {N} agents spawned this session`
+
+If N > 15: `[!!] Unusually high agent count ({N}) — possible drift`
+If file absent or empty: `[--] 0 agents spawned (or log not initialized)`
 
 ---
 
