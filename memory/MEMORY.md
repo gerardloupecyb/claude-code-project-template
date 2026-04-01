@@ -121,17 +121,17 @@ Pattern découvert : injecter des quality patterns cross-workflow via `.claude/r
 - Projet local : /Users/gerardvinou/Claude code/Claude Projects/project-template-v2
 
 <!-- pre-compact snapshot -->
-**Snapshot pre-compaction** (2026-03-31 20:17)
+**Snapshot pre-compaction** (2026-03-31 20:58)
 
 - **Prochaine etape:** (1) merge feat/agentdb-track-b → master, (2) lancer Track B si prévu, ou (3) tests d'intégration multi-projets via init-project.sh.
 - **Derniers commits:**
+  - 7eed084 pre-compact snapshot
   - 44b145e feat(agentdb): Track B — AgentDB self-hosted memory infrastructure
   - 389dc81 docs: update MEMORY.md — Track A complete, AgentDB replaces Supermemory
-  - 627354d feat(template): add SPARC, swarm-patterns, pre-flight critic, session enforcement, todo skill, prepare-phase
 - **Fichiers modifies:**
+  -  M agentdb-server/agentdb-api/package.json
+  -  M agentdb-server/docker-compose.yml
+  - ?? .claude/mcp/agentdb/package-lock.json
   - ?? .claude/skills/code-xray/
   - ?? .claude/skills/memory-consolidate/
-  - ?? .claude/skills/template-sync/
-  - ?? .claude/worktrees/
-  - ?? compound-engineering.local.md
 <!-- /pre-compact snapshot -->
