@@ -27,6 +27,30 @@ where N is the phase number (e.g., `/prepare-phase 1`).
 
 ## Sequence
 
+### Step 0 — Context Capture (automatic)
+
+Objective: capture everything needed during implementation *before* discussing
+or planning. Principle: "if you would search for it during implementation, capture now."
+
+Actions:
+
+1. Read `CLAUDE.md` — extract stack, active tools, conventions
+2. Read `LESSONS.md` — identify lessons relevant to the requested feature
+3. Grep `.claude/rules/*.md` for rules applicable to the feature domain
+4. Grep source files for patterns similar to the feature
+   (limit to `.claude/`, project root, and `src/` — max 1 level deep)
+5. Write `.claude/workspace/context-capture-{N}.md` with:
+   - `## Stack détectée` — languages, frameworks, active MCPs
+   - `## Patterns existants` — file:line + brief description
+   - `## Conventions établies` — non-negotiable rules from CARL/rules
+   - `## Gotchas documentés` — relevant LESSONS.md entries
+   - `## Questions à lever` — ambiguities detected before discuss
+6. Report: `Context capture → .claude/workspace/context-capture-{N}.md`
+7. Pass this file path to Step 1 (discuss) as additional context
+
+If LESSONS.md is empty or no patterns found: write empty sections, do not fail.
+If CLAUDE.md is missing: skip actions 1 and 3, continue with what's available.
+
 ### Step 1 — Discuss Phase (automatic)
 
 ```

@@ -61,6 +61,17 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "HOOK_INPUT=$(cat); [ \"${CLAUDE_BASH_AUDIT:-1}\" = \"0\" ] && printf '%s' \"$HOOK_INPUT\" && exit 0; CMD=$(echo \"$HOOK_INPUT\" | jq -r '.tool_input.command // empty' 2>/dev/null) || CMD=\"\"; CMD=\"${CMD:-?}\"; CMD=$(echo \"$CMD\" | tr '\\n' ' '); CMD=$(echo \"$CMD\" | sed 's/--token[= ][^ ]*/--token=<REDACTED>/g; s/AKIA[A-Z0-9]\\{16\\}/<REDACTED>/g; s/sk-ant-[A-Za-z0-9_-]*/<REDACTED>/g; s/sk-proj-[A-Za-z0-9_-]*/<REDACTED>/g; s/ghp_[A-Za-z0-9_]*/<REDACTED>/g; s/github_pat_[A-Za-z0-9_]*/<REDACTED>/g'); mkdir -p ~/.claude; echo \"[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $CMD\" >> ~/.claude/bash-commands.log 2>/dev/null || true; chmod 600 ~/.claude/bash-commands.log 2>/dev/null || true; printf '%s' \"$HOOK_INPUT\""
+          }
+        ]
+      }
     ]
   }
 }

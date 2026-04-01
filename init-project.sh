@@ -93,6 +93,9 @@ mkdir -p "${PROJECT_DIR}/.claude/skills/todo"
 mkdir -p "${PROJECT_DIR}/.claude/skills/prepare-phase"
 mkdir -p "${PROJECT_DIR}/.codex"
 mkdir -p "${PROJECT_DIR}/.claude/workspace"
+mkdir -p "${PROJECT_DIR}/.claude/skills/rules-distill"
+mkdir -p "${PROJECT_DIR}/.claude/skills/security-audit"
+mkdir -p "${PROJECT_DIR}/.claude/agents"
 mkdir -p "${PROJECT_DIR}/src"
 
 # Copy skills (universal, no modifications needed)
@@ -127,6 +130,17 @@ cp "${TEMPLATE_DIR}/.claude/skills/project-template-sync/SKILL.md" \
    "${PROJECT_DIR}/.claude/skills/project-template-sync/SKILL.md"
 cp "${TEMPLATE_DIR}/.claude/skills/task-router/SKILL.md" \
    "${PROJECT_DIR}/.claude/skills/task-router/SKILL.md"
+cp "${TEMPLATE_DIR}/.claude/skills/rules-distill/SKILL.md" \
+   "${PROJECT_DIR}/.claude/skills/rules-distill/SKILL.md"
+cp "${TEMPLATE_DIR}/.claude/skills/security-audit/SKILL.md" \
+   "${PROJECT_DIR}/.claude/skills/security-audit/SKILL.md"
+
+# Copy agent definitions
+echo "→ Installing agents..."
+cp "${TEMPLATE_DIR}/.claude/agents/architect.md"         "${PROJECT_DIR}/.claude/agents/architect.md"
+cp "${TEMPLATE_DIR}/.claude/agents/code-reviewer.md"     "${PROJECT_DIR}/.claude/agents/code-reviewer.md"
+cp "${TEMPLATE_DIR}/.claude/agents/tdd-guide.md"         "${PROJECT_DIR}/.claude/agents/tdd-guide.md"
+cp "${TEMPLATE_DIR}/.claude/agents/security-reviewer.md" "${PROJECT_DIR}/.claude/agents/security-reviewer.md"
 
 # Copy hook scripts
 echo "→ Installing hooks..."
@@ -248,10 +262,12 @@ echo "    • CLAUDE.md              (edit: Stack, MCP, Skills, Domaines)"
 echo "    • memory/MEMORY.md       (edit: Contexte, Stack, Liens)"
 echo "    • LESSONS.md             (ready to use — capture via /lesson)"
 echo "    • DECISIONS.md           (ready to use — ADR register for architectural decisions)"
-echo "    • .claude/skills/         (16 skills: context-manager, pre-flight, session-gate,"
+echo "    • .claude/skills/         (18 skills: context-manager, pre-flight, session-gate,"
 echo "                               project-sync, lesson, context-checkpoint, project-bootstrap,"
 echo "                               memory-consolidate, template-sync, sparc, todo, prepare-phase,"
-echo "                               reference-audit, project-template-sync, task-router)"
+echo "                               reference-audit, project-template-sync, task-router,"
+echo "                               rules-distill, security-audit)"
+echo "    • .claude/agents/         (4 agents: architect, code-reviewer, tdd-guide, security-reviewer)"
 echo "    • .claude/hooks/          (pre-compact.sh + session-start.sh + pre-agent.sh)"
 echo "    • .claude/rules/          (tool-routing.md + flywheel-workflow.md +"
 echo "                               execution-quality.md + swarm-patterns.md +"
