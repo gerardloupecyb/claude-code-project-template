@@ -10,9 +10,12 @@ services:
   embedding:
     image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.5
     restart: unless-stopped
-    command: --model-id nomic-ai/nomic-embed-text-v1.5 --port 80
+    # Model pre-downloaded to VPS: /docker/agentdb/models/bge-base-en-v1.5
+    # Download: docker run --rm -v /docker/agentdb/models:/models python:3.11-slim bash -c \
+    #   'pip install -q huggingface_hub && python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id=\"BAAI/bge-base-en-v1.5\", local_dir=\"/models/bge-base-en-v1.5\")"'
+    command: --model-id /models/bge-base-en-v1.5 --port 80
     volumes:
-      - embedding_cache:/data
+      - /docker/agentdb/models:/models:ro
     networks:
       - agentdb_internal
 
@@ -29,10 +32,11 @@ services:
       - traefik_net
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=n8n_default"
       - "traefik.http.routers.agentdb.rule=Host(`${AGENTDB_HOST}`)"
       - "traefik.http.routers.agentdb.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
       - "traefik.http.routers.agentdb.tls=true"
-      - "traefik.http.routers.agentdb.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}"
+      - "traefik.http.routers.agentdb.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-mytlschallenge}"
       - "traefik.http.services.agentdb.loadbalancer.server.port=3100"
     depends_on:
       - qdrant
@@ -40,7 +44,6 @@ services:
 
 volumes:
   qdrant_data:
-  embedding_cache:
 
 networks:
   agentdb_internal:
