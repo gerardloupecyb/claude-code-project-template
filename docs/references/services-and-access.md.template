@@ -1,0 +1,116 @@
+# L3 — Services & Access Reference
+
+> Infrastructure endpoints, secrets, service accounts, MCP configs, API keys.
+> Read BEFORE any infra work (SSH, Docker, secrets, MCP, deploy).
+
+---
+
+## Servers & Hosting
+
+<!-- VPS, cloud instances, hosting providers. -->
+
+| Server | Address | Access method | Purpose | Notes |
+|--------|---------|--------------|---------|-------|
+| {{SERVER_NAME}} | {{ADDRESS}} | {{ACCESS_METHOD}} | {{PURPOSE}} | {{NOTES}} |
+
+---
+
+## Docker Services
+
+<!-- Docker Compose services, restart policies, volumes. -->
+
+| Service | Image | Ports | Restart | Notes |
+|---------|-------|-------|---------|-------|
+| {{SERVICE_NAME}} | {{IMAGE}} | {{PORTS}} | {{RESTART_POLICY}} | {{NOTES}} |
+
+---
+
+## Secrets & Environment Variables
+
+<!-- Canonical secret names. Values are in .env — NEVER document values here. -->
+
+| Secret name ($ENV_VAR) | Source | Purpose | Rotation |
+|------------------------|--------|---------|----------|
+| {{ENV_VAR_NAME}} | {{SOURCE}} | {{PURPOSE}} | {{ROTATION_POLICY}} |
+
+---
+
+## Service Principals / Service Accounts
+
+<!-- Service accounts, app registrations, API credentials. -->
+
+| Name | ID/AppId | Auth method | Roles | Expiry | Notes |
+|------|----------|------------|-------|--------|-------|
+| {{SP_NAME}} | {{SP_ID}} | {{AUTH_METHOD}} | {{ROLES}} | {{EXPIRY}} | {{NOTES}} |
+
+---
+
+## MCP Servers
+
+<!-- Configured MCP servers with auth and limit parameters. -->
+
+| MCP name | Endpoint | Auth type | Limit param | Recommended limit |
+|----------|----------|-----------|-------------|-------------------|
+| {{MCP_NAME}} | {{ENDPOINT}} | {{AUTH_TYPE}} | {{LIMIT_PARAM}} | {{RECOMMENDED_LIMIT}} |
+
+---
+
+## External APIs
+
+<!-- Third-party APIs the project integrates with. -->
+
+| API | Base URL | Auth | Rate limit | $ENV_VAR |
+|-----|----------|------|-----------|----------|
+| {{API_NAME}} | {{BASE_URL}} | {{AUTH_TYPE}} | {{RATE_LIMIT}} | {{ENV_VAR}} |
+
+---
+
+## Systemd / Background Services
+
+<!-- System services, cron jobs, background workers. -->
+
+| Service | Type | Status command | Notes |
+|---------|------|---------------|-------|
+| {{SERVICE_NAME}} | {{TYPE}} | {{STATUS_CMD}} | {{NOTES}} |
+
+---
+
+## Routing — When to Read This File
+
+| Trigger | Why |
+|---------|-----|
+| SSH, VPS, hosting | Server address, SSH key, access method |
+| Docker, docker-compose, container | Paths, services, restart policy |
+| Secret, API key, credential | Canonical $ENV_VAR name (value in .env) |
+| Service principal, app registration | AppId, cert, roles, expiry |
+| MCP configure or debug | Endpoint, auth type, limit param |
+| systemd, background service | Status commands, known gotchas |
+| External API integration | Base URL, auth, rate limits |
+| Deploy, CI/CD | Server + Docker + secrets combined |
+
+---
+
+## Update Rules — Write in Same Commit as Infra Change
+
+| Event | Section to update |
+|-------|-------------------|
+| New secret created | Secrets table → add row ($ENV_VAR_NAME) |
+| Service account created or cert renewed | Service Principals → ID, auth, expiry, roles |
+| New MCP added | MCP Servers + .claude/rules/tool-routing.md |
+| Docker service added/modified | Docker Services |
+| API key changed/rotated | Update $ENV_VAR reference — NEVER the value |
+| New external API integrated | External APIs → add section |
+| New server/VPS provisioned | Servers & Hosting |
+| Background service added | Systemd / Background Services |
+
+---
+
+## Staleness Detection
+
+If a secret name, AppId, endpoint, or service in this file doesn't match reality
+(actual KV / secrets manager / Entra / cloud console) → this file is stale.
+**Fix before any work that depends on it.**
+
+---
+
+_Last verified: {{DATE}}_

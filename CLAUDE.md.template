@@ -11,11 +11,13 @@
 - Compound Engineering   → planning riche, review, capitalisation
 - CARL                   → règles dynamiques selon contexte (domaine `{{CARL_DOMAIN}}`)
 - Discipline outils      → voir `.claude/rules/tool-routing.md`
+- Routing modèles        → voir `.claude/rules/model-routing.md`
 - Quality checks exécution → voir `.claude/rules/execution-quality.md`
 - SPARC                  → micro-exécution dans une phase GSD
 - Swarm patterns         → conventions multi-agent, voir `.claude/rules/swarm-patterns.md`
 - Codex plugin           → cross-model review + délégation implémentation
 - AgentDB                → mémoire sémantique self-hosted (remplace Supermemory)
+- Transitions automatiques → voir `.claude/rules/workflow-automation.md`
 
 ## MCP actifs
 
@@ -41,6 +43,7 @@
 | .carl/{{CARL_DOMAIN}} | Règles critiques CARL, injectées automatiquement | `/lesson` (promotion) | Quand leçon critique ou répétée |
 | AgentDB (projet) | Archive principale des leçons, cherchable via `agentdb_search` | `/lesson migrate` | Quand LESSONS.md atteint le cap |
 | docs/solutions/ | Backup local git des leçons migrées + patterns détaillés | `/lesson migrate` | Copie locale lors de la migration |
+| docs/references/ | 4-layer reference system: architecture, patterns, services, codebase | Manuel + CARL RULE_11 | Avec chaque changement infra/code documenté |
 | .claude/integrations.md | Outils externes actifs (Linear, GSD, AgentDB) | Setup manuel | Au setup du projet ou changement d'outils |
 
 ### Cohérence mémoire — `/memory-consolidate`
@@ -48,7 +51,7 @@
 `/memory-consolidate` vérifie la cohérence **sémantique** entre les fichiers mémoire (MEMORY.md ↔ DECISIONS.md ↔ LESSONS.md ↔ codebase).
 Complément de `/session-gate` qui vérifie la structure. Read-only, advisory.
 
-- `/memory-consolidate quick` : dates relatives, doublons, blocages stale (aussi dans session-gate END checks 14-16)
+- `/memory-consolidate quick` : dates relatives, doublons, blocages stale (aussi dans session-gate END checks 16-18)
 - `/memory-consolidate` : full — ajoute stack drift, LESSONS.md dedup/staleness, cohérence décisions, patterns
 
 Quand lancer : avant reprise après longue pause, avant milestone, quand LESSONS.md approche du cap.
@@ -426,6 +429,18 @@ Claude doit compléter le contexte de session (Règle #1) avec les sources de pl
 
 MEMORY.md, LESSONS.md et CARL sont déjà chargés par la Règle #1 — ne pas recharger.
 Cette séquence s'applique à TOUTES les commandes de planification, pas seulement `/ce:plan`.
+
+### Règle de référence — fichiers techniques
+
+Avant de coder ou modifier l'infra, consulter `docs/references/Reference-files-index-routing.md` pour le routing :
+- **Architecture/sécurité** → L1 (`architecture-security.md`)
+- **Écrire/reviewer du code** → L2 (`coding-patterns.md`)
+- **Infra/secrets/Docker/MCP/API** → L3 (`services-and-access.md`)
+- **Modules partagés/schemas** → L3 (`codebase-context.md`)
+
+Mettre à jour le fichier de référence dans le MÊME commit que le changement qu'il documente.
+Si un fichier de référence contredit la réalité (secret stale, endpoint changé) → corriger AVANT de travailler.
+Utiliser `/reference-audit` périodiquement pour auto-peupler les fichiers de référence et valider la synchronisation MCP.
 
 ---
 

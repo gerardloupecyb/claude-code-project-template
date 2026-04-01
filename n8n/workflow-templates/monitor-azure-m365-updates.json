@@ -1,0 +1,205 @@
+{
+  "name": "Template - Monitor Azure & M365 Updates - Breaking Changes",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9,
+              "triggerAtDay": 3
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://azure.microsoft.com/en-us/updates/feed/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/atom+xml, application/rss+xml, application/xml, text/xml"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Azure-M365-Monitor/1.0"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "get-azure-updates",
+      "name": "GET Azure Updates RSS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Keywords that signal breaking or high-impact Azure/M365 changes\nconst KEYWORDS = [\n  'breaking', 'deprecation', 'retirement',\n  'migration required', 'action required',\n  'end of support', 'preview', 'general availability',\n  'entra', 'conditional access', 'intune',\n  'defender', 'key vault', 'managed identity',\n  'graph api', 'powershell'\n];\n\n// Get static data to track last checked date\nconst staticData = this.getWorkflowStaticData('global');\nconst lastCheckedDate = staticData.lastCheckedDate || '1970-01-01T00:00:00Z';\nconst lastCheckedTime = new Date(lastCheckedDate).getTime();\n\nconst rawData = $input.first().json;\nlet xmlText = '';\n\n// Handle different response formats\nif (typeof rawData === 'string') {\n  xmlText = rawData;\n} else if (rawData.data && typeof rawData.data === 'string') {\n  xmlText = rawData.data;\n} else if (rawData.body && typeof rawData.body === 'string') {\n  xmlText = rawData.body;\n} else {\n  xmlText = JSON.stringify(rawData);\n}\n\n// Parse Atom/RSS XML entries using regex (n8n Code node has no DOMParser)\n// Azure feed uses Atom format with <entry> tags\nconst items = [];\n\n// Try Atom format first (<entry>)\nconst entryRegex = /<entry>(.*?)<\\/entry>/gs;\nlet match;\nwhile ((match = entryRegex.exec(xmlText)) !== null) {\n  const entryXml = match[1];\n  const getTag = (tag) => {\n    // Handle self-closing tags with attributes (e.g., <link href=\"...\"/>)\n    const selfClose = new RegExp(`<${tag}[^>]*href=\"([^\"]+)\"[^>]*/?>`, 's');\n    const sc = entryXml.match(selfClose);\n    if (tag === 'link' && sc) return sc[1];\n    // Handle CDATA and regular content\n    const r = new RegExp(`<${tag}[^>]*><!\\\\[CDATA\\\\[(.+?)\\\\]\\\\]><\\\\/${tag}>|<${tag}[^>]*>(.+?)<\\\\/${tag}>`, 's');\n    const m = entryXml.match(r);\n    return m ? (m[1] || m[2] || '').trim() : '';\n  };\n  items.push({\n    title: getTag('title'),\n    link: getTag('link'),\n    pubDate: getTag('updated') || getTag('published'),\n    description: getTag('summary') || getTag('content')\n  });\n}\n\n// Fallback: try RSS format (<item>)\nif (items.length === 0) {\n  const itemRegex = /<item>(.*?)<\\/item>/gs;\n  while ((match = itemRegex.exec(xmlText)) !== null) {\n    const itemXml = match[1];\n    const getTag = (tag) => {\n      const r = new RegExp(`<${tag}><!\\\\[CDATA\\\\[(.+?)\\\\]\\\\]><\\\\/${tag}>|<${tag}>(.+?)<\\\\/${tag}>`, 's');\n      const m = itemXml.match(r);\n      return m ? (m[1] || m[2] || '').trim() : '';\n    };\n    items.push({\n      title: getTag('title'),\n      link: getTag('link'),\n      pubDate: getTag('pubDate'),\n      description: getTag('description')\n    });\n  }\n}\n\nconst matched = [];\nlet newestDate = lastCheckedDate;\n\nfor (const item of items) {\n  const itemDate = item.pubDate ? new Date(item.pubDate) : null;\n  if (!itemDate || isNaN(itemDate.getTime())) continue;\n  if (itemDate.getTime() <= lastCheckedTime) continue;\n\n  if (itemDate.toISOString() > newestDate) {\n    newestDate = itemDate.toISOString();\n  }\n\n  // Strip HTML tags for keyword matching\n  const plainDesc = (item.description || '').replace(/<[^>]*>/g, ' ').toLowerCase();\n  const plainTitle = (item.title || '').toLowerCase();\n  const text = plainTitle + ' ' + plainDesc;\n\n  const hits = KEYWORDS.filter(kw => text.includes(kw.toLowerCase()));\n  if (hits.length > 0) {\n    matched.push({\n      title: item.title,\n      keywords: hits,\n      url: item.link,\n      published: item.pubDate\n    });\n  }\n}\n\nstaticData.lastCheckedDate = newestDate;\nstaticData.lastRunAt = new Date().toISOString();\n\nreturn [{ json: { matchedCount: matched.length, updates: matched, lastChecked: lastCheckedDate, newLastChecked: newestDate } }];"
+      },
+      "id": "filter-breaking-changes",
+      "name": "Filter Breaking Changes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-matched",
+              "leftValue": "={{ $json.matchedCount }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "has-breaking-changes",
+      "name": "Has Breaking Changes?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst updates = data.updates;\n\nconst facts = updates.map(u => ({\n  type: 'FactSet',\n  facts: [\n    { title: 'Update', value: u.title },\n    { title: 'Keywords', value: u.keywords.join(', ') },\n    { title: 'Published', value: u.published ? new Date(u.published).toLocaleDateString() : 'N/A' }\n  ]\n}));\n\nconst actions = updates.slice(0, 5).map(u => ({\n  type: 'Action.OpenUrl',\n  title: `View: ${u.title.substring(0, 40)}`,\n  url: u.url\n}));\n\nconst card = {\n  type: 'message',\n  attachments: [{\n    contentType: 'application/vnd.microsoft.card.adaptive',\n    contentUrl: null,\n    content: {\n      '$schema': 'http://adaptivecards.io/schemas/adaptive-card.json',\n      type: 'AdaptiveCard',\n      version: '1.4',\n      body: [\n        {\n          type: 'TextBlock',\n          size: 'Medium',\n          weight: 'Bolder',\n          text: `Azure & M365 Breaking Changes Alert (${updates.length} update${updates.length > 1 ? 's' : ''})`\n        },\n        {\n          type: 'TextBlock',\n          text: `Checked updates since ${new Date(data.lastChecked).toLocaleDateString()}`,\n          isSubtle: true,\n          wrap: true\n        },\n        ...facts\n      ],\n      actions: actions\n    }\n  }]\n};\n\nreturn [{ json: { teamsPayload: card } }];"
+      },
+      "id": "build-teams-card",
+      "name": "Build Teams Card",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, -100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.TEAMS_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.teamsPayload) }}",
+        "options": {}
+      },
+      "id": "post-to-teams",
+      "name": "POST to Teams",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, -100],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "id": "no-breaking-changes",
+      "name": "No Breaking Changes",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [880, 100]
+    },
+    {
+      "parameters": {
+        "content": "## Monitor Azure & M365 Updates - Breaking Changes\n\nRuns every Wednesday at 9 AM.\n\n**Flow:** Schedule -> Azure Updates RSS Feed -> Filter by keywords -> Teams notification\n\n**Setup:**\n1. Set `TEAMS_WEBHOOK_URL` environment variable in n8n\n2. Activate the workflow\n3. First run will set the baseline date\n\n**Keywords monitored:** breaking, deprecation, retirement, migration required, action required, end of support, preview, general availability, entra, conditional access, intune, defender, key vault, managed identity, graph api, powershell",
+        "width": 400,
+        "height": 300
+      },
+      "id": "sticky-note",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-60, -300]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "GET Azure Updates RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Azure Updates RSS": {
+      "main": [
+        [
+          {
+            "node": "Filter Breaking Changes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Breaking Changes": {
+      "main": [
+        [
+          {
+            "node": "Has Breaking Changes?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Breaking Changes?": {
+      "main": [
+        [
+          {
+            "node": "Build Teams Card",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Breaking Changes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Teams Card": {
+      "main": [
+        [
+          {
+            "node": "POST to Teams",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

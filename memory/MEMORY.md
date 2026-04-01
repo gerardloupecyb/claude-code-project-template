@@ -121,17 +121,17 @@ Pattern découvert : injecter des quality patterns cross-workflow via `.claude/r
 - Projet local : /Users/gerardvinou/Claude code/Claude Projects/project-template-v2
 
 <!-- pre-compact snapshot -->
-**Snapshot pre-compaction** (2026-03-31 20:58)
+**Snapshot pre-compaction** (2026-03-31 21:10)
 
 - **Prochaine etape:** (1) merge feat/agentdb-track-b → master, (2) lancer Track B si prévu, ou (3) tests d'intégration multi-projets via init-project.sh.
 - **Derniers commits:**
-  - 7eed084 pre-compact snapshot
-  - 44b145e feat(agentdb): Track B — AgentDB self-hosted memory infrastructure
-  - 389dc81 docs: update MEMORY.md — Track A complete, AgentDB replaces Supermemory
+  - 3db3f1f chore: track pre-existing skill files before merge
+  - e59ae2c feat: merge feat/agentdb-track-b — Track A (Ruflo concepts) + Track B (AgentDB self-hosted memory)
+  - bf81008 chore(agentdb-mcp): add package-lock.json for reproducible MCP client installs
 - **Fichiers modifies:**
-  -  M agentdb-server/agentdb-api/package.json
-  -  M agentdb-server/docker-compose.yml
-  - ?? .claude/mcp/agentdb/package-lock.json
-  - ?? .claude/skills/code-xray/
-  - ?? .claude/skills/memory-consolidate/
+  - UU .carl/domain.template
+  - A  .carl/n8nautomation
+  - UU .claude/rules/execution-quality.md
+  - A  .claude/rules/model-routing.md
+  - M  .claude/rules/tool-routing.md
 <!-- /pre-compact snapshot -->

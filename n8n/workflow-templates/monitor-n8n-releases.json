@@ -1,0 +1,199 @@
+{
+  "name": "Template - Monitor n8n Releases - Breaking Changes",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9,
+              "triggerAtDay": 0
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/repos/n8n-io/n8n/releases?per_page=5",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "n8n-Release-Monitor"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-github-releases",
+      "name": "GET GitHub Releases",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Keywords that signal breaking or high-impact changes\nconst KEYWORDS = [\n  'breaking', 'deprecated', 'removed',\n  'code node', 'task runner', 'python',\n  'expression', 'webhook', '$env',\n  'publish', 'migration'\n];\n\n// Get static data to track last checked version\nconst staticData = this.getWorkflowStaticData('global');\nconst lastChecked = staticData.lastCheckedVersion || '0.0.0';\n\n// Parse semver string to comparable array [major, minor, patch]\nfunction parseSemver(tag) {\n  const clean = tag.replace(/^[vn@]+/, '');\n  const parts = clean.split('.').map(Number);\n  return [parts[0] || 0, parts[1] || 0, parts[2] || 0];\n}\n\nfunction isNewer(versionTag, baseline) {\n  const a = parseSemver(versionTag);\n  const b = parseSemver(baseline);\n  for (let i = 0; i < 3; i++) {\n    if (a[i] > b[i]) return true;\n    if (a[i] < b[i]) return false;\n  }\n  return false;\n}\n\nconst releases = $input.all();\nlet releaseList = [];\nif (releases.length === 1 && Array.isArray(releases[0].json)) {\n  releaseList = releases[0].json;\n} else {\n  releaseList = releases.map(r => r.json);\n}\n\nconst matched = [];\nlet newestVersion = lastChecked;\n\nfor (const release of releaseList) {\n  const tag = release.tag_name || '';\n  const body = (release.body || '').toLowerCase();\n  const name = (release.name || '').toLowerCase();\n  const text = body + ' ' + name;\n\n  if (!isNewer(tag, lastChecked)) continue;\n  if (isNewer(tag, newestVersion)) newestVersion = tag;\n\n  const hits = KEYWORDS.filter(kw => text.includes(kw.toLowerCase()));\n  if (hits.length > 0) {\n    matched.push({\n      version: tag,\n      name: release.name || tag,\n      keywords: hits,\n      url: release.html_url || `https://github.com/n8n-io/n8n/releases/tag/${tag}`,\n      published: release.published_at || ''\n    });\n  }\n}\n\nstaticData.lastCheckedVersion = newestVersion;\nstaticData.lastRunAt = new Date().toISOString();\n\nreturn [{ json: { matchedCount: matched.length, releases: matched, lastChecked: lastChecked, newLastChecked: newestVersion } }];"
+      },
+      "id": "filter-breaking-changes",
+      "name": "Filter Breaking Changes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-matched",
+              "leftValue": "={{ $json.matchedCount }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "has-breaking-changes",
+      "name": "Has Breaking Changes?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst releases = data.releases;\n\nconst facts = releases.map(r => ({\n  type: 'FactSet',\n  facts: [\n    { title: 'Version', value: r.version },\n    { title: 'Keywords', value: r.keywords.join(', ') },\n    { title: 'Published', value: r.published ? new Date(r.published).toLocaleDateString() : 'N/A' }\n  ]\n}));\n\nconst actions = releases.map(r => ({\n  type: 'Action.OpenUrl',\n  title: `View ${r.version}`,\n  url: r.url\n}));\n\nconst card = {\n  type: 'message',\n  attachments: [{\n    contentType: 'application/vnd.microsoft.card.adaptive',\n    contentUrl: null,\n    content: {\n      '$schema': 'http://adaptivecards.io/schemas/adaptive-card.json',\n      type: 'AdaptiveCard',\n      version: '1.4',\n      body: [\n        {\n          type: 'TextBlock',\n          size: 'Medium',\n          weight: 'Bolder',\n          text: `n8n Breaking Changes Alert (${releases.length} release${releases.length > 1 ? 's' : ''})`\n        },\n        {\n          type: 'TextBlock',\n          text: `Checked versions from ${data.lastChecked} to ${data.newLastChecked}`,\n          isSubtle: true,\n          wrap: true\n        },\n        ...facts\n      ],\n      actions: actions\n    }\n  }]\n};\n\nreturn [{ json: { teamsPayload: card } }];"
+      },
+      "id": "build-teams-card",
+      "name": "Build Teams Card",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, -100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.TEAMS_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.teamsPayload) }}",
+        "options": {}
+      },
+      "id": "post-to-teams",
+      "name": "POST to Teams",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, -100],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "id": "no-breaking-changes",
+      "name": "No Breaking Changes",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [880, 100]
+    },
+    {
+      "parameters": {
+        "content": "## Monitor n8n Releases - Breaking Changes\n\nRuns every Sunday at 9 AM.\n\n**Flow:** Schedule -> GitHub API -> Filter by keywords -> Teams notification\n\n**Setup:**\n1. Set `TEAMS_WEBHOOK_URL` environment variable in n8n\n2. Activate the workflow\n3. First run will set the baseline version\n\n**Keywords monitored:** breaking, deprecated, removed, code node, task runner, python, expression, webhook, $env, publish, migration",
+        "width": 400,
+        "height": 280
+      },
+      "id": "sticky-note",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-60, -300]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "GET GitHub Releases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET GitHub Releases": {
+      "main": [
+        [
+          {
+            "node": "Filter Breaking Changes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Breaking Changes": {
+      "main": [
+        [
+          {
+            "node": "Has Breaking Changes?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Breaking Changes?": {
+      "main": [
+        [
+          {
+            "node": "Build Teams Card",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Breaking Changes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Teams Card": {
+      "main": [
+        [
+          {
+            "node": "POST to Teams",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

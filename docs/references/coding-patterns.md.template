@@ -1,0 +1,97 @@
+# L2 — Coding Patterns Reference
+
+> Language-specific patterns, error handling, test conventions.
+> Read BEFORE writing or reviewing code in project languages.
+
+---
+
+## Language & Framework Stack
+
+<!-- List primary languages and frameworks with version constraints. -->
+
+| Language/Framework | Version | Notes |
+|-------------------|---------|-------|
+| {{LANGUAGE_1}} | {{VERSION}} | {{NOTES}} |
+
+---
+
+## Error Handling Pattern
+
+<!-- Standard error handling approach for the project. -->
+
+```{{LANGUAGE}}
+# {{ERROR_PATTERN_DESCRIPTION}}
+# Replace with your project's standard error handling skeleton
+```
+
+---
+
+## Retry & Resilience Pattern
+
+<!-- Standard retry/backoff approach for external calls. -->
+
+```{{LANGUAGE}}
+# {{RETRY_PATTERN_DESCRIPTION}}
+# Replace with your project's standard retry skeleton
+```
+
+---
+
+## Test Conventions
+
+<!-- Testing framework, naming, coverage expectations. -->
+
+| Aspect | Convention |
+|--------|-----------|
+| Framework | {{TEST_FRAMEWORK}} |
+| Naming | {{TEST_NAMING_CONVENTION}} |
+| Coverage target | {{COVERAGE_TARGET}} |
+| Integration tests | {{INTEGRATION_APPROACH}} |
+
+---
+
+## Naming Conventions
+
+| Element | Convention | Example |
+|---------|-----------|---------|
+| Files | {{FILE_NAMING}} | {{FILE_EXAMPLE}} |
+| Functions | {{FUNC_NAMING}} | {{FUNC_EXAMPLE}} |
+| Variables | {{VAR_NAMING}} | {{VAR_EXAMPLE}} |
+| Constants | {{CONST_NAMING}} | {{CONST_EXAMPLE}} |
+
+---
+
+## Batch & Pagination Pattern
+
+<!-- Standard pattern for batch processing / paginated API calls. -->
+
+```{{LANGUAGE}}
+# {{BATCH_PATTERN_DESCRIPTION}}
+# Replace with your project's standard batch skeleton
+```
+
+---
+
+## Logging Conventions
+
+| Level | When to use | Example |
+|-------|------------|---------|
+| ERROR | Unrecoverable failures | {{ERROR_EXAMPLE}} |
+| WARN | Recoverable issues, degraded state | {{WARN_EXAMPLE}} |
+| INFO | Business events, state transitions | {{INFO_EXAMPLE}} |
+| DEBUG | Development only, verbose | {{DEBUG_EXAMPLE}} |
+
+---
+
+## Update Rules
+
+| Event | Section to update |
+|-------|-------------------|
+| New language/framework added | Language & Framework Stack |
+| New error handling pattern established | Error Handling Pattern |
+| Test convention changed | Test Conventions |
+| New shared pattern discovered | Add new section |
+
+---
+
+_Last verified: {{DATE}}_

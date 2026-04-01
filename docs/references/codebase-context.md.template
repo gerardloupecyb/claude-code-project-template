@@ -1,0 +1,91 @@
+# L3 — Codebase Context Reference
+
+> Module exports, schemas, key file inventory, shared interfaces.
+> Read BEFORE calling shared modules, modifying schemas, or touching core interfaces.
+
+---
+
+## Project Structure
+
+<!-- High-level directory layout with purpose of each area. -->
+
+```
+{{PROJECT_ROOT}}/
+  src/               — {{SRC_PURPOSE}}
+  docs/              — Documentation, plans, brainstorms, references
+  memory/            — MEMORY.md (session state)
+  .claude/           — Skills, hooks, rules, settings
+  .carl/             — CARL domain rules
+  .planning/         — GSD ephemeral plans
+```
+
+---
+
+## Key Modules / Shared Libraries
+
+<!-- Modules that other code depends on. Document exports and contracts. -->
+
+| Module | Path | Exports | Used by |
+|--------|------|---------|---------|
+| {{MODULE_NAME}} | {{MODULE_PATH}} | {{KEY_EXPORTS}} | {{CONSUMERS}} |
+
+---
+
+## Data Schemas
+
+<!-- Key schemas, models, database tables. -->
+
+| Schema/Model | Location | Key fields | Notes |
+|-------------|----------|------------|-------|
+| {{SCHEMA_NAME}} | {{LOCATION}} | {{KEY_FIELDS}} | {{NOTES}} |
+
+---
+
+## Core Interfaces & Contracts
+
+<!-- APIs, event buses, message formats that multiple components depend on. -->
+
+| Interface | Type | Location | Contract |
+|-----------|------|----------|----------|
+| {{INTERFACE_NAME}} | {{TYPE}} | {{LOCATION}} | {{CONTRACT_DESC}} |
+
+---
+
+## Configuration Files
+
+<!-- Key config files that affect runtime behavior. -->
+
+| File | Purpose | Key settings |
+|------|---------|-------------|
+| .env | Environment variables | See services-and-access.md for secret names |
+| {{CONFIG_FILE}} | {{PURPOSE}} | {{KEY_SETTINGS}} |
+
+---
+
+## Entry Points
+
+<!-- Main entry points for running, testing, deploying. -->
+
+| Action | Command | Notes |
+|--------|---------|-------|
+| Run dev | {{DEV_CMD}} | {{NOTES}} |
+| Run tests | {{TEST_CMD}} | {{NOTES}} |
+| Build | {{BUILD_CMD}} | {{NOTES}} |
+| Deploy | {{DEPLOY_CMD}} | {{NOTES}} |
+
+---
+
+## Update Rules
+
+| Event | Section to update |
+|-------|-------------------|
+| New shared module created | Key Modules table |
+| Schema/model changed | Data Schemas table |
+| New API or event interface | Core Interfaces table |
+| New config file added | Configuration Files table |
+| Entry point command changed | Entry Points table |
+| Directory structure reorganized | Project Structure |
+
+---
+
+_Last verified: {{DATE}}_
