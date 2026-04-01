@@ -1,8 +1,16 @@
 # Claude Code Project Template
 
-[![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)](https://github.com/gerardloupecyb/claude-code-project-template/releases)
+[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/gerardloupecyb/claude-code-project-template/releases)
 
 Template de projet pour Claude Code avec flywheel de capitalisation, gestion de contexte multi-session, et injection de regles dynamiques via CARL.
+
+**v3.0.0** — Agents natifs + audit tooling (ECC patterns) :
+
+- `.claude/agents/` : 4 agents invocables nommement (`architect`, `code-reviewer`, `tdd-guide`, `security-reviewer`)
+- `/prepare-phase` : Step 0 context capture automatique avant discuss
+- `/rules-distill` : flywheel LESSONS → CARL automatise
+- `/security-audit` : audit config Claude Code via AgentShield (on-demand)
+- Hook PostToolUse/Bash : audit log `~/.claude/bash-commands.log` avec redaction secrets
 
 > **Guide complet :** [docs/GUIDE.md](docs/GUIDE.md) — architecture 3 couches, 7 skills, hooks, CARL, workflows, FAQ
 
@@ -30,6 +38,7 @@ Chaque couche ajoute du detail. Claude descend dans la pile seulement quand il a
 ### Requis
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installe et fonctionnel
+- `jq` — parsing JSON pour le hook d'audit Bash (pre-installe sur macOS/Linux)
 
 ### Recommande
 
@@ -337,6 +346,13 @@ Sans CARL, les fichiers `.carl/` existent mais ne sont pas lus automatiquement. 
 | `.claude/skills/project-bootstrap/SKILL.md` | Skill | Bootstrap cross-projet (Supermemory) |
 | `.claude/skills/context-checkpoint/SKILL.md` | Skill | Checkpoint avant coupure de session |
 | `.claude/skills/task-router/SKILL.md` | Skill | Routing multi-modele (Opus/Codex) |
+| `.claude/skills/prepare-phase/SKILL.md` | Skill | Context capture + discuss + plan + pre-flight en une commande |
+| `.claude/skills/rules-distill/SKILL.md` | Skill | Distille LESSONS.md en regles CARL (flywheel automatise) |
+| `.claude/skills/security-audit/SKILL.md` | Skill | Audit securite on-demand via AgentShield (`npx`) |
+| `.claude/agents/architect.md` | Agent | Architecture specialist — design systeme, ADR (Opus) |
+| `.claude/agents/code-reviewer.md` | Agent | Code review par severite CRITICAL/HIGH/MEDIUM (Sonnet) |
+| `.claude/agents/tdd-guide.md` | Agent | TDD specialist — RED → GREEN → REFACTOR (Sonnet) |
+| `.claude/agents/security-reviewer.md` | Agent | OWASP Top 10 + secrets detection (Sonnet) |
 | `.claude/rules/model-routing.md` | Rule | Delegation taches code vers executors externes |
 | `.gitignore.template` | Template | Gitignore avec `.task-briefs/` |
 
