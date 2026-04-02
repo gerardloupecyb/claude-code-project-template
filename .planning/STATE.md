@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-04-02T17:05:20.153Z"
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-04-02T20:27:55.748Z"
 progress:
   total_phases: 11
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Claude exécute les phases GSD de façon structurée et auditable — micro-exécution SPARC, pre-flight jamais skippé, décisions architecturales tracées, mémoire sémantique fiable.
-**Current focus:** Phase 01 — swarm-patterns
+**Current focus:** Phase 02 — preflight-agent5-critic
 
 ## Current Position
 
-Phase: 02
-Plan: Not started
+Phase: 02 (preflight-agent5-critic) — EXECUTING
+Plan: 1 of 1
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Plan: Not started
 
 *Updated after each plan completion*
 | Phase 01 P01 | 2min | 2 tasks | 1 files |
+| Phase 02 P01 | 2min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -60,6 +61,7 @@ Recent decisions affecting current work:
 - Project init: Enforcement pre-flight = CARL + session-gate — défense en profondeur
 - [Phase 01]: architect and critic default to Sonnet/Opus (not Opus-only) to avoid overhead on standard tasks
 - [Phase 01]: SPARC table split Phase 3 into two rows (architect + critic separately) with Reason column for auditability
+- [Phase 02]: Agent 5 model routing delegates to swarm-patterns.md (Sonnet default, Opus on escalation) instead of hardcoding Opus tier
 
 ### Pending Todos
 
@@ -71,6 +73,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-02T17:02:18.734Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-04-02T20:27:55.742Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None

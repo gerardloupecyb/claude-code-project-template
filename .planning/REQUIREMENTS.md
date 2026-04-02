@@ -17,12 +17,12 @@
 
 ### Pre-flight
 
-- [ ] **PREFLT-01**: Agent 5 Critic ajouté dans `.claude/skills/pre-flight/SKILL.md`
-- [ ] **PREFLT-02**: Agent 5 reçoit l'output de l'Agent 1 (séquentiel, pas parallèle)
-- [ ] **PREFLT-03**: Référence rôle `critic` de swarm-patterns.md
-- [ ] **PREFLT-04**: Section "Architecture Challenge" dans le report template
-- [ ] **PREFLT-05**: Agent 5 skip si plan trivial (pas de findings Agent 1)
-- [ ] **PREFLT-06**: Agent 5 vérifie le fichier `docs/architecture/contexts.md` si existant
+- [x] **PREFLT-01**: Agent 5 Critic ajouté dans `.claude/skills/pre-flight/SKILL.md`
+- [x] **PREFLT-02**: Agent 5 reçoit l'output de l'Agent 1 (séquentiel, pas parallèle)
+- [x] **PREFLT-03**: Référence rôle `critic` de swarm-patterns.md
+- [x] **PREFLT-04**: Section "Architecture Challenge" dans le report template
+- [x] **PREFLT-05**: Agent 5 skip si plan trivial (pas de findings Agent 1)
+- [x] **PREFLT-06**: Agent 5 vérifie le fichier `docs/architecture/contexts.md` si existant
 
 ### SPARC
 

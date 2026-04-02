@@ -56,7 +56,7 @@ Plans:
   5. Agent 5 reads `docs/architecture/contexts.md` as a constraint when the file exists
 **Plans:** 1 plan
 Plans:
-- [ ] 02-01-PLAN.md — Fix 3 targeted gaps in SKILL.md (model routing, placeholder-skip, agent count) + validate all 6 PREFLT requirements
+- [x] 02-01-PLAN.md — Fix 3 targeted gaps in SKILL.md (model routing, placeholder-skip, agent count) + validate all 6 PREFLT requirements
 
 ### Phase 3: SPARC Skill
 **Goal**: Developers can invoke a structured 5-phase micro-execution skill within any GSD phase
