@@ -105,6 +105,9 @@ Present the Pre-Flight Report to the user with the verdict:
 - If any step returns an error: stop the chain and diagnose for the user
 - Deepen-plan is the only interactive step (1 question, 2 choices)
 - Never launch execution (`/sparc`, `/gsd:execute-phase`) — that's the user's decision
+- **Suspends workflow-automation.md transitions**: when this skill is active, the automatic
+  post-planning transition ("Plan prêt. Lancer l'execution ?") does NOT fire — this orchestrator
+  owns the sequence through pre-flight. Resume normal transitions after Step 5.
 
 ## What this skill does NOT do
 

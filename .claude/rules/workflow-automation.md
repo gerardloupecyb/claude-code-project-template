@@ -55,7 +55,10 @@ Apres `/ce:review` :
 
 ## Transitions post-planning
 
-Apres `/gsd:plan-phase` ou `/ce:plan` :
+**Exception : si l'orchestrateur actif est `/prepare-phase`, NE PAS appliquer ces transitions.**
+`/prepare-phase` gere sa propre sequence (deepen? → pre-flight → report). Laisser l'orchestrateur reprendre la main.
+
+Apres `/gsd:plan-phase` ou `/ce:plan` (hors `/prepare-phase`) :
 
 - Si taches external detectees (model-routing.md) → "N taches delegables a Codex. Generer les briefs avec `/task-router` ?"
 - Sinon → "Plan pret. Lancer l'execution ?"
