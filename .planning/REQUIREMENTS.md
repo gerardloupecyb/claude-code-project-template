@@ -9,11 +9,11 @@
 
 ### Swarm Patterns
 
-- [ ] **SWARM-01**: `.claude/rules/swarm-patterns.md` existe et contient les 8 rôles définis (architect, critic, coder, reviewer, tester, security-auditor, spec-writer, logic-planner)
-- [ ] **SWARM-02**: Topologie hiérarchique, anti-drift, et shared namespace documentés (3 patterns)
-- [ ] **SWARM-03**: Model routing 3-tier (Haiku/Sonnet/Opus) avec règles d'escalade
-- [ ] **SWARM-04**: Model routing SPARC par phase avec conditions d'escalade vers Opus
-- [ ] **SWARM-05**: Fichier < 80 lignes
+- [x] **SWARM-01**: `.claude/rules/swarm-patterns.md` existe et contient les 8 rôles définis (architect, critic, coder, reviewer, tester, security-auditor, spec-writer, logic-planner)
+- [x] **SWARM-02**: Topologie hiérarchique, anti-drift, et shared namespace documentés (3 patterns)
+- [x] **SWARM-03**: Model routing 3-tier (Haiku/Sonnet/Opus) avec règles d'escalade
+- [x] **SWARM-04**: Model routing SPARC par phase avec conditions d'escalade vers Opus
+- [x] **SWARM-05**: Fichier < 80 lignes
 
 ### Pre-flight
 

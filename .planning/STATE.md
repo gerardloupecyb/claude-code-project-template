@@ -1,3 +1,17 @@
+---
+gsd_state_version: 1.0
+milestone: v1.5
+milestone_name: milestone
+status: unknown
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-04-02T17:02:18.740Z"
+progress:
+  total_phases: 11
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
+---
+
 # Project State
 
 ## Project Reference
@@ -5,20 +19,17 @@
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Claude exécute les phases GSD de façon structurée et auditable — micro-exécution SPARC, pre-flight jamais skippé, décisions architecturales tracées, mémoire sémantique fiable.
-**Current focus:** Phase 1 — swarm-patterns.md
+**Current focus:** Phase 01 — swarm-patterns
 
 ## Current Position
 
-Phase: 1 of 11 (swarm-patterns.md)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-03-31 — ROADMAP.md and STATE.md initialized
-
-Progress: [░░░░░░░░░░] 0%
+Phase: 01 (swarm-patterns) — EXECUTING
+Plan: 1 of 1
 
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0
 - Average duration: -
 - Total execution time: 0 hours
@@ -30,10 +41,12 @@ Progress: [░░░░░░░░░░] 0%
 | - | - | - | - |
 
 **Recent Trend:**
+
 - Last 5 plans: -
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 01 P01 | 2min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -45,6 +58,8 @@ Recent decisions affecting current work:
 - Project init: Milestones séparés Track A / Track B — Track A zero deps, livrable indépendamment
 - Project init: swarm-patterns.md dans .claude/rules/ — auto-chargé par tous les subagents
 - Project init: Enforcement pre-flight = CARL + session-gate — défense en profondeur
+- [Phase 01]: architect and critic default to Sonnet/Opus (not Opus-only) to avoid overhead on standard tasks
+- [Phase 01]: SPARC table split Phase 3 into two rows (architect + critic separately) with Reason column for auditability
 
 ### Pending Todos
 
@@ -56,6 +71,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31
-Stopped at: Roadmap created, no plans written yet
+Last session: 2026-04-02T17:02:18.734Z
+Stopped at: Completed 01-01-PLAN.md
 Resume file: None

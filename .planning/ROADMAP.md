@@ -42,7 +42,7 @@ Two-milestone project enriching project-template-v2 with ruflo concepts. Milesto
   5. File stays under 80 lines
 **Plans:** 1 plan
 Plans:
-- [ ] 01-01-PLAN.md — Rewrite swarm-patterns.md to match CONTEXT.md spec (roles, topologies, routing, escalation)
+- [x] 01-01-PLAN.md — Rewrite swarm-patterns.md to match CONTEXT.md spec (roles, topologies, routing, escalation)
 
 ### Phase 2: Pre-flight Agent 5 Critic
 **Goal**: Pre-flight challenges its own architecture findings before a plan is approved
