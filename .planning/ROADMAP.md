@@ -54,7 +54,9 @@ Plans:
   3. Pre-flight report template includes an "Architecture Challenge" section
   4. Agent 5 is skipped when Agent 1 finds no architectural concerns (trivial plan)
   5. Agent 5 reads `docs/architecture/contexts.md` as a constraint when the file exists
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 02-01-PLAN.md — Fix 3 targeted gaps in SKILL.md (model routing, placeholder-skip, agent count) + validate all 6 PREFLT requirements
 
 ### Phase 3: SPARC Skill
 **Goal**: Developers can invoke a structured 5-phase micro-execution skill within any GSD phase
@@ -172,7 +174,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. swarm-patterns.md | Track A | 0/1 | Planning complete | - |
-| 2. Pre-flight Agent 5 Critic | Track A | 0/TBD | Not started | - |
+| 2. Pre-flight Agent 5 Critic | Track A | 0/1 | Planning complete | - |
 | 3. SPARC Skill | Track A | 0/TBD | Not started | - |
 | 4. Pre-flight Enforcement | Track A | 0/TBD | Not started | - |
 | 5. Execution Quality + DDD | Track A | 0/TBD | Not started | - |
