@@ -4,16 +4,18 @@ Single source of truth for agent orchestration. Referenced by SPARC and pre-flig
 
 ## Agent Roles
 
-| Rôle | Responsabilité | Model tier | Biais |
+| Role | Responsabilite | Model tier | Biais |
 |------|---------------|------------|-------|
-| `architect` | Design système, APIs, boundaries | Opus (tier 3) | Propose la meilleure solution |
-| `critic` | Challenge, edge cases, over-engineering | Opus (tier 3) | Cherche activement les problèmes |
-| `coder` | Implémentation, TDD | Sonnet (tier 2) | Best practices |
-| `reviewer` | Code review structurée | Sonnet/Opus | Qualité + sécurité |
-| `tester` | Tests, edge cases, couverture | Sonnet (tier 2) | Couverture exhaustive |
+| `architect` | Design systeme, APIs, boundaries | Sonnet/Opus | Propose la meilleure solution |
+| `critic` | Challenge, edge cases, over-engineering | Sonnet/Opus | Cherche activement les problemes |
+| `coder` | Implementation, TDD | Sonnet | Best practices |
+| `reviewer` | Code review structuree | Sonnet/Opus | Qualite + securite |
+| `tester` | Tests, edge cases, couverture | Sonnet | Couverture exhaustive |
 | `security-auditor` | OWASP, auth, data exposure | Sonnet/Opus | Paranoid |
-| `spec-writer` | Requirements, AC mesurables | Sonnet (tier 2) | Clarté + traçabilité |
-| `logic-planner` | Pseudocode, logique, TDD anchors | Sonnet (tier 2) | Structure |
+| `spec-writer` | Requirements, AC mesurables | Sonnet | Clarte + tracabilite |
+| `logic-planner` | Pseudocode, logique, TDD anchors | Sonnet | Structure |
+
+critic defaults to Sonnet; escalates to Opus per escalation triggers below.
 
 ## Topology and Anti-Drift
 
@@ -40,17 +42,22 @@ Lead reads outputs and synthesizes. Workers NEVER call each other (context flood
 
 **SPARC routing by phase:**
 
-| Phase | Agent | Model |
-|-------|-------|-------|
-| 1 Spec | spec-writer | Sonnet |
-| 2 Pseudo | logic-planner | Sonnet |
-| 3 Arch | architect + critic | Opus |
-| 4 Refine | implementation | Sonnet |
-| 5 Complete — standard | reviewer | Sonnet |
-| 5 Complete — security/contradiction | reviewer + critic | Opus |
+| Phase | Agent | Model | Reason |
+|-------|-------|-------|--------|
+| 1 Spec | spec-writer | Sonnet | Standard execution |
+| 2 Pseudo | logic-planner | Sonnet | Standard execution |
+| 3 Arch | architect | Opus | Structural decision |
+| 3 Arch | critic | Opus | Challenge must match proposal tier |
+| 4 Refine | implementation | Sonnet | Standard code |
+| 5 Complete | reviewer | Sonnet | Ordinary review |
+| 5 Complete | reviewer + critic | Opus | If security, contradiction, or bounded context |
 
-Escalate to Opus when: auth/security, bounded contexts, architect↔critic contradiction unresolved,
-2nd NO-GO on same task, decision costly to reverse (schema, API contract, data model).
+**Escalate to Opus when:**
+- Auth, security, permissions, or sensitive data
+- Bounded contexts or API boundaries in scope
+- Architect and critic contradict without clear resolution
+- 2nd NO-GO on the same task
+- Costly-to-reverse decision (schema, API contract, data model, orchestration)
 
 ## Limits
 
