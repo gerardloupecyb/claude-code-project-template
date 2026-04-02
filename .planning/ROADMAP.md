@@ -40,7 +40,9 @@ Two-milestone project enriching project-template-v2 with ruflo concepts. Milesto
   3. 3-tier model routing table (Haiku/Sonnet/Opus) is present with escalation conditions
   4. SPARC phase-to-model routing table exists with Opus escalation conditions
   5. File stays under 80 lines
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 01-01-PLAN.md — Rewrite swarm-patterns.md to match CONTEXT.md spec (roles, topologies, routing, escalation)
 
 ### Phase 2: Pre-flight Agent 5 Critic
 **Goal**: Pre-flight challenges its own architecture findings before a plan is approved
@@ -169,7 +171,7 @@ Two-milestone project enriching project-template-v2 with ruflo concepts. Milesto
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. swarm-patterns.md | Track A | 0/TBD | Not started | - |
+| 1. swarm-patterns.md | Track A | 0/1 | Planning complete | - |
 | 2. Pre-flight Agent 5 Critic | Track A | 0/TBD | Not started | - |
 | 3. SPARC Skill | Track A | 0/TBD | Not started | - |
 | 4. Pre-flight Enforcement | Track A | 0/TBD | Not started | - |
