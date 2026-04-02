@@ -102,7 +102,7 @@ Review the plan for:
 
 ```
 role: critic (ref: .claude/rules/swarm-patterns.md)
-model: Opus (tier 3)
+model: per swarm-patterns.md routing (Sonnet default; Opus on escalation triggers)
 ```
 
 Receives: Agent 1 (Architecture Strategist) output + original plan.
@@ -115,13 +115,15 @@ Mission: actively challenge Agent 1's proposals:
 - Are hidden costs identified?
 - Is this the simplest design that satisfies the ACs?
 
-If `docs/architecture/contexts.md` exists: verify the plan respects bounded contexts.
+If `docs/architecture/contexts.md` exists and contains real content (not just unfilled
+placeholders): verify the plan respects bounded contexts. Skip if file is absent or
+contains only template placeholders.
 
 ---
 
 ## Output — Pre-Flight Report
 
-After all 4 agents complete, synthesize their findings into a structured report.
+After all 5 agents complete, synthesize their findings into a structured report.
 
 ### Format
 
