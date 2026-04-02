@@ -70,7 +70,9 @@ Plans:
   5. SPARC works standalone (Phase 5 invocable alone for Codex review without full GSD)
   6. Workspace artifacts written to `.claude/workspace/sparc-*.md`
   7. File stays under 150 lines
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 03-01-PLAN.md — Fix 3 targeted gaps (Phase 5 dual-agent, validation gate, standalone entry) + validate all 9 SPARC requirements
 
 ### Phase 4: Pre-flight Enforcement
 **Goal**: Executing a GSD phase without a completed pre-flight is mechanically blocked
@@ -175,7 +177,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 1. swarm-patterns.md | Track A | 0/1 | Planning complete | - |
 | 2. Pre-flight Agent 5 Critic | Track A | 0/1 | Planning complete | - |
-| 3. SPARC Skill | Track A | 0/TBD | Not started | - |
+| 3. SPARC Skill | Track A | 0/1 | Planning complete | - |
 | 4. Pre-flight Enforcement | Track A | 0/TBD | Not started | - |
 | 5. Execution Quality + DDD | Track A | 0/TBD | Not started | - |
 | 6. Agent Spawn Hook | Track A | 0/TBD | Not started | - |
