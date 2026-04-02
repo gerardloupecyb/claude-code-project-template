@@ -121,17 +121,15 @@ Pattern découvert : injecter des quality patterns cross-workflow via `.claude/r
 - Projet local : /Users/gerardvinou/Claude code/Claude Projects/project-template-v2
 
 <!-- pre-compact snapshot -->
-**Snapshot pre-compaction** (2026-03-31 21:30)
+**Snapshot pre-compaction** (2026-04-02 11:48)
 
 - **Prochaine etape:** (1) merge feat/agentdb-track-b → master, (2) lancer Track B si prévu, ou (3) tests d'intégration multi-projets via init-project.sh.
 - **Derniers commits:**
-  - 6c0dd6d merge: integrate origin/master — ref files discipline + MCP sync checks
-  - 3db3f1f chore: track pre-existing skill files before merge
-  - e59ae2c feat: merge feat/agentdb-track-b — Track A (Ruflo concepts) + Track B (AgentDB self-hosted memory)
+  - 094c75e docs(01-swarm-patterns): create phase plan
+  - 71b2e22 fix(skills): restore plugin syntax now that codex@openai-codex v1.0.2 is installed
+  - 4ddc0af fix(skills): replace /codex:plugin commands with codex CLI equivalents
 - **Fichiers modifies:**
   - ?? .claude/worktrees/
+  - ?? .vscode/
   - ?? compound-engineering.local.md
-  - ?? docs/brainstorms/2026-03-31-ecc-integration-requirements.md
-  - ?? docs/plans/2026-03-31-002-feat-ecc-integration-tier1-tier2-plan.md
-  - ?? sync-project.sh
 <!-- /pre-compact snapshot -->
