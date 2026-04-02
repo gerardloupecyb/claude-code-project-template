@@ -81,8 +81,8 @@ Implement with: (A) Claude Code [default] or (B) Codex (/codex:rescue)?
 - Commit per logical unit (ref: execution-quality.md commit heuristics)
 
 **Option B (Codex)**: Pass Phase 1-3 workspace files as context to Codex:
-```bash
-codex exec "implement based on .claude/workspace/sparc-spec.md, sparc-pseudo.md, sparc-arch.md"
+```
+/codex:rescue "implement based on .claude/workspace/sparc-spec.md, sparc-pseudo.md, sparc-arch.md"
 ```
 
 ---
@@ -96,11 +96,11 @@ Launch 2 reviews AUTOMATICALLY IN PARALLEL:
 - Checks: architecture, patterns, code quality, maintainability
 
 **Review B — Codex adversarial**:
-```bash
-codex review --base main
+```
+/codex:adversarial-review --base main
 ```
 - Challenges: design approach, tradeoffs, risks
-- Skip silently if Codex not available
+- Skip silently if Codex plugin not installed
 
 Claude synthesizes both reviews → **GO / NO-GO verdict**:
 - **GO**: task complete, close associated todos

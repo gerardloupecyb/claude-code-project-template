@@ -202,8 +202,8 @@ Save the report to `.planning/milestones/{milestone}/{phase}-PREFLIGHT.md`
 
 After the 5 agents + synthesis, launch automatically:
 
-```bash
-codex review --base main
+```
+/codex:adversarial-review --base main
 ```
 
 The Codex review challenges the **plan** (not code — none exists yet).
