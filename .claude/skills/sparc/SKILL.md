@@ -21,8 +21,11 @@ Phase 4 delegates to GSD standard execution.
 |---------|------|---------|
 | After `/prepare-phase` GO | Default for any GSD phase task | PLAN.md + ACs in `.planning/` |
 | `/sparc "description"` standalone | Complex isolated task | SPARC asks for context if needed |
+| `/sparc:review` standalone | Review-only (skip Phases 1-4) | Existing code + optional workspace files |
 
 **Default in phase**: Use SPARC for all GSD phase tasks unless user explicitly invokes `/gsd:fast`.
+
+**Phase 5 standalone**: `/sparc:review` runs only Phase 5 (reviewer + critic) against existing code. Useful for Codex-produced code review or post-implementation validation without running full SPARC.
 
 ---
 
@@ -85,28 +88,26 @@ Implement with: (A) Claude Code [default] or (B) Codex (/codex:rescue)?
 /codex:rescue "implement based on .claude/workspace/sparc-spec.md, sparc-pseudo.md, sparc-arch.md"
 ```
 
+**Validation**: Show implementation summary to user. Wait for confirmation before Phase 5.
+
 ---
 
 ## Phase 5 — Completion (dual review)
 
-Launch 2 reviews AUTOMATICALLY IN PARALLEL:
+Spawn 2 agents IN PARALLEL (ref: swarm-patterns.md):
 
-**Review A — CE:review** (multi-agent, Claude):
-- Reviews produced code against Phase 1 ACs
-- Checks: architecture, patterns, code quality, maintainability
+- `reviewer` (per swarm-patterns.md routing): reviews code against Phase 1 ACs, checks architecture, patterns, quality, maintainability
+- `critic` (per swarm-patterns.md routing): challenges design approach, tradeoffs, risks, hidden costs
 
-**Review B — Codex adversarial**:
-```
-/codex:adversarial-review --base main
-```
-- Challenges: design approach, tradeoffs, risks
-- Skip silently if Codex plugin not installed
+If escalation triggers apply (security, bounded contexts, contradiction, 2nd NO-GO): both agents run at tier 3 (Opus).
 
-Claude synthesizes both reviews → **GO / NO-GO verdict**:
-- **GO**: task complete, close associated todos
+Claude principal synthesizes both outputs → **GO / NO-GO verdict**:
+- **GO**: task complete, close associated todos with `/todo close {ID}`
 - **NO-GO**: return to Phase 4 with specific findings from both reviews
 
-Close associated todos with `/todo close {ID}` on GO.
+Optional: if Codex plugin installed, also run `/codex:adversarial-review --base main` for cross-model challenge. Skip silently if not installed.
+
+- Write to: `.claude/workspace/sparc-review.md`
 
 ---
 
@@ -115,11 +116,11 @@ Close associated todos with `/todo close {ID}` on GO.
 - Skip Phase 2 (Pseudocode) for tasks with obvious logic (CRUD, simple config)
 - Skip Phase 3 (Architecture) for trivial implementation tasks
 - Skip Phase 5 Codex review if Codex not installed (CE:review still runs)
-- Never auto-chain without user validation between phases (except Phase 5 which runs automatically after Phase 4)
+- Never auto-chain without user validation between phases
 
 ## What SPARC Does NOT Do
 
 - Replace GSD (SPARC lives INSIDE a GSD phase)
 - Force all phases (explicit skip is valid)
 - Wrap or modify `/gsd:execute-phase`
-- Auto-proceed without user validation (except Phase 5)
+- Auto-proceed without user validation
