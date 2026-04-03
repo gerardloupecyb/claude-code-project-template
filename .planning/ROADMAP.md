@@ -100,7 +100,7 @@ Plans:
   5. When contexts.md has only unfilled placeholders, agents ignore it without error
 **Plans:** 1 plan
 Plans:
-- [ ] 05-01-PLAN.md — Add contexts.md row to Reference Layer table (DDD-04) + compress to < 80 lines (ADR-03)
+- [x] 05-01-PLAN.md — Add contexts.md row to Reference Layer table (DDD-04) + compress to < 80 lines (ADR-03)
 
 ### Phase 6: Agent Spawn Hook
 **Goal**: Every agent spawn is logged per session and audited at session end
