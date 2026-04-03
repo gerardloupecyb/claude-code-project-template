@@ -65,7 +65,7 @@
 - [ ] **HOOK-02**: `.claude/settings.json` mis à jour avec matcher `Agent` PreToolUse
 - [ ] **HOOK-03**: Log dans `.claude/workspace/agent-log.txt`
 - [ ] **HOOK-04**: Hook exit 0 toujours (ne bloque jamais)
-- [ ] **HOOK-05**: Session-gate Check 19 (END, informational) — compte spawns, alerte si > 15
+- [ ] **HOOK-05**: Session-gate Check 21 (END, informational) — compte spawns, alerte si > 15
 - [ ] **HOOK-06**: `session-start.sh` vide le log au démarrage (compteur par session)
 
 ### Template + Init
