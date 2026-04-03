@@ -6,7 +6,7 @@
 
 trap 'exit 0' EXIT
 
-# Reset agent spawn log (for session-gate Check 19)
+# Reset agent spawn log (for session-gate Check 21)
 PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 mkdir -p "${PROJECT_ROOT}/.claude/workspace" 2>/dev/null
 > "${PROJECT_ROOT}/.claude/workspace/agent-log.txt" 2>/dev/null

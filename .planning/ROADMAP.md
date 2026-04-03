@@ -18,7 +18,7 @@ Two-milestone project enriching project-template-v2 with ruflo concepts. Milesto
 - [ ] **Phase 3: SPARC Skill** - Create 5-phase SPARC skill with dual-agent phases 3 and 5, workspace files, contexts.md
 - [ ] **Phase 4: Pre-flight Enforcement** - Add hard gate in execute-phase + CARL rule + session-gate Check 20 enforcement
 - [ ] **Phase 5: Execution Quality + DDD** - Add Decision Tracking to execution-quality.md + create contexts.md.template + wire pre-flight and SPARC
-- [ ] **Phase 6: Agent Spawn Hook** - Create pre-agent.sh hook, update settings.json, session-gate Check 19, session-start.sh
+- [ ] **Phase 6: Agent Spawn Hook** - Create pre-agent.sh hook, update settings.json, session-gate Check 21, session-start.sh
 - [ ] **Phase 7: Template + Init** - Update CLAUDE.md.template references (SPARC, swarm-patterns, AgentDB), update init-project.sh
 
 ### Milestone 2 — Track B: AgentDB Self-Hosted
@@ -104,14 +104,14 @@ Plans:
 
 ### Phase 6: Agent Spawn Hook
 **Goal**: Every agent spawn is logged per session and audited at session end
-**Depends on**: Phase 5 (session-gate has Check 18 before adding Check 19)
+**Depends on**: Phase 5 (session-gate has Check 20 before adding Check 21)
 **Requirements**: HOOK-01, HOOK-02, HOOK-03, HOOK-04, HOOK-05, HOOK-06
 **Success Criteria** (what must be TRUE):
   1. `.claude/hooks/pre-agent.sh` exists, logs timestamp + agent type + description on each spawn
   2. Log entries are written to `.claude/workspace/agent-log.txt`
   3. Hook always exits 0 (never blocks Claude from spawning an agent)
   4. `.claude/settings.json` has a `PreToolUse` matcher for `Agent` triggering the hook
-  5. Session-gate Check 19 (END, informational) counts spawns and alerts when count exceeds 15
+  5. Session-gate Check 21 (END, informational) counts spawns and alerts when count exceeds 15
   6. `session-start.sh` clears agent-log.txt so the counter resets each session
 **Plans**: TBD
 

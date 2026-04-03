@@ -27,8 +27,8 @@ Claude exécute les phases GSD de façon structurée et auditable — micro-exé
 - [ ] Pre-flight Agent 5 Critic — challenger l'Agent 1 Architecture, intégration DDD
 - [ ] SPARC skill — micro-exécution 5 phases dans une phase GSD (< 150 lignes)
 - [ ] CARL rule — enforcement pre-flight avant /gsd:execute-phase
-- [ ] Session-gate Check 18 — détection pre-flight absent ou NO-GO non relancé
-- [ ] Session-gate Check 19 — agent spawn audit (informational)
+- [ ] Session-gate Check 20 — détection pre-flight absent ou NO-GO non relancé
+- [ ] Session-gate Check 21 — agent spawn audit (informational)
 - [ ] Hook PreToolUse Agent — log des spawns dans .claude/workspace/agent-log.txt
 - [ ] execution-quality.md — section Decision Tracking (ADR auto)
 - [ ] DDD léger — docs/architecture/contexts.md.template + intégrations pre-flight et SPARC

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Pre-agent hook: log agent spawns for session-gate Check 19 audit.
+# Pre-agent hook: log agent spawns for session-gate Check 21 audit.
 # Fires on every Agent tool call via PreToolUse hook.
 # Receives tool input JSON on stdin. Always exits 0 — never blocks.
 
