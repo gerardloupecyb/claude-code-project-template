@@ -116,7 +116,7 @@ Plans:
 **Plans**: TBD
 
 ### Phase 7: Template + Init
-**Goal**: New projects initialized from the template get all Milestone 1 enrichments wired automatically
+**Goal**: CLAUDE.md.template compressed from 505 to under 200 lines; extracted content lives in auto-loaded rules/ files; init-project.sh copies all new artifacts
 **Depends on**: Phases 1-6 (all template files must exist to be referenced)
 **Requirements**: TMPL-01, TMPL-02, TMPL-03, TMPL-04, TMPL-05, TMPL-06, TMPL-07
 **Success Criteria** (what must be TRUE):
@@ -126,7 +126,10 @@ Plans:
   4. `init-project.sh` copies `docs/architecture/contexts.md.template` into new projects
   5. `init-project.sh` copies `.claude/hooks/pre-agent.sh` and wires it into settings.json
   6. `init-project.sh` adds `.claude/workspace/` to `.gitignore`
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 07-01-PLAN.md — Extract Rules 3-7, coordination table, plan structure, and metadata from CLAUDE.md.template into 4 rules/ files + update init-project.sh
+- [ ] 07-02-PLAN.md — Compress CLAUDE.md.template to under 200 lines + verify all 7 TMPL requirements
 
 ### Phase 8: VPS Infrastructure
 **Goal**: A self-hosted vector search stack accepts store/search requests from Claude
@@ -185,7 +188,7 @@ Plans:
 | 4. Pre-flight Enforcement | Track A | 0/1 | Planning complete | - |
 | 5. Execution Quality + DDD | Track A | 0/1 | Planning complete | - |
 | 6. Agent Spawn Hook | Track A | 0/TBD | Not started | - |
-| 7. Template + Init | Track A | 0/TBD | Not started | - |
+| 7. Template + Init | Track A | 0/2 | Planning complete | - |
 | 8. VPS Infrastructure | Track B | 0/TBD | Not started | - |
 | 9. MCP Thin Client | Track B | 0/TBD | Not started | - |
 | 10. Entries Format + Git | Track B | 0/TBD | Not started | - |
