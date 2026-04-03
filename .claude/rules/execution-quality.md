@@ -1,13 +1,9 @@
 # Execution Quality — ce-work patterns for all executors
 
-APPLICABILITY: These rules apply when a task modifies application code or infrastructure.
-Skip for docs-only, config-only, or YAML-only changes.
-
+APPLICABILITY: These rules apply when a task modifies application code or infrastructure. Skip for docs-only, config-only, or YAML-only changes.
 PRECEDENCE: These heuristics complement the GSD commit protocol. On conflict, GSD protocol wins.
 
 ## System-Wide Test Check
-
-Before marking a code task done, answer these 5 questions:
 
 | Question | Action |
 |----------|--------|
@@ -21,13 +17,7 @@ Before marking a code task done, answer these 5 questions:
 
 ## Post-Deploy Monitoring
 
-For any change touching production runtime code, document in SUMMARY.md or commit message:
-
-- **Logs/search terms:** what to grep for
-- **Metrics/dashboards:** what to watch
-- **Expected healthy signal:** what normal looks like
-- **Failure signal + rollback trigger:** when to act
-
+For any change touching production runtime code, document in SUMMARY.md or commit message: logs/search terms, metrics/dashboards, expected healthy signal, failure signal + rollback trigger.
 If no runtime impact: add one line — `No monitoring needed: [reason]`
 
 ## Reference Layer Awareness
@@ -40,11 +30,10 @@ When a task modifies infrastructure or shared code, consult the appropriate refe
 | Shared module or schema change | L3 Codebase | `docs/references/codebase-context.md` |
 | Architecture or security decision | L1 Architecture | `docs/references/architecture-security.md` |
 | Writing code in project languages | L2 Patterns | `docs/references/coding-patterns.md` |
+| Cross-domain change | DDD Contexts | `docs/architecture/contexts.md` |
 
-**After completing the task:** update the reference file in the SAME commit.
-If the reference file contradicts what you found in the codebase, fix it first.
-
-**Skip heuristic:** If `docs/references/` doesn't exist or files contain only `{{` placeholders, skip reference checks.
+**After completing the task:** update the reference file in the SAME commit. If it contradicts reality, fix it first.
+**Skip heuristic:** If `docs/references/` doesn't exist or files contain only `{{` placeholders, skip reference checks. For `contexts.md`, also skip if file contains only `{{` placeholders.
 
 ## Commit Quality Heuristics
 
@@ -55,13 +44,11 @@ If the reference file contradicts what you found in the codebase, fix it first.
 | About to switch contexts (backend to frontend) | Purely scaffolding with no behavior |
 | About to attempt risky/uncertain changes | Would need a "WIP" commit message |
 
-**Heuristic:** "Can I write a commit message that describes a complete, valuable change? If yes, commit. If the message would be 'WIP', wait."
+**Heuristic:** "Can I write a commit message that describes a complete, valuable change? If yes, commit. If 'WIP', wait."
 
 ## Decision Tracking
 
-When making an architectural decision during execution (choice of pattern, library,
-data model, API design, or rejection of an alternative), propose a DECISIONS.md
-entry BEFORE continuing implementation:
+When making an architectural decision during execution (pattern, library, data model, API design, or rejection of an alternative), propose a DECISIONS.md entry BEFORE continuing:
 
 | Field | Content |
 |-------|---------|
@@ -71,24 +58,14 @@ entry BEFORE continuing implementation:
 | Scope | What this affects |
 | Date | Today |
 
-Skip for trivial decisions (variable naming, formatting, imports).
-Only track decisions a colleague joining next week would need to know.
+Skip for trivial decisions (variable naming, formatting, imports). Only track decisions a colleague joining next week would need to know.
 
 ## Simplify As You Go
 
-After completing every 2-3 tasks (or at a natural phase boundary like backend → frontend), review recently changed files:
-
-1. Consolidate duplicated patterns into shared helpers
-2. Extract repeated logic that emerged across tasks
-3. Remove dead code introduced by earlier iterations
-
-**Skip heuristic:** If all tasks touch different files with no shared logic, skip. Only simplify when cross-task patterns are visible.
-
-**Timing:** Do NOT simplify after every single task — early patterns may look duplicated but diverge intentionally in later tasks. Wait for a cluster.
+After every 2-3 tasks (or at a natural phase boundary), review changed files: consolidate duplicates into shared helpers, extract repeated logic, remove dead code from earlier iterations.
+**Skip heuristic:** Skip if all tasks touch different files with no shared logic. Do NOT simplify after every single task — early patterns may diverge intentionally. Wait for a cluster.
 
 ## Reviewer Agents (Post-Phase, Optional)
-
-After completing all tasks in a phase, consider launching reviewer agents for complex or risky changes:
 
 | Change type | Reviewer agent |
 |-------------|---------------|
@@ -97,4 +74,4 @@ After completing all tasks in a phase, consider launching reviewer agents for co
 | Architecture changes (new services, API contracts) | `architecture-strategist` |
 | Performance-critical paths | `performance-oracle` |
 
-**Skip heuristic:** Skip if changes are leaf-node, < 50 LOC, or purely additive (new file, no existing code modified). Only invoke when the change could break things you can't see from the diff alone.
+**Skip:** Skip if changes are leaf-node, < 50 LOC, or purely additive. Only invoke when the change could break things you can't see from the diff alone.
