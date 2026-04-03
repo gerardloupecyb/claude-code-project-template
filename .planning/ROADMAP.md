@@ -86,7 +86,7 @@ Plans:
   5. Error messages are actionable (tell the user exactly what command to run next)
 **Plans:** 1 plan
 Plans:
-- [ ] 04-01-PLAN.md — Add preflight_gate step to execute-phase.md, create live .carl/project-template domain, update REQUIREMENTS.md Check 18 to Check 20
+- [x] 04-01-PLAN.md — Add preflight_gate step to execute-phase.md, create live .carl/project-template domain, update REQUIREMENTS.md Check 18 to Check 20
 
 ### Phase 5: Execution Quality + DDD
 **Goal**: Architectural decisions are auto-tracked and cross-domain boundaries are visible before modification
