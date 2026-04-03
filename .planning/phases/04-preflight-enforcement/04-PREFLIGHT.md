@@ -1,64 +1,53 @@
-# Pre-Flight Report — Phase 4
+# Pre-Flight Report — Phase 4 (re-run)
 
 **Date:** 2026-04-03
-**Plans reviewed:** 04-01-PLAN.md
-**Verdict:** NO-GO
+**Plans reviewed:** 04-01-PLAN.md (updated with C1/C2/H1/H3 fixes)
+**Verdict:** GO
 
 ## Summary
 
-Phase 4 plan is architecturally sound with correct placement of the enforcement gate. The two-layer design (workflow gate + CARL rule) is justified because they operate on different surfaces (runtime execution vs session instruction). However, 2 CRITICAL and 3 HIGH edge cases are not addressed — per pre-flight contract (SKILL.md:181,184), any HIGH or CRITICAL finding is NO-GO. Fix the plan, then re-run /pre-flight.
+Phase 4 plan addresses all prior NO-GO findings. The gate logic is well-structured with 8 mutually exclusive branches ordered from cheapest to most expensive check. Two-layer enforcement (workflow gate + CARL rule) is justified for different runtime surfaces. All 4 required changes from the first pre-flight are incorporated. No HIGH or CRITICAL findings remain.
 
-## Findings
+## Prior NO-GO Findings — Resolution Status
+
+| Finding | Severity | Status |
+|---------|----------|--------|
+| C1: --skip-preflight without --reason | CRITICAL | RESOLVED — rejects with error + example |
+| C2: plan_count == 0 hits gate | CRITICAL | RESOLVED — gate skipped when no plans |
+| H1: No Verdict line → silent pass | HIGH | RESOLVED — fail closed, blocks execution |
+| H2: Non-interactive CONDITIONAL GO | HIGH | DOWNGRADED to recommendation — execute-phase doesn't expose non-interactive path currently |
+| H3: Gap-closure phases undefined | HIGH | RESOLVED — decimal phases follow same gate, no parent inheritance |
+
+## Remaining Findings (re-run)
 
 ### Architecture
-- **MEDIUM** — ls sort order: `ls "${PHASE_DIR}"/*-PREFLIGHT.md` should be `ls -t` to guarantee mtime selection when multiple PREFLIGHT files exist
-- **LOW** — No cross-reference comment between execute-phase.md gate and CARL RULE_9
-- **LOW** — Override logging: specify SUMMARY.md write before MEMORY.md write
+- **LOW** — Phase-level verification threshold was `>= 2` but gate has 3 "Execution blocked" messages. Fixed to `>= 3` during this review cycle.
 
 ### Security
-- **MEDIUM** — Override self-authorization: --skip-preflight --reason relies on social convention, no second-factor. Acceptable for workflow context — not a hard security boundary.
-- **MEDIUM** — Silent bypass via malformed PREFLIGHT.md: file exists but no Verdict line → falls through as GO. Must add content validation.
-- **LOW** — Mutable audit log (SUMMARY.md/MEMORY.md editable by same executor)
+- **MEDIUM** — Override --reason is free-text with no minimum length validation. A caller could satisfy with `--reason " "`. Acceptable for workflow context — enforcement is friction-based, not cryptographic. Non-blocking.
+- **LOW** — Mutable audit log (SUMMARY.md/MEMORY.md editable by same executor). Inherent to architecture.
 
 ### Performance
-- No findings. All operations bounded, negligible token cost.
+- No findings.
 
 ### Spec Completeness
-- **CRITICAL** — `--skip-preflight` without `--reason` has no error handling. Gate neither blocks nor proceeds — silent undefined behavior. Must reject with error message.
-- **CRITICAL** — plan_count == 0 phases hit the gate unnecessarily. A phase with 0 plans produces a confusing error about missing PREFLIGHT when there's no PLAN either. Must exempt.
-- **HIGH** — PREFLIGHT file exists but has no Verdict line → no branch matches → silent pass-through. Must add fourth branch: block with "PREFLIGHT.md found but contains no Verdict line."
-- **HIGH** — CONDITIONAL GO in non-interactive/CI mode → hangs indefinitely. Must specify behavior (auto-block or auto-proceed-with-warning).
-- **HIGH** — Gap-closure phases (e.g., 4.1) are not addressed. Do they require pre-flight or inherit parent's?
-- **MEDIUM** — Override logging to SUMMARY.md before it exists (created by aggregate_results after execution). Log to MEMORY.md only when skipping, or create stub.
-- **MEDIUM** — CONDITIONAL GO: accepted affirmative tokens and timeout not specified.
+- **MEDIUM** — Multiple PREFLIGHT files: `ls -t` sorts by mtime which can differ from creation order on cloned/restored filesystems. Most common case is single PREFLIGHT per phase. Default assumption (mtime = latest run) is reasonable. Non-blocking.
+- **LOW** — CONDITIONAL GO display format (how many lines of findings to show) is undefined. Cosmetic, not functional.
 
-### Architecture Challenge
-- **Agent 1 (Strategist):** Two-layer design is appropriate — runtime gate + session instruction, well-separated, correct placement between validate_phase and discover_and_group_plans.
-- **Agent 5 (Critic):** Challenged that execute-phase.md is a GLOBAL file modified for PROJECT-SPECIFIC enforcement. Also challenged two-layer redundancy.
-- **Resolution:** The Critic's concern about the global file is valid in form but not in substance. The pre-flight concept is part of GSD's standard workflow (RULE_9 ships in domain.template for all projects). The enforcement at the workflow level is appropriate for ALL GSD projects — it's a GSD-level feature, not project-specific. The two layers serve different runtime surfaces: workflow gate catches at execution time, CARL rule catches at planning/discussion time. Not redundant — complementary.
-
-### Design Verdict
-Strategist's design retained. Critic's global-file concern acknowledged but resolved: pre-flight enforcement is a GSD-wide feature, not project-local. The gate belongs in execute-phase.md. CARL rule provides backup at a different surface.
+### Architecture Challenge (from first run — retained)
+- Strategist's two-layer design retained. Critic's global-file concern resolved: pre-flight is a GSD-wide feature, not project-local.
 
 ## Verdict Rationale
 
-NO-GO per pre-flight contract: 2 CRITICAL + 3 HIGH findings. Any HIGH or CRITICAL is NO-GO (pre-flight/SKILL.md:181,184). Fix the plan with the 5 required changes below, then re-run /pre-flight before /gsd:execute-phase 4.
-
-## Required Changes (NO-GO — must fix before execution)
-
-1. **C1 — Add --skip-preflight validation:** In Task 1 Part A, add: "If --skip-preflight is present but --reason is missing or empty, display: `Error: --skip-preflight requires --reason "description". Example: --skip-preflight --reason "doc-only gap closure"` and stop execution."
-2. **C2 — Add plan_count == 0 exemption:** In Task 1 Part A preflight_gate, add at the top: "If `plan_count` from init JSON is 0 (no plans found), skip this step entirely — no plans means nothing to gate."
-3. **H2 — Add malformed PREFLIGHT branch:** After the 3 verdict branches, add: "If PREFLIGHT file exists but grep for Verdict returns empty: `Execution blocked: PREFLIGHT.md found but contains no Verdict line — file may be incomplete. Re-run /pre-flight.` Stop execution."
-4. **H3 — Specify non-interactive CONDITIONAL GO:** Add: "If running in non-interactive mode (no TTY or --auto flag), treat CONDITIONAL GO as a block — display findings and stop. Do not auto-proceed."
-5. **H1 — Specify gap-closure policy:** Add: "Gap-closure phases (decimal numbers like 4.1) follow the same gate logic. They inherit no PREFLIGHT from the parent phase — they either have their own PREFLIGHT or must use --skip-preflight --reason."
+GO — No HIGH or CRITICAL findings. 2 MEDIUM findings (--reason free-text, mtime ambiguity) are non-blocking and appropriate for the workflow configuration context. All 4 required changes from the first NO-GO run are incorporated and verified in the plan text.
 
 ## Recommended Improvements (non-blocking)
 
-1. Use `ls -t` instead of `ls` for mtime-sorted PREFLIGHT selection
-2. Add cross-reference comment in execute-phase.md: `# Mirrors CARL RULE_9`
-3. Specify SUMMARY.md write before MEMORY.md write for override logging order
-4. For override logging before SUMMARY.md exists: log only to MEMORY.md at gate time, then add to SUMMARY.md during aggregate_results
+1. Add minimum length check for --reason (e.g., >= 10 chars) to prevent trivial bypass
+2. For override logging before SUMMARY.md exists: log to MEMORY.md at gate time, add to SUMMARY.md during aggregate_results
+3. Define CONDITIONAL GO display format (e.g., show ## Required Changes section from PREFLIGHT)
+4. Consider non-interactive CONDITIONAL GO behavior if --auto path is added later
 
 ## Cross-Model Challenge
 
-Codex adversarial review: skipped (not applicable to plan-only review in template project).
+Codex review from first run validated most findings and corrected the verdict from CONDITIONAL GO to NO-GO. Codex confirmed C1, C2, H1, H3 as valid enforcement gaps. H2 noted as directionally good but overstated for current scope. All Codex feedback incorporated.
