@@ -16,7 +16,7 @@ Two-milestone project enriching project-template-v2 with ruflo concepts. Milesto
 - [ ] **Phase 1: swarm-patterns.md** - Document 8 agent roles, 3 topologies, 3-tier model routing, SPARC routing, escalation rules
 - [ ] **Phase 2: Pre-flight Agent 5 Critic** - Add critic agent (sequential after Agent 1), Architecture Challenge section, DDD integration
 - [ ] **Phase 3: SPARC Skill** - Create 5-phase SPARC skill with dual-agent phases 3 and 5, workspace files, contexts.md
-- [ ] **Phase 4: Pre-flight Enforcement** - Add CARL rule + session-gate Check 18 blocking execution without pre-flight
+- [ ] **Phase 4: Pre-flight Enforcement** - Add hard gate in execute-phase + CARL rule + session-gate Check 20 enforcement
 - [ ] **Phase 5: Execution Quality + DDD** - Add Decision Tracking to execution-quality.md + create contexts.md.template + wire pre-flight and SPARC
 - [ ] **Phase 6: Agent Spawn Hook** - Create pre-agent.sh hook, update settings.json, session-gate Check 19, session-start.sh
 - [ ] **Phase 7: Template + Init** - Update CLAUDE.md.template references (SPARC, swarm-patterns, AgentDB), update init-project.sh
@@ -80,11 +80,13 @@ Plans:
 **Requirements**: ENFC-01, ENFC-02, ENFC-03, ENFC-04, ENFC-05, ENFC-06
 **Success Criteria** (what must be TRUE):
   1. A CARL rule exists stating "do not run /gsd:execute-phase without a *-PREFLIGHT.md file"
-  2. Session-gate Check 18 (mode END) detects a PLAN file with no corresponding PREFLIGHT file
-  3. Check 18 also detects a NO-GO verdict that has not been relaunched
-  4. Check 18 searches both `.planning/` and `.planning/milestones/` paths
+  2. Session-gate Check 20 (mode END) detects a PLAN file with no corresponding PREFLIGHT file
+  3. Check 20 also detects a NO-GO verdict that has not been relaunched
+  4. Check 20 searches both `.planning/` and `.planning/milestones/` paths
   5. Error messages are actionable (tell the user exactly what command to run next)
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 04-01-PLAN.md — Add preflight_gate step to execute-phase.md, create live .carl/project-template domain, update REQUIREMENTS.md Check 18 to Check 20
 
 ### Phase 5: Execution Quality + DDD
 **Goal**: Architectural decisions are auto-tracked and cross-domain boundaries are visible before modification
@@ -178,7 +180,7 @@ Plans:
 | 1. swarm-patterns.md | Track A | 0/1 | Planning complete | - |
 | 2. Pre-flight Agent 5 Critic | Track A | 0/1 | Planning complete | - |
 | 3. SPARC Skill | Track A | 0/1 | Planning complete | - |
-| 4. Pre-flight Enforcement | Track A | 0/TBD | Not started | - |
+| 4. Pre-flight Enforcement | Track A | 0/1 | Planning complete | - |
 | 5. Execution Quality + DDD | Track A | 0/TBD | Not started | - |
 | 6. Agent Spawn Hook | Track A | 0/TBD | Not started | - |
 | 7. Template + Init | Track A | 0/TBD | Not started | - |
