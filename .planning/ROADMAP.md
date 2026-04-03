@@ -98,7 +98,9 @@ Plans:
   3. `docs/architecture/contexts.md.template` exists with domain placeholder sections
   4. Pre-flight SKILL.md (Agent 5) and SPARC SKILL.md (Phase 3) both reference contexts.md
   5. When contexts.md has only unfilled placeholders, agents ignore it without error
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 05-01-PLAN.md — Add contexts.md row to Reference Layer table (DDD-04) + compress to < 80 lines (ADR-03)
 
 ### Phase 6: Agent Spawn Hook
 **Goal**: Every agent spawn is logged per session and audited at session end
@@ -181,7 +183,7 @@ Plans:
 | 2. Pre-flight Agent 5 Critic | Track A | 0/1 | Planning complete | - |
 | 3. SPARC Skill | Track A | 0/1 | Planning complete | - |
 | 4. Pre-flight Enforcement | Track A | 0/1 | Planning complete | - |
-| 5. Execution Quality + DDD | Track A | 0/TBD | Not started | - |
+| 5. Execution Quality + DDD | Track A | 0/1 | Planning complete | - |
 | 6. Agent Spawn Hook | Track A | 0/TBD | Not started | - |
 | 7. Template + Init | Track A | 0/TBD | Not started | - |
 | 8. VPS Infrastructure | Track B | 0/TBD | Not started | - |
