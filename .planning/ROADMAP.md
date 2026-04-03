@@ -72,7 +72,7 @@ Plans:
   7. File stays under 150 lines
 **Plans:** 1 plan
 Plans:
-- [ ] 03-01-PLAN.md — Fix 3 targeted gaps (Phase 5 dual-agent, validation gate, standalone entry) + validate all 9 SPARC requirements
+- [x] 03-01-PLAN.md — Fix 3 targeted gaps (Phase 5 dual-agent, validation gate, standalone entry) + validate all 9 SPARC requirements
 
 ### Phase 4: Pre-flight Enforcement
 **Goal**: Executing a GSD phase without a completed pre-flight is mechanically blocked
