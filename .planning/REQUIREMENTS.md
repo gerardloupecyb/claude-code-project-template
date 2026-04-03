@@ -40,9 +40,9 @@
 
 - [ ] **ENFC-01**: Règle CARL ajoutée — ne pas exécuter /gsd:execute-phase sans fichier *-PREFLIGHT.md
 - [ ] **ENFC-02**: Règle actionnable (verbe + condition + action), numéro séquentiel correct
-- [ ] **ENFC-03**: Session-gate Check 18 (mode END) — détecte PLAN sans PREFLIGHT
-- [ ] **ENFC-04**: Session-gate Check 18 — détecte verdict NO-GO non relancé
-- [ ] **ENFC-05**: Check 18 vérifie les deux paths (.planning/ et .planning/milestones/)
+- [ ] **ENFC-03**: Session-gate Check 20 (mode END) — détecte PLAN sans PREFLIGHT
+- [ ] **ENFC-04**: Session-gate Check 20 — détecte verdict NO-GO non relancé
+- [ ] **ENFC-05**: Check 20 vérifie les deux paths (.planning/ et .planning/milestones/)
 - [ ] **ENFC-06**: Message d'erreur actionnable (pas juste un warning)
 
 ### Decision Tracking
