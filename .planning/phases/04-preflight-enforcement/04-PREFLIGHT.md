@@ -2,11 +2,11 @@
 
 **Date:** 2026-04-03
 **Plans reviewed:** 04-01-PLAN.md
-**Verdict:** CONDITIONAL GO
+**Verdict:** NO-GO
 
 ## Summary
 
-Phase 4 plan is architecturally sound with correct placement of the enforcement gate. The two-layer design (workflow gate + CARL rule) is justified because they operate on different surfaces (runtime execution vs session instruction). However, the Spec Flow Analyzer found 2 CRITICAL and 3 HIGH edge cases not addressed in the plan that should be fixed before execution.
+Phase 4 plan is architecturally sound with correct placement of the enforcement gate. The two-layer design (workflow gate + CARL rule) is justified because they operate on different surfaces (runtime execution vs session instruction). However, 2 CRITICAL and 3 HIGH edge cases are not addressed — per pre-flight contract (SKILL.md:181,184), any HIGH or CRITICAL finding is NO-GO. Fix the plan, then re-run /pre-flight.
 
 ## Findings
 
@@ -42,9 +42,9 @@ Strategist's design retained. Critic's global-file concern acknowledged but reso
 
 ## Verdict Rationale
 
-CONDITIONAL GO because there are 2 CRITICAL spec completeness gaps (C1: --skip-preflight without --reason, C2: plan_count == 0 exemption) and 3 HIGH gaps (H1: malformed PREFLIGHT, H2: non-interactive CONDITIONAL GO, H3: gap-closure phases). These are plan-level omissions that can be fixed with targeted additions to Task 1's action text.
+NO-GO per pre-flight contract: 2 CRITICAL + 3 HIGH findings. Any HIGH or CRITICAL is NO-GO (pre-flight/SKILL.md:181,184). Fix the plan with the 5 required changes below, then re-run /pre-flight before /gsd:execute-phase 4.
 
-## Required Changes (CONDITIONAL GO)
+## Required Changes (NO-GO — must fix before execution)
 
 1. **C1 — Add --skip-preflight validation:** In Task 1 Part A, add: "If --skip-preflight is present but --reason is missing or empty, display: `Error: --skip-preflight requires --reason "description". Example: --skip-preflight --reason "doc-only gap closure"` and stop execution."
 2. **C2 — Add plan_count == 0 exemption:** In Task 1 Part A preflight_gate, add at the top: "If `plan_count` from init JSON is 0 (no plans found), skip this step entirely — no plans means nothing to gate."
