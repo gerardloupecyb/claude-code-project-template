@@ -1,0 +1,41 @@
+# CARL Domain: PROJECT-TEMPLATE
+# ==========================
+# Rules for the project-template-v2 project.
+# Rules for the project-template-v2 template enrichment project. Enforces flywheel, credentials, execution discipline, tool routing, planning, preflight enforcement, todo discipline, and reference files.
+# Activated when context mentions project-template, template enrichment, swarm-patterns, SPARC, pre-flight, AgentDB.
+
+# --- FOUNDATIONAL RULES ---
+
+PROJECT_TEMPLATE_RULE_0=These rules apply when working on the project-template-v2 project at /Users/gerardvinou/Claude code/Claude Projects/project-template-v2. Enforces workflow discipline for template enrichment development.
+
+PROJECT_TEMPLATE_RULE_1=FLYWHEEL - CONSULT BEFORE IMPLEMENTING: Check LESSONS.md (already loaded), then recall Supermemory with domain keywords. Only search docs/solutions/ via agent if Supermemory is unavailable or if more detail is needed. Reuse what's proven, don't reinvent.
+
+PROJECT_TEMPLATE_RULE_2=FLYWHEEL - CAPTURE AFTER SOLVING: After resolving any non-trivial problem, propose /lesson to capture the lesson in LESSONS.md. For patterns needing detail (code, anti-patterns), use /ce:compound instead. Every solved problem compounds into future productivity.
+
+PROJECT_TEMPLATE_RULE_3=CREDENTIALS SAFETY: All API credentials must be stored in .env files, never hardcoded. Verify .gitignore includes .env before any commit.
+
+# --- EXECUTION DISCIPLINE ---
+
+PROJECT_TEMPLATE_RULE_4=LOOP CLOSURE: After every /gsd:execute-phase, verify that .planning/{phase}-SUMMARY.md includes a planned-vs-actual reconciliation: tasks planned vs completed, decisions made during execution, items deferred. This closure is MANDATORY before /gsd:verify-work and /ce:review.
+
+PROJECT_TEMPLATE_RULE_5=DEVIATION LOGGING: If execution diverges from the plan — task skipped, scope changed, different approach taken, or a file in the plan's Boundaries section touched — log the deviation and reason in MEMORY.md under "Deviations d'execution" BEFORE proceeding. New implementation files created as part of completing a planned task are NOT deviations. Never silently drift from the plan.
+
+# --- CONTEXT DISCIPLINE ---
+
+PROJECT_TEMPLATE_RULE_6=TOOL_ROUTING: Use Glob (file search) and Grep (content search) over Bash(find/grep). Reserve Bash for: git, mkdir, rm, mv, npm install, pip install, echo, printf. For large files, unknown-size output, or web content: use Agent or dedicated tools — never raw Bash. See .claude/rules/tool-routing.md.
+
+PROJECT_TEMPLATE_RULE_7=MCP_DISCIPLINE: NEVER call list_*/query MCP tools without explicit limit/filter. Hardcoded limits: ms365 list_mail ($top=20,+$select), quickbooks query (MAXRESULTS 25), airtable list_records (maxRecords:20), azure resources (scope by resource group). No native limit available: delegate to subagent with explicit return contract (max 10 rows, named columns). After claude mcp add, update .claude/rules/tool-routing.md discipline table.
+
+# --- PLANNING DISCIPLINE ---
+
+PROJECT_TEMPLATE_RULE_8=PLANNING RECALL: Before any /gsd:plan-phase, /gsd:discuss-phase, or /ce:plan, run recall on Supermemory with the RECALL keywords from .carl/manifest. Also read DECISIONS.md for active decisions that may constrain the plan. Skip recall only if Supermemory unavailable. This is NOT optional — it prevents rediscovering solved problems.
+
+# --- EXECUTION ENFORCEMENT ---
+
+PROJECT_TEMPLATE_RULE_9=PREFLIGHT ENFORCEMENT: Never run /gsd:execute-phase without a *-PREFLIGHT.md file for the current phase in .planning/ or .planning/milestones/{milestone}/. If that file is absent in both paths, run /pre-flight first. A NO-GO verdict that has not been addressed must be re-run before execution.
+
+PROJECT_TEMPLATE_RULE_10=TODO DISCIPLINE: Never write directly to todos/ using Write or Edit tools. Always use /todo create|close|done|validate|list. If a subagent must create a todo, it must pass through the /todo skill. Direct Write to todos/ bypasses ID sequencing and breaks /todo validate.
+
+# --- REFERENCE FILES DISCIPLINE ---
+
+PROJECT_TEMPLATE_RULE_11=REFERENCE FILES: Before starting work, route to the correct reference file via docs/references/Reference-files-index-routing.md. L1 (architecture-security.md) for arch/security decisions. L2 (coding-patterns.md) for writing/reviewing code. L3 (services-and-access.md) for infra/secrets/Docker/MCP/API keys. L3 (codebase-context.md) for shared modules/schemas/interfaces. Update reference files in the SAME commit as the infra/code change they document. If a reference file contradicts reality (stale secret, wrong endpoint), fix it BEFORE proceeding.
