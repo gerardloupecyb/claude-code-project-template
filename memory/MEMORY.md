@@ -121,15 +121,17 @@ Pattern découvert : injecter des quality patterns cross-workflow via `.claude/r
 - Projet local : /Users/gerardvinou/Claude code/Claude Projects/project-template-v2
 
 <!-- pre-compact snapshot -->
-**Snapshot pre-compaction** (2026-04-02 11:48)
+**Snapshot pre-compaction** (2026-04-04 09:24)
 
 - **Prochaine etape:** (1) merge feat/agentdb-track-b → master, (2) lancer Track B si prévu, ou (3) tests d'intégration multi-projets via init-project.sh.
 - **Derniers commits:**
-  - 094c75e docs(01-swarm-patterns): create phase plan
-  - 71b2e22 fix(skills): restore plugin syntax now that codex@openai-codex v1.0.2 is installed
-  - 4ddc0af fix(skills): replace /codex:plugin commands with codex CLI equivalents
+  - 38a746f docs(07): create phase plan — extract rules + compress CLAUDE.md.template
+  - e948f5f docs(07-context): gather phase 7 decisions — CLAUDE.md.template 505→<200 compression strategy
+  - 6f99d4a fix(06): align stale Check 19 refs → Check 21 in hooks, ROADMAP, PROJECT
 - **Fichiers modifies:**
   - ?? .claude/worktrees/
+  - ?? .planning/phases/01-swarm-patterns/01-PREFLIGHT.md
   - ?? .vscode/
   - ?? compound-engineering.local.md
+  - ?? docs/brainstorms/2026-04-02-ghl-mcp-complet-requirements.md
 <!-- /pre-compact snapshot -->
