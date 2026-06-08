@@ -98,19 +98,36 @@ sync_file() {
     fi
 }
 
-# ── Universal files: skills ───────────────────────────────────────────────
-echo "→ Skills"
-for SKILL_DIR in "${TEMPLATE_DIR}"/.claude/skills/*/; do
-    SKILL_NAME=$(basename "$SKILL_DIR")
-    sync_file ".claude/skills/${SKILL_NAME}/SKILL.md"
-done
+# ── Allowlist (D-6) ───────────────────────────────────────────────────────
+# Source of truth for WHAT may be synced. Replaces the former blind
+# `skills/*/` + `rules/*.md` globs (which could push a domain skill, e.g.
+# ghl-architect / n8n-*, into a consumer). A skill/rule NOT in the allowlist
+# is NEVER synced. Adopts the allowlist model formerly carried by the retired
+# project-template-sync skill.
+ALLOWLIST="${TEMPLATE_DIR}/.forge/sync-allowlist.json"
+if [ ! -f "$ALLOWLIST" ]; then
+    echo "ERROR: sync allowlist not found: ${ALLOWLIST}"
+    echo "       (D-6: sync-project.sh requires .forge/sync-allowlist.json to know what is safe to push)"
+    exit 1
+fi
+if ! command -v jq > /dev/null 2>&1; then
+    echo "ERROR: jq is required to read the sync allowlist (${ALLOWLIST})"
+    exit 1
+fi
 
-# ── Universal files: rules ────────────────────────────────────────────────
-echo "→ Rules"
-for RULE_FILE in "${TEMPLATE_DIR}"/.claude/rules/*.md; do
-    RULE_NAME=$(basename "$RULE_FILE")
+# ── Universal files: skills (ALLOWLIST-driven, not blind glob) ─────────────
+echo "→ Skills (allowlist)"
+while IFS= read -r SKILL_NAME; do
+    [ -z "$SKILL_NAME" ] && continue
+    sync_file ".claude/skills/${SKILL_NAME}/SKILL.md"
+done < <(jq -r '.skills[]' "$ALLOWLIST")
+
+# ── Universal files: rules (ALLOWLIST-driven, not blind glob) ──────────────
+echo "→ Rules (allowlist)"
+while IFS= read -r RULE_NAME; do
+    [ -z "$RULE_NAME" ] && continue
     sync_file ".claude/rules/${RULE_NAME}"
-done
+done < <(jq -r '.rules[]' "$ALLOWLIST")
 
 # ── Universal files: hooks ────────────────────────────────────────────────
 echo "→ Hooks"

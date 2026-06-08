@@ -1,0 +1,55 @@
+{
+  "$schema_note": "Template-sync ALLOWLIST — what sync-project.sh is permitted to push to a consumer project. Authored by FORGE Phase 22 Plan 00 (D-6 allowlist-preserving fold). This file ADOPTS the allowlist model formerly carried by the (now retired) project-template-sync skill. Plan 01's forge-extract.sh refreshes this from the Loupe golden manifest (.forge/extraction-manifest.json) during extraction. A skill NOT in skills[] is NEVER synced — that is how a domain skill (ghl/n8n/azure) can never be pushed into a consumer.",
+  "version": "1.0.0",
+  "authored_by": "forge-phase-22-plan-00",
+  "authored_on": "2026-06-08",
+  "skills": [
+    "context-checkpoint",
+    "context-manager",
+    "lesson",
+    "memory-consolidate",
+    "pre-flight",
+    "prepare-phase",
+    "project-bootstrap",
+    "project-sync",
+    "reference-audit",
+    "rules-distill",
+    "security-audit",
+    "session-gate",
+    "skill-refresh",
+    "sparc",
+    "task-router",
+    "template-sync",
+    "todo",
+    "code-xray"
+  ],
+  "skills_excluded": [
+    "ghl-architect",
+    "n8n-workflow-architect",
+    "n8n-node-expert",
+    "n8n-code-nodes",
+    "project-template-sync"
+  ],
+  "rules": [
+    "execution-quality.md",
+    "flywheel-workflow.md",
+    "model-routing.md",
+    "swarm-patterns.md",
+    "todo-discipline.md",
+    "tool-routing.md",
+    "workflow-automation.md"
+  ],
+  "hooks_glob": ".claude/hooks/*.sh",
+  "settings": ".claude/settings.json",
+  "protected": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "memory/MEMORY.md",
+    "LESSONS.md",
+    "DECISIONS.md",
+    ".claude/integrations.md",
+    ".carl/*",
+    "compound-engineering.local.md",
+    "docs/references/*"
+  ]
+}
