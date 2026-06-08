@@ -14,7 +14,7 @@
 
 {{CARL_DOMAIN_UPPER}}_RULE_3=CREDENTIALS SAFETY: All API credentials must be stored in .env files, never hardcoded. Verify .gitignore includes .env before any commit.
 
-# --- EXECUTION DISCIPLINE (PAUL) ---
+# --- EXECUTION DISCIPLINE ---
 
 {{CARL_DOMAIN_UPPER}}_RULE_4=LOOP CLOSURE: After every /gsd:execute-phase, verify that .planning/{phase}-SUMMARY.md includes a planned-vs-actual reconciliation: tasks planned vs completed, decisions made during execution, items deferred. This closure is MANDATORY before /gsd:verify-work and /ce:review.
 
