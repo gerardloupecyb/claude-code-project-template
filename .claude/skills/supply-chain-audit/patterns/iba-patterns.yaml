@@ -1,0 +1,168 @@
+# IBA Detection Patterns — Install Behavior Audit
+#
+# Patterns Grep utilises par Step 1 de SCAG pour detecter les comportements
+# d'install dangereux dans le code source d'un package externe.
+#
+# Format : classe -> liste de patterns regex (Python re / ripgrep compatible)
+#
+# Reference : .claude/skills/supply-chain-audit/SKILL.md
+
+version: 1
+updated: "2026-04-10"
+
+# ---------------------------------------------------------------------------
+# Classe 1 — Modifications de fichiers de gouvernance
+# ---------------------------------------------------------------------------
+governance_modification:
+  severity: critical
+  description: "Code that writes to protected governance files"
+  patterns:
+    # Python file I/O targeting governance files
+    - 'open\s*\(\s*["\'].*CLAUDE\.md'
+    - 'open\s*\(\s*["\'].*settings\.json'
+    - 'open\s*\(\s*["\'].*\.mcp\.json'
+    - 'Path\s*\(\s*["\'].*CLAUDE\.md'
+    - 'Path\s*\(\s*["\'].*settings\.json'
+    - '\.write_text\s*\('   # follow-up check on target path
+    - '\.write_bytes\s*\('
+    # String literals referencing governance paths
+    - '["\']CLAUDE\.md["\']'
+    - '["\']AGENTS\.md["\']'
+    - '["\']\.claude/settings\.json["\']'
+    - '["\']\.mcp\.json["\']'
+
+# ---------------------------------------------------------------------------
+# Classe 2 — Ecritures dans scope utilisateur global (~/.claude, ~/.config)
+# ---------------------------------------------------------------------------
+global_user_config:
+  severity: critical
+  description: "Code that writes to global user config directories"
+  patterns:
+    - 'Path\.home\s*\(\s*\)\s*/\s*["\']\.claude'
+    - 'Path\.home\s*\(\s*\)\s*/\s*["\']\.config'
+    - 'os\.path\.expanduser\s*\(\s*["\']~/\.claude'
+    - 'os\.path\.expanduser\s*\(\s*["\']~/\.config'
+    - '["\']~/\.claude/'
+    - '["\']\$HOME/\.claude/'
+
+# ---------------------------------------------------------------------------
+# Classe 3 — Git hooks installes hors .githooks/ gouverne
+# ---------------------------------------------------------------------------
+git_hook_install:
+  severity: high
+  description: "Code that installs git hooks outside governed .githooks/"
+  patterns:
+    - '\.git/hooks/'
+    - '["\']post-commit["\']'
+    - '["\']pre-commit["\']'
+    - '["\']post-checkout["\']'
+    - 'chmod\s*\(\s*.+,\s*0o755'
+    - '\.chmod\s*\(\s*0o755'
+    - 'os\.chmod\s*\('
+
+# ---------------------------------------------------------------------------
+# Classe 4 — Auto-install de deps sans version pin
+# ---------------------------------------------------------------------------
+auto_install_no_pin:
+  severity: high
+  description: "Code or skill docs that auto-install packages without version pin"
+  patterns:
+    - 'pip\s+install\s+[a-zA-Z][a-zA-Z0-9_\-]*(?!.*==)'
+    - 'pip3\s+install\s+[a-zA-Z][a-zA-Z0-9_\-]*(?!.*==)'
+    - 'uv\s+add\s+[a-zA-Z][a-zA-Z0-9_\-]*(?!.*==)'
+    - 'npm\s+install\s+[a-zA-Z][a-zA-Z0-9_\-]*(?!.*@)'
+    - '--break-system-packages'
+    - '--user.*install'
+  file_types: [".py", ".sh", ".md", ".txt"]
+
+# ---------------------------------------------------------------------------
+# Classe 5 — Shell exec non-sandboxe
+# ---------------------------------------------------------------------------
+shell_exec_unsandboxed:
+  severity: high
+  description: "Shell execution without sandboxing"
+  patterns:
+    - 'subprocess\.(run|call|Popen|check_output).*shell\s*=\s*True'
+    - 'os\.system\s*\('
+    - 'os\.popen\s*\('
+    - 'curl\s+.*\|\s*sh'
+    - 'curl\s+.*\|\s*bash'
+    - 'wget\s+.*\|\s*sh'
+    - 'eval\s*\('
+    - '\bexec\s*\('
+
+# ---------------------------------------------------------------------------
+# Classe 6 — Modifications shell config (PATH, rc files)
+# ---------------------------------------------------------------------------
+shell_config_modification:
+  severity: high
+  description: "Code that modifies user shell configuration"
+  patterns:
+    - '["\']\.bashrc["\']'
+    - '["\']\.zshrc["\']'
+    - '["\']\.profile["\']'
+    - '["\']\.bash_profile["\']'
+    - '["\']\.zprofile["\']'
+    - 'PATH=\$PATH'
+    - 'export\s+PATH='
+
+# ---------------------------------------------------------------------------
+# Classe 7 — Slopsquatting (typosquat via edit-distance to popular package)
+# ---------------------------------------------------------------------------
+slopsquatting:
+  severity: high
+  description: "Package name with Levenshtein distance <= 2 to a popular PyPI/npm package (requires helper, not pure regex)"
+  # NOTE: This class breaks the pure-regex pattern of classes 1-6.
+  # Detection requires semantic edit-distance computation against a curated seed list.
+  # supply-chain-audit SKILL.md Step 1 driver is taught to invoke `helper:` when present.
+  helper: "patterns/helpers/slopsquat-check.py"
+  seed_list: "config/security/slopsquatting-seed.json"
+  allowlist: ".claude/allowlists/slopsquatting-exceptions.json"
+  max_distance: 2
+  scan_file_types: [".txt", ".in", ".toml", ".json"]
+  scan_file_patterns: ["requirements*.txt", "pyproject.toml", "package.json"]
+  verdict_mapping:
+    distance_0: skip       # exact match to popular package = legitimate
+    distance_1: high
+    distance_2: high
+    distance_gt_2: skip
+
+# ---------------------------------------------------------------------------
+# File types to scan
+# ---------------------------------------------------------------------------
+scan_file_types:
+  - ".py"
+  - ".pyx"
+  - ".sh"
+  - ".bash"
+  - ".zsh"
+  - ".md"    # skill docs, READMEs with install instructions
+  - ".txt"
+  - ".toml"
+  - ".yaml"
+  - ".yml"
+  - ".json"
+  - ".js"
+  - ".ts"
+  - ".rb"
+
+# ---------------------------------------------------------------------------
+# Verdict thresholds
+# ---------------------------------------------------------------------------
+verdicts:
+  clean:
+    description: "Zero findings"
+    action: "proceed to triad"
+  local:
+    description: "Findings only within package directory itself"
+    action: "proceed to triad"
+  user_config:
+    description: "Findings touch user home config (not governance)"
+    action: "proceed to triad with warning"
+  governance_violation:
+    description: "At least 1 critical finding on a Loupe-protected file"
+    action: "proceed to triad but force Conditional/Reject verdict"
+  extreme_violation:
+    description: "More than 10 critical findings"
+    action: "short-circuit — skip triad, verdict Reject"
+    threshold: 10

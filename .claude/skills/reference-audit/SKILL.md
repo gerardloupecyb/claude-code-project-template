@@ -35,7 +35,7 @@ Glob: **/Dockerfile, **/docker-compose*.yml, **/docker-compose*.yaml
 For each docker-compose file found:
 1. Read the file
 2. Extract service names, images, ports, restart policies
-3. Compare with docs/references/services-and-access.md "Docker Services" table
+3. Compare with docs/codebase/services-and-access.md "Docker Services" table
 4. Report: `[NEW]` services not in reference, `[MATCH]` services already documented, `[STALE]` services in reference but not in compose
 
 ### Secrets / Environment Variables detection
@@ -46,7 +46,7 @@ Glob: **/.env.example, **/.env.sample, **/.env.template
 
 If no example file exists, check `.env` but **NEVER read or output values**.
 Extract variable names only (left side of `=`).
-Compare with docs/references/services-and-access.md "Secrets" table.
+Compare with docs/codebase/services-and-access.md "Secrets" table.
 
 ### Language & Framework detection
 
@@ -57,7 +57,7 @@ Glob: **/package.json, **/Gemfile, **/requirements.txt, **/pyproject.toml,
 
 For each found:
 1. Extract language/framework name and version
-2. Compare with docs/references/coding-patterns.md "Language & Framework Stack" table
+2. Compare with docs/codebase/coding-patterns.md "Language & Framework Stack" table
 3. Report `[NEW]` or `[MATCH]`
 
 ### MCP detection
@@ -69,7 +69,7 @@ Glob: **/.mcp.json, **/.mcp*.json
 
 For each MCP server found:
 1. Extract name, command/endpoint
-2. Compare with docs/references/services-and-access.md "MCP Servers" table
+2. Compare with docs/codebase/services-and-access.md "MCP Servers" table
 3. Report `[NEW]`, `[MATCH]`, or `[STALE]`
 
 ### Entry Points detection
@@ -79,7 +79,7 @@ Glob: **/Makefile, **/Procfile, **/package.json (scripts section), **/Taskfile.y
 ```
 
 Extract key commands (dev, test, build, deploy).
-Compare with docs/references/codebase-context.md "Entry Points" table.
+Compare with docs/codebase/codebase-context.md "Entry Points" table.
 
 ### Schema detection
 
@@ -88,7 +88,7 @@ Glob: **/schema.rb, **/schema.prisma, **/migrations/**/*.sql,
       **/db/migrate/**/*.rb, **/alembic/**/*.py, **/*.graphql
 ```
 
-List found schema files. Compare with docs/references/codebase-context.md "Data Schemas" table.
+List found schema files. Compare with docs/codebase/codebase-context.md "Data Schemas" table.
 
 ---
 
@@ -98,7 +98,7 @@ List found schema files. Compare with docs/references/codebase-context.md "Data 
 
 1. Read `.claude/rules/tool-routing.md`
 2. Extract MCP names from "Discipline MCP" table (column 1, pattern `mcp__*`)
-3. Read `docs/references/services-and-access.md`
+3. Read `docs/codebase/services-and-access.md`
 4. Extract MCP names from "MCP Servers" table (column 1)
 5. Report:
    - `[DESYNC]` MCPs in tool-routing but NOT in services-and-access
@@ -194,7 +194,7 @@ For `[DESYNC]` findings:
 ## What this skill does NOT do
 
 - Read secret VALUES from .env (only variable names)
-- Modify .claude/rules/tool-routing.md (that's CARL RULE_9 / GLOBAL_RULE_9)
+- Modify .claude/rules/tool-routing.md (that's CARL RULE_8 / GLOBAL_RULE_9)
 - Create reference files if docs/references/ doesn't exist (run init-project.sh first)
 - Replace manual documentation — it fills tables, not prose sections
 - Run without user confirmation on writes (unless piped into automation)

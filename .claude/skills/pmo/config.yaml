@@ -1,0 +1,71 @@
+# /pmo configuration — the only file to edit when porting to another GSD project.
+#
+# Schema version. Increment if a breaking field rename happens.
+# Plan 02 reads this file and MUST validate schema_version == 1 before proceeding.
+schema_version: 1
+
+# Repository root, relative to the shell working directory when /pmo runs.
+# Default "." = run from repo root (Claude Code working dir).
+repo_root: "."
+
+# Phase directory layout — the ONLY hard dependency on GSD conventions (D-19).
+# The skill expects phase directories under ${repo_root}/${phases_dir}/{active,planned,complete}/
+# Each phase dir name starts with the phase number, e.g. "1000-foo", "24.1-bar".
+phases_dir: ".planning/phases"
+phase_states:
+  - active
+  - planned
+  - complete
+
+# Phase number extraction regex (applied to phase directory basename).
+# Captures the leading version-like token with arbitrary decimal depth:
+#   "1000-foo"             -> "1000"
+#   "24.1-bar"             -> "24.1"
+#   "04.2.1-baz"           -> "04.2.1"
+#   "04.2.1.1-qux"         -> "04.2.1.1"
+# The "*" quantifier (not "?") is load-bearing: "?" would collapse
+# "04.2.1" and "04.2.1.1" into "04.2" and fire a false-positive collision.
+phase_number_regex: "^([0-9]+(?:\\.[0-9]+)*)"
+
+# Per-phase CONTEXT.md filename pattern. `*` = phase number prefix glob.
+# Example match: "1005-CONTEXT.md", "24.1-CONTEXT.md".
+context_md_glob: "*-CONTEXT.md"
+
+# Plan-checker marker required by .claude/rules/verification-discipline.md (D-11).
+# Flagged as a gate gap when absent in active/ or planned/ phases.
+plan_checker_marker: "PLAN-CHECKER-PASS"
+
+# Drift-detected sources (D-02). Read only for comparison with filesystem reality.
+# If any of these files is absent, the corresponding drift signal degrades gracefully
+# (reports "no reference to compare") instead of erroring.
+drift_sources:
+  state_md: ".planning/STATE.md"
+  memory_md: "memory/MEMORY.md"
+  roadmap_md: ".planning/ROADMAP.md"
+
+# Signal thresholds and toggles.
+thresholds:
+  # Stagnation threshold in days. D-07 default = 7 (one working week).
+  # Overridable at invocation time via --stale-days N.
+  stale_days: 7
+
+# Output sinks — controls shape, not content.
+output:
+  # Stdout markdown format (D-13). Max terminal screen: 120x40.
+  markdown:
+    max_lines: 40
+    table_width: 120
+  # Statusline compact format (D-14). Single line, ~5 metrics max.
+  statusline:
+    max_metrics: 5
+    emoji_prefix: "📊"
+    separator: " · "
+
+# Advisory line (D-12). Set to false to suppress "Next recommended move".
+advisory_enabled: true
+
+# Git log strategy (Deferred-to-Planning Q1). Plan 02 benchmarks both modes.
+# "per_dir" = N calls of `git log -1 --format=%cI -- <path>` (simple, deterministic)
+# "batch"   = single `git log --all --name-only --since=<cutoff>` + path filtering
+git_log_strategy: "per_dir"
+git_log_since_days: 180  # only used by the "batch" strategy

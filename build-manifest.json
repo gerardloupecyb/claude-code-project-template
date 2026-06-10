@@ -1,0 +1,21 @@
+{
+  "generated": "2026-06-10T00:00:00Z",
+  "source_commit": "aa91f3f7ca28b247a2d96d0b1a8a741f4089d313",
+  "files": 125,
+  "scrub": "PASS",
+  "dca_verdict": "CONFORME interne ; À RISQUE en attente D-8 public",
+  "art17_destination_assessed": false,
+  "deviations": [
+    {
+      "id": "DEV-AC14-D3",
+      "ac_refs": [
+        "AC-1-4",
+        "D-3"
+      ],
+      "resolution": "Template tier = verbatim EXCEPT universal identity-scrub",
+      "detail": "IDENTITY split by hardness — HARD scrub-blocking literals (owner full-names, infra hostnames, DB names, vendors, client names) tokenize UNIVERSALLY (all tiers); SOFT de-identification literals (bare project name / owner-handle) are .md-prose-only, same gating as STRUCTURAL. Executables receive hard-scrub only and keep functional domain vocab + project-prefixed workflow names; Plan 02 config-sources them. owner:/maintained_by: frontmatter tokenized to {{OWNER}} universally. Loupe-specific danger keyword dropped from DANGER_RE so the tokenized regex stays valid ERE.",
+      "ref": ".forge/DEVIATION-ac14-d3.md",
+      "date": "2026-06-08"
+    }
+  ]
+}

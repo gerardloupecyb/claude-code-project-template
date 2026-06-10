@@ -1,6 +1,6 @@
 ---
 name: skill-refresh
-description: "Automatically refresh skills when platform updates are detected. Fetches latest docs, compares claims against current skill content, applies fixes, and asks only for commit approval. Trigger on 'skill refresh', 'refresh skill', 'update skill docs', 'skill outdated', or when a todo from the release monitor workflows (n8n/GHL/Azure) is detected."
+description: "Automatically refresh skills when platform updates are detected. Fetches latest docs, compares claims against current skill content, applies fixes, and asks only for commit approval. Trigger on 'skill refresh', 'refresh skill', 'update skill docs', 'skill outdated', or when a todo from the release monitor workflows ({{WORKFLOW_ENGINE}}/{{CRM_PLATFORM}}/{{CLOUD_PROVIDER}}) is detected."
 ---
 
 # Skill Refresh
@@ -9,7 +9,7 @@ Automatically update skills when platform breaking changes are detected. Fully a
 
 ## When to Use
 
-- A release monitor todo is detected (`todos/*-n8n-release-review.md`, `*-ghl-update-review.md`, `*-azure-update-review.md`)
+- A release monitor todo is detected (`todos/*-{{WORKFLOW_ENGINE}}-release-review.md`, `*-{{crm_platform}}-update-review.md`, `*-{{cloud_provider}}-update-review.md`)
 - User says "refresh skills", "update skill for X", "skill outdated"
 - Periodic quarterly validation (manual trigger)
 
@@ -17,31 +17,31 @@ Automatically update skills when platform breaking changes are detected. Fully a
 
 | Platform | Skills to check | Doc source |
 |----------|----------------|------------|
-| n8n | n8n-workflow-architect, n8n-node-expert, n8n-code-nodes | Context7 `/n8n-io/n8n-docs` or docs.n8n.io |
-| GHL | ghl-architect | marketplace.gohighlevel.com/docs/ |
-| Azure/M365 | azure-m365-architect | azure.microsoft.com/updates, learn.microsoft.com |
+| {{WORKFLOW_ENGINE}} | {{WORKFLOW_ENGINE}}-workflow-architect, {{WORKFLOW_ENGINE}}-node-expert, {{WORKFLOW_ENGINE}}-code-nodes | Context7 `/{{WORKFLOW_ENGINE}}-io/{{WORKFLOW_ENGINE}}-docs` or docs.{{WORKFLOW_ENGINE}}.io |
+| {{CRM_PLATFORM}} | {{crm_platform}}-architect | marketplace.gohi{{crm_platform}}evel.com/docs/ |
+| {{CLOUD_PROVIDER}}/{{IDENTITY_PLATFORM}} | {{cloud_provider}}-{{identity_platform}}-architect | {{cloud_provider}}.microsoft.com/updates, learn.microsoft.com |
 
 ## Process (fully autonomous)
 
 ### Step 1: Detect context
 
-If argument is a platform name (n8n, ghl, azure), use it directly.
+If argument is a platform name ({{WORKFLOW_ENGINE}}, {{crm_platform}}, {{cloud_provider}}), use it directly.
 If no argument, scan `todos/` for pending release monitor todos and auto-detect platform.
 If a todo exists, read it for: version, matched keywords, release notes link.
 
 ### Step 2: Fetch latest docs
 
-**n8n:** Try Context7 first (`/n8n-io/n8n-docs`), fall back to web search on docs.n8n.io.
-**GHL:** Web search on marketplace.gohighlevel.com/docs/ for the matched keywords.
-**Azure:** Web search on learn.microsoft.com + azure.microsoft.com/updates for matched keywords.
+**{{WORKFLOW_ENGINE}}:** Try Context7 first (`/{{WORKFLOW_ENGINE}}-io/{{WORKFLOW_ENGINE}}-docs`), fall back to web search on docs.{{WORKFLOW_ENGINE}}.io.
+**{{CRM_PLATFORM}}:** Web search on marketplace.gohi{{crm_platform}}evel.com/docs/ for the matched keywords.
+**{{CLOUD_PROVIDER}}:** Web search on learn.microsoft.com + {{cloud_provider}}.microsoft.com/updates for matched keywords.
 
 Focus queries on the keywords from the todo (e.g., "breaking", "deprecated", "task runner"). If no todo, query the 3 key validation areas per platform:
 
 | Platform | Validation areas |
 |----------|-----------------|
-| n8n | Task runners/sandbox, Python imports, Save/Publish, expressions |
-| GHL | API version header, webhook signature, OAuth scopes, rate limits |
-| Azure | Bicep API versions, Graph SDK version, Entra CA changes, PowerShell modules |
+| {{WORKFLOW_ENGINE}} | Task runners/sandbox, Python imports, Save/Publish, expressions |
+| {{CRM_PLATFORM}} | API version header, webhook signature, OAuth scopes, rate limits |
+| {{CLOUD_PROVIDER}} | Bicep API versions, Graph SDK version, {{IDENTITY_PROVIDER}} CA changes, {{SCRIPTING_LANG}} modules |
 
 ### Step 3: Extract claims from skills
 

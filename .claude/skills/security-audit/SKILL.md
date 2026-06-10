@@ -10,9 +10,25 @@ description: >
 # Security Audit — AgentShield On-Demand Scanner
 
 Runs AgentShield against `.claude/` to detect configuration security issues.
-Use before merge/ship — not a continuous hook.
+Scans the **agent configuration** (skills, hooks, settings, permissions, agents,
+commands) — NOT the application code diff. Code SAST is `sast-scanner`, wired into
+`/{{project}}:review` Step 8.
 
 Requires: `npx` (Node.js). Not a project dependency — downloaded on demand.
+
+---
+
+## When to run
+
+| Trigger | Obligation |
+|---------|-----------|
+| Diff touched `.claude/` (skills, hooks, settings, permissions, agents, commands) | **Proposed before merge** — surfaced by `/{{project}}:review` Step 9 |
+| Before `/promote` of any agentic artefact (skill, hook, agent, command) | **Mandatory** |
+| Diff did NOT touch `.claude/` | Not relevant — AgentShield has nothing in scope; skip |
+
+This is the agent-config security gate; it is part of the `security-review` capability
+(`docs/architecture/security-review/`). It complements — does not replace — the code
+review pipeline (`/{{project}}:review` Steps 1-8).
 
 ---
 

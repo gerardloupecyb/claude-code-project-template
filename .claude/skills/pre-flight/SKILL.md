@@ -72,6 +72,43 @@ Review the plan for:
 - OWASP top 10 exposure in planned implementation
 - Data exposure risks in API responses
 
+**STRIDE-per-boundary extension (Phase 24.7 R2):**
+
+Activate a STRIDE-per-boundary analysis when the plan body matches ANY keyword in this frozen list (Option A per Phase 24.7 RESEARCH):
+
+```
+\b(auth|authentication|authorization|oauth|jwt|session|mfa)\b
+\b(public\s+API|webhook|graphql\s+endpoint|cross-tenant|multi-tenant)\b
+\b(llm|claude|gpt|openai|anthropic|embeddings|rag)\b
+```
+
+**Word-boundary regex MANDATORY** (per Phase 24.7 Gemini cross-model review 2026-04-20). Without `\b` anchors, bare tokens like `auth`, `rag`, `gpt`, `mfa`, `llm` match substrings (`Egypt`, `storage`, `author`, `authoritative`), firing STRIDE on nearly every plan — directly contradicting Pitfall 5. Match invocation: `grep -Eiw` (word-match) or `grep -Ei '\b(...)\b'`.
+
+**Comment-marker exclusion MANDATORY** (per Phase 24.7 pre-flight 2026-04-20 CONDITIONAL GO — Required Change 2). Before keyword matching, exclude commented-out reminder lines matching `^(\s*(//|--)|\s+#)\s*(TODO|NOTE|FIXME|XXX)` — a line like `// TODO: add oauth later` describes a non-existent boundary and would fire a ghost STRIDE section. The `#` arm requires leading whitespace (`\s+#`): a column-0 `# TODO: ...` in a Markdown PLAN.md is an ATX heading, not a comment, and must be kept — excluding it would mask a real boundary (a false negative, worse than a ghost section). Filter these out first (`grep -Ev '^(\s*(//|--)|\s+#)\s*(TODO|NOTE|FIXME|XXX)'`), then run the word-boundary keyword match on the remainder.
+
+Case-insensitive. If zero whole-word matches, **SKIP** the STRIDE section entirely — do NOT emit an N/A table (RESEARCH Pitfall 5).
+
+When at least one keyword matches:
+1. Identify each trust boundary in the plan (crossings where untrusted input enters trusted code: client→API, webhook receiver→runbook, cross-tenant data, LLM input→prompt)
+2. For each boundary, emit one STRIDE table using this schema:
+
+```
+### STRIDE — Boundary: {boundary_name}
+
+| Category | Threat | Mitigation in plan | Severity | Rubric link |
+|----------|--------|--------------------|----------|-------------|
+| S (Spoofing) | {specific threat, or "N/A" with rationale} | {what plan does to mitigate, or "GAP"} | {Critical/High/Medium/Low/Info} | docs/references/security-review/scoring-rubric.md#per-cwe-example-bands |
+| T (Tampering) | ... | ... | ... | ... |
+| R (Repudiation) | ... | ... | ... | ... |
+| I (Info disclosure) | ... | ... | ... | ... |
+| D (DoS) | ... | ... | ... | ... |
+| E (Elevation) | ... | ... | ... | ... |
+```
+
+All 6 rows MUST be present per boundary. "N/A" is acceptable in the Threat column with a one-line rationale — it is NOT acceptable in the Severity column (use "Info" for N/A threats).
+
+Each STRIDE finding Severity MUST be both categorical and numeric band per `docs/references/security-review/scoring-rubric.md` (D-07 contract). Append composite severity per `#composite-severity-for-chained-findings` when a chain spans multiple STRIDE categories.
+
 ### Agent 3: Performance Oracle
 
 ```
@@ -98,11 +135,32 @@ Review the plan for:
 - Incomplete state transitions
 - Flows that dead-end without user feedback
 
+### Agent 4b: Quebec Privacy Lens (parallel with Agents 1-4, conditional)
+
+```
+subagent_type: quebec-privacy-lens-reviewer
+```
+
+**Activate only if** the plan touches any of these Quebec/Canada privacy signals:
+- Renseignements personnels, renseignements de santé, or prospection data
+- Cross-border storage/transit ({{CLOUD_PROVIDER}} region choice, SaaS routing, backup geo-replication)
+- {{CRM_PLATFORM}}, {{ACCOUNTING_PLATFORM}}, or any US-hosted SaaS carrying {{PROJECT}} client data
+- Consent collection, SAR/portability flow, retention/destruction policy
+- Law references: {{COMPLIANCE_FRAMEWORK_PRIMARY}}, {{COMPLIANCE_FRAMEWORK_HEALTH}} ({{COMPLIANCE_FRAMEWORK_HEALTH}}/LRSSS), LPRPSP, {{COMPLIANCE_FRAMEWORK_FEDERAL}}, art. 17, art. 27, art. 3.3
+
+If activated, pass the plan + the stable path hint so the subagent can load
+framework docs from `docs/references/frameworks/` at runtime (it does not inherit
+parent skill context — it reads the files itself).
+
+This agent anchors every finding in a specific law article. It replaces the
+default "generic privacy reflex" that `security-sentinel` applies when it
+encounters PII — the two are complementary, not redundant.
+
 ### Agent 5: Architecture Critic (sequential — waits for Agent 1 output)
 
 ```
 role: critic (ref: .claude/rules/swarm-patterns.md)
-model: per swarm-patterns.md routing (Sonnet default; Opus on escalation triggers)
+model: Opus (tier 3)
 ```
 
 Receives: Agent 1 (Architecture Strategist) output + original plan.
@@ -115,15 +173,13 @@ Mission: actively challenge Agent 1's proposals:
 - Are hidden costs identified?
 - Is this the simplest design that satisfies the ACs?
 
-If `docs/architecture/contexts.md` exists and contains real content (not just unfilled
-placeholders): verify the plan respects bounded contexts. Skip if file is absent or
-contains only template placeholders.
+If architecture artefacts exist in `docs/architecture/{slug}/`: verify the plan respects documented constraints.
 
 ---
 
 ## Output — Pre-Flight Report
 
-After all 5 agents complete, synthesize their findings into a structured report.
+After all 4 agents complete, synthesize their findings into a structured report.
 
 ### Format
 
@@ -155,6 +211,10 @@ After all 5 agents complete, synthesize their findings into a structured report.
 ### Spec Completeness
 - {finding 1 — severity: LOW/MEDIUM/HIGH/CRITICAL}
 - {finding 2}
+
+### Quebec Privacy (if activated)
+- {finding 1 — law article anchor — severity: À RISQUE/NON-CONFORME}
+- {finding 2 — law article anchor — severity: À RISQUE/NON-CONFORME}
 
 ### Architecture Challenge
 - {Agent 1 proposal} → {Critic challenge} → {Resolution}
@@ -204,8 +264,8 @@ Save the report to `.planning/milestones/{milestone}/{phase}-PREFLIGHT.md`
 
 After the 5 agents + synthesis, launch automatically:
 
-```
-/codex:adversarial-review --base main
+```bash
+codex review --base main
 ```
 
 The Codex review challenges the **plan** (not code — none exists yet).

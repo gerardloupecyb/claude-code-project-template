@@ -19,10 +19,14 @@ Les règles complètes sont dans CLAUDE.md (Règles #1 à #8). Ce skill ne les d
 
 ### Démarrage de session
 
-Le hook SessionStart injecte automatiquement `memory/MEMORY.md` + `LESSONS.md`
-au démarrage, après compaction, resume et /clear. Lecture manuelle = fallback si hook absent.
-Si l'un n'existe pas → le créer depuis le template.
-Voir CLAUDE.md Règle #1 pour le détail.
+Le hook SessionStart injecte automatiquement un résumé compact de
+`memory/MEMORY.md` au démarrage et après compaction (continuité minimale).
+`LESSONS.md` n'est **pas** injecté — il est task-scoped :
+lire avant implémentation, review, debug, fix, refactor, modification de
+workflow, ou changement auth/infra/sécurité (voir AGENTS.md § "Fichiers à lire").
+Le hook ne se déclenche pas sur `resume` ou `/clear`.
+Lecture manuelle = fallback si hook absent.
+Voir CLAUDE.md § "Chargement minimal" pour le détail.
 
 ### Fin de session
 
@@ -55,7 +59,7 @@ hiérarchie des couches mémoire), lire directement CLAUDE.md Règles #4 à #8.
 
 - CLAUDE.md Règles #1-#8                → règles complètes de gestion du contexte
 - `.claude/rules/tool-routing.md`       → routing outils + discipline MCP
-- `.claude/hooks/session-start.sh`      → injection auto MEMORY.md + LESSONS.md
+- `.claude/hooks/session-start.sh`      → injection auto MEMORY.md (startup + compact)
 - `.claude/hooks/pre-compact.sh`        → snapshot avant compaction
 - memory/MEMORY.md                      → état courant projet
 - LESSONS.md                            → cache chaud des leçons (cap 50)

@@ -1,0 +1,162 @@
+#!/bin/bash
+# post-commit: auto-sync ChromaDB knowledge base after commit (Option C)
+#
+# Runs scripts/knowledge-sync.py in a detached background process so the
+# commit returns immediately. Uses chroma-mcp's uv tool env (chromadb
+# pre-installed, no cold start) — see LESSONS.md entry [chromadb] and
+# docs/architecture/chromadb/integration-architecture.md § 2.6.
+#
+# Lock file prevents concurrent syncs (session-start hook uses the same lock).
+# Log: .claude/workspace/knowledge-sync.log
+# Never blocks, never fails the commit (post-commit can't abort anyway).
+
+set +e
+trap 'exit 0' EXIT
+
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+[ -z "$PROJECT_ROOT" ] && exit 0
+
+CHROMA_PY="${HOME}/.local/share/uv/tools/chroma-mcp/bin/python"
+SYNC_SCRIPT="${PROJECT_ROOT}/scripts/knowledge-sync.py"
+SYNC_LOCK="/tmp/loupe-knowledge-sync.lock"
+SYNC_LOG="${PROJECT_ROOT}/.claude/workspace/knowledge-sync.log"
+
+# Prerequisites: chromadb client binary + sync script
+[ -x "$CHROMA_PY" ] || exit 0
+[ -f "$SYNC_SCRIPT" ] || exit 0
+
+# ChromaDB healthcheck — skip sync if container is down
+CHROMA_PORT="${CHROMA_PORT:-8000}"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${CHROMA_PORT}/api/v2/heartbeat" 2>/dev/null || echo "000")
+[ "$HTTP_CODE" != "200" ] && exit 0
+
+# Lock: skip if another sync is running (age > 60s = stale, clear it)
+if [ -f "$SYNC_LOCK" ]; then
+    LOCK_AGE=$(($(date +%s) - $(stat -f "%m" "$SYNC_LOCK" 2>/dev/null || stat -c "%Y" "$SYNC_LOCK" 2>/dev/null || echo 0)))
+    if [ "$LOCK_AGE" -lt 60 ]; then
+        exit 0
+    fi
+    rm -f "$SYNC_LOCK"
+fi
+
+mkdir -p "${PROJECT_ROOT}/.claude/workspace" 2>/dev/null
+
+# Detached background sync — write lock, run script, clear lock
+COMMIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+(
+    echo "$$" > "$SYNC_LOCK"
+    {
+        echo ""
+        echo "=== post-commit sync @ $(date -u +%Y-%m-%dT%H:%M:%SZ) — commit $COMMIT_SHA ==="
+        cd "$PROJECT_ROOT" && "$CHROMA_PY" "$SYNC_SCRIPT" 2>&1
+    } >> "$SYNC_LOG"
+    rm -f "$SYNC_LOCK"
+) </dev/null >/dev/null 2>&1 &
+disown 2>/dev/null || true
+
+# --- Graphify incremental rebuild (code AST + doc structural, zero LLM) ---
+# Code files: tree-sitter AST extraction (deterministic, 0 tokens)
+# Doc files (.md): structural extraction (headings, links, frontmatter — no LLM)
+# Only runs if graphify is installed and graph.json exists (initial build done).
+# Detached background — returns in <10ms, rebuild takes 1-5s async.
+GRAPHIFY_BIN=$(which graphify 2>/dev/null)
+GRAPHIFY_GRAPH="${PROJECT_ROOT}/graphify-out/graph.json"
+GRAPHIFY_LOG="${PROJECT_ROOT}/.claude/workspace/graphify-rebuild.log"
+
+if [ -n "$GRAPHIFY_BIN" ] && [ -f "$GRAPHIFY_GRAPH" ]; then
+    # Resolve Python interpreter from graphify shebang
+    GRAPHIFY_PY=$(head -1 "$GRAPHIFY_BIN" | tr -d '#!')
+    case "$GRAPHIFY_PY" in *[!a-zA-Z0-9/_.-]*) GRAPHIFY_PY="python3" ;; esac
+
+    # Get changed files in this commit (code + docs)
+    CHANGED_CODE=$(git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -E '\.(ps1|psm1|psd1|py|js|ts|go|rs|rb|sh)$' || true)
+    CHANGED_DOCS=$(git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -E '\.md$' | grep -v 'MEMORY\.md\|LESSONS\.md\|services-and-access\.md' || true)
+
+    if [ -n "$CHANGED_CODE" ] || [ -n "$CHANGED_DOCS" ]; then
+        (
+            {
+                echo ""
+                echo "=== graphify rebuild @ $(date -u +%Y-%m-%dT%H:%M:%SZ) — commit $COMMIT_SHA ==="
+                echo "Changed code: $(echo "$CHANGED_CODE" | grep -c . || echo 0) | Changed docs: $(echo "$CHANGED_DOCS" | grep -c . || echo 0)"
+                cd "$PROJECT_ROOT" && "$GRAPHIFY_PY" -c "
+import json, sys, re
+from pathlib import Path
+import networkx as nx
+from networkx.readwrite import json_graph
+
+changed_code_str = '''$CHANGED_CODE'''.strip()
+changed_docs_str = '''$CHANGED_DOCS'''.strip()
+
+code_files = [f for f in changed_code_str.split('\n') if f and Path(f).exists()]
+doc_files = [f for f in changed_docs_str.split('\n') if f and Path(f).exists()]
+
+if not code_files and not doc_files:
+    print('No existing changed files — skipping')
+    sys.exit(0)
+
+# Load existing graph
+data = json.loads(Path('graphify-out/graph.json').read_text())
+try:
+    G = json_graph.node_link_graph(data, edges='links')
+except TypeError:
+    G = json_graph.node_link_graph(data)
+
+# AST extraction for code files
+if code_files:
+    from graphify.extract import extract
+    from graphify.build import build_from_json
+    paths = [Path(f) for f in code_files]
+    new_extract = extract(paths)
+    G_new = build_from_json(new_extract)
+    G.update(G_new)
+    print(f'AST: {len(new_extract[\"nodes\"])} nodes from {len(code_files)} code files')
+
+# Structural extraction for doc files (headings, links, frontmatter — zero LLM)
+if doc_files:
+    doc_nodes = 0
+    doc_edges = 0
+    for df in doc_files:
+        content = Path(df).read_text(errors='replace')
+        stem = Path(df).stem.lower().replace('-', '_').replace(' ', '_')
+
+        # File-level node
+        G.add_node(stem, label=Path(df).stem, file_type='document',
+                   source_file=df, source_location=None, community=None)
+        doc_nodes += 1
+
+        # Extract ## headings as nodes
+        for m in re.finditer(r'^#{1,3}\s+(.+)$', content, re.MULTILINE):
+            heading = m.group(1).strip()
+            hid = stem + '_' + re.sub(r'[^a-z0-9]+', '_', heading.lower())[:40]
+            G.add_node(hid, label=heading, file_type='document',
+                       source_file=df, source_location=f'line {content[:m.start()].count(chr(10))+1}')
+            G.add_edge(stem, hid, relation='contains', confidence='EXTRACTED',
+                       confidence_score=1.0, source_file=df, weight=1.0)
+            doc_nodes += 1
+            doc_edges += 1
+
+        # Extract markdown links [text](path.md) as cross-file edges
+        for m in re.finditer(r'\[([^\]]+)\]\(([^)]+\.md[^)]*)\)', content):
+            target_path = m.group(2).split('#')[0].split('?')[0]
+            target_stem = Path(target_path).stem.lower().replace('-', '_').replace(' ', '_')
+            if target_stem != stem:
+                G.add_edge(stem, target_stem, relation='references', confidence='EXTRACTED',
+                           confidence_score=1.0, source_file=df, weight=0.8)
+                doc_edges += 1
+
+    print(f'Docs: {doc_nodes} nodes, {doc_edges} edges from {len(doc_files)} files')
+
+# Re-cluster and export
+from graphify.cluster import cluster
+from graphify.export import to_json
+communities = cluster(G)
+to_json(G, communities, 'graphify-out/graph.json')
+print(f'Total: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges, {len(communities)} communities')
+" 2>&1
+            } >> "$GRAPHIFY_LOG"
+        ) </dev/null >/dev/null 2>&1 &
+        disown 2>/dev/null || true
+    fi
+fi
+
+exit 0

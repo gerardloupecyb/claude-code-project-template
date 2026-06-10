@@ -3,10 +3,9 @@ name: task-router
 description: >
   Route les tâches d'un plan GSD vers le modèle approprié (opus/external) et
   génère des context briefs structurés pour les executors externes (Codex VS Code).
-  Packaging seulement — review et retry sont gérés par .claude/rules/model-routing.md.
+  Packaging seulement — review et retry sont gérés par .claude/rules/router-rules.md.
   Trigger: "task-router", "route tasks", "génère les briefs", "prépare pour Codex".
 argument-hint: "[plan-path]"
-disable-model-invocation: true
 allowed-tools: Read, Write, Glob, Grep, Bash(mkdir *)
 ---
 
@@ -21,7 +20,7 @@ Génère des `.task-briefs/` structurés pour les tâches déléguées aux execu
 - Manuellement via `/task-router` pour pré-générer les briefs
 - Quand l'utilisateur dit "route tasks", "génère les briefs", "prépare pour Codex"
 
-> **Note :** L'intégration GSD passe par `.claude/rules/model-routing.md` (auto-chargé), pas par ce skill. Ce skill est un raccourci pour pré-générer tous les briefs d'un coup.
+> **Note :** L'intégration GSD passe par `.claude/rules/router-rules.md` (auto-chargé), pas par ce skill. Ce skill est un raccourci pour pré-générer tous les briefs d'un coup.
 
 ---
 
@@ -43,7 +42,7 @@ mkdir -p .task-briefs
 
 ### 1. Lire le plan et classifier chaque tâche
 
-Appliquer la classification de `.claude/rules/model-routing.md` :
+Appliquer la classification de `.claude/rules/router-rules.md` :
 
 | La tâche est... | Routing |
 |-----------------|---------|
@@ -130,8 +129,8 @@ Afficher un résumé :
 
 ## Ce que ce skill ne fait PAS
 
-- **Review** — géré par model-routing.md (signal `Codex done {slug}`)
-- **Retry/Escalade** — géré par model-routing.md (max 2 retries → Opus)
+- **Review** — géré par router-rules.md (signal `Codex done {slug}`)
+- **Retry/Escalade** — géré par router-rules.md (max 2 retries → Opus)
 - **Exécuter les tâches opus** — elles passent dans le flow GSD normal
 
 Ce skill ne fait que le packaging. Responsabilité unique.

@@ -1,0 +1,118 @@
+---
+paths:
+  - ".claude/skills/supply-chain-audit/**"
+  - ".claude/rules/supply-chain-audit.md"
+  - "docs/audits/dependencies/**"
+---
+
+# Protected Files Registry — Loupe Technologies
+#
+# Source canonique : fichiers de gouvernance que AUCUN package externe ne doit
+# modifier lors de son install. Consommé par Install Behavior Audit (IBA) —
+# Step 1 du Supply-Chain Audit Gate (SCAG).
+#
+# Format : glob Python pathlib.Path.match (pas regex)
+# Classes : critical / high / medium
+#
+# Maintenance : mettre a jour dans le meme commit si :
+#   - un nouveau fichier de gouvernance est cree
+#   - un fichier de gouvernance est renomme
+#   - la structure de .claude/ change
+#
+# Reference : docs/architecture/security/supply-chain-controls.md
+
+version: 1
+updated: "2026-04-10"
+
+# ---------------------------------------------------------------------------
+# CRITICAL : si un package modifie un de ces fichiers, GOVERNANCE_VIOLATION
+# ---------------------------------------------------------------------------
+critical:
+  # Bootstrap Claude Code (local et global)
+  - "CLAUDE.md"
+  - "AGENTS.md"
+  - "~/.claude/CLAUDE.md"
+  - "~/.claude/AGENTS.md"
+  - "~/.claude/settings.json"
+
+  # Claude Code runtime config
+  - ".claude/settings.json"
+  - ".claude/settings.local.json"
+  - ".mcp.json"
+
+  # Loupe governance rules (auto-injected runtime rules)
+  - ".claude/rules/**"
+
+  # Loupe skills (executable agent behaviors)
+  - ".claude/skills/**"
+
+  # Loupe governance hooks
+  - ".claude/hooks/**"
+  - ".githooks/**"
+
+  # Integration and access inventory
+  - ".claude/integrations.md"
+  - ".claude/allowlists/**"
+
+# ---------------------------------------------------------------------------
+# HIGH : trigger un finding haute severite, pas un court-circuit complet
+# ---------------------------------------------------------------------------
+high:
+  # Dependency manifests — modification = potential dependency injection
+  - "pyproject.toml"
+  - "requirements.txt"
+  - "requirements-*.txt"
+  - "package.json"
+  - "package-lock.json"
+  - ".gitmodules"
+
+  # Git config (not hooks, config itself)
+  - ".gitignore"
+  - ".gitattributes"
+  - ".git/config"
+
+  # GitHub CI/CD
+  - ".github/workflows/**"
+  - ".github/dependabot.yml"
+
+  # Credentials-adjacent
+  - ".env"
+  - ".env.*"
+  - "**/credentials.json"
+  - "**/config.json"
+
+  # Shell config (user scope)
+  - "~/.bashrc"
+  - "~/.zshrc"
+  - "~/.profile"
+  - "~/.bash_profile"
+
+# ---------------------------------------------------------------------------
+# MEDIUM : finding informationnel, flag dans l'audit
+# ---------------------------------------------------------------------------
+medium:
+  # Editor config (could inject malicious snippets)
+  - ".editorconfig"
+  - ".vscode/settings.json"
+
+  # Docs/planning (modification legitime rare pour un package externe)
+  - "docs/**"
+  - ".planning/**"
+  - "memory/**"
+  - "LESSONS.md"
+  - "DECISIONS.md"
+
+# ---------------------------------------------------------------------------
+# WHITELIST : packages autorises a modifier certains fichiers protes
+# ---------------------------------------------------------------------------
+# Format : package name -> liste de paths qu'il peut modifier legitimement
+# Un match whitelist degrade le finding de CRITICAL -> INFO dans IBA.
+# Ajouter a cette liste UNIQUEMENT avec justification humaine documentee.
+whitelist:
+  # Example (commentaire — pas de whitelist active au 2026-04-10) :
+  # - package: "some-official-anthropic-bootstrapper"
+  #   allowed_modifications:
+  #     - "CLAUDE.md"
+  #   reason: "Official bootstrapping tool from Anthropic"
+  #   approved_by: "gerard"
+  #   date: "2026-XX-XX"
