@@ -54,6 +54,15 @@
     "session-isolation.md",
     "protected-files.yaml"
   ],
+  "files": [
+    "CLAUDE.md",
+    ".claude/gate.config.json",
+    ".claude/forge.config.json",
+    "scripts/forge/render-skill-gate.sh",
+    "scripts/forge/test-gate-config.sh",
+    "scripts/forge/validate-gate-config.sh",
+    "scripts/forge/test-manifest-reconcile.sh"
+  ],
   "protected": [
     "CLAUDE.md",
     "AGENTS.md",
