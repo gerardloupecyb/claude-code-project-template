@@ -129,12 +129,205 @@ cmd_routing() {
     return 0
 }
 
-# ── dispatch ─────────────────────────────────────────────────────────────────
-SUB="${1:-}"; shift || true
-case "$SUB" in
-    routing) cmd_routing "$@" ;;
-    ""|-h|--help)
-        sed -n '2,40p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
-        exit 0 ;;
-    *) echo "forge-setup-executors: unknown subcommand '$SUB' (have: routing)" >&2; exit 2 ;;
-esac
+# ============================================================================
+# [SENSIBLE] key handling + auth probe (AC-5-2 / AC-5-3)
+# ----------------------------------------------------------------------------
+# Invariants (cross-vendor no-waiver surface):
+#   - keys read with `read -s` (no echo) or from stdin — NEVER from argv.
+#   - keys reach curl via a `-K -` stdin config — NEVER in curl's argv (so a
+#     `ps aux` during the probe shows no key). `printf` is a bash BUILTIN, so the
+#     header line carrying the key is never a separate process's argv either.
+#   - the response body is discarded (`--output /dev/null`) — never printed.
+#   - no `set -x` anywhere in this file; `umask 077` before any key write.
+#   - .env.local store is gitignore-PRECHECKED + chmod 600. keychain is offered
+#     with a documented argv caveat (macOS `security` has no stdin-password mode).
+# F12 calibration (feedback_security_finding_calibration): /proc + `ps e` env
+# scanning is template-hardening guidance, NOT a gate on the single-operator box
+# (a /proc read there = already-owned). The argv + repo-key-scan + output-redaction
+# assertions are the real teeth and are what the oracle checks.
+# ============================================================================
+
+# executor → canonical env-var / keychain-service name
+_keyvar_for() {  # $1=executor
+    case "$1" in
+        openai|codex|codex-cli)   echo "OPENAI_API_KEY" ;;
+        openrouter)               echo "OPENROUTER_API_KEY" ;;
+        deepseek)                 echo "DEEPSEEK_API_KEY" ;;
+        gemini|google|gemini-cli) echo "GEMINI_API_KEY" ;;
+        anthropic|claude)         echo "ANTHROPIC_API_KEY" ;;
+        *) printf '%s' "$1" | tr '[:lower:]-' '[:upper:]_' | sed 's/$/_API_KEY/' ;;
+    esac
+}
+
+# PINNED endpoint allowlist (hardcoded; config-supplied hosts are rejected).
+_allowed_hosts() { printf '%s\n' api.openai.com openrouter.ai api.deepseek.com generativelanguage.googleapis.com; }
+
+# Pinned AUTH-GATED probe endpoint per executor. CRITICAL: the endpoint MUST require
+# auth so an INVALID key returns 401 — otherwise the probe false-greens. OpenRouter's
+# /api/v1/models is PUBLIC (returns 200 with no/any key), so it is unusable as an auth
+# probe; its auth-gated endpoint is /api/v1/key (401 on invalid key). OpenAI/DeepSeek
+# /models and Gemini /models all require auth. (Surfaced by the AC-5-2/5-3 oracle —
+# a fake key PASSED against openrouter /models; deviation logged for the consolidated review.)
+_endpoint_for() {  # $1=executor → pinned auth-gated endpoint (or empty + rc 2)
+    case "$1" in
+        openai|codex|codex-cli)   echo "https://api.openai.com/v1/models" ;;
+        openrouter)               echo "https://openrouter.ai/api/v1/key" ;;
+        deepseek)                 echo "https://api.deepseek.com/user/balance" ;;
+        gemini|google|gemini-cli) echo "https://generativelanguage.googleapis.com/v1beta/models" ;;
+        *) return 2 ;;
+    esac
+}
+
+# accept only https + an allowlisted host (exact). Rejects any config-supplied URL
+# whose host is not pinned — closes the "typo'd/malicious endpoint → exfil" threat.
+_endpoint_allowed() {  # $1=url
+    local url="$1" scheme host
+    scheme="${url%%://*}"
+    [ "$scheme" = "https" ] || return 1
+    host="${url#*://}"; host="${host%%/*}"; host="${host%%:*}"
+    _allowed_hosts | grep -qxF "$host"
+}
+
+# HTTP status → outcome. 000/5xx = UNREACHABLE (network), 401/403 = FAIL-auth,
+# 429/402/other-4xx = VISIBLE non-PASS (rate-limit/quota/denied are NEVER PASS).
+_classify_probe() {  # $1=http_status
+    case "$1" in
+        2??)        echo "PASS" ;;
+        401|403)    echo "FAIL-auth" ;;
+        429)        echo "RATE-LIMITED" ;;
+        402)        echo "QUOTA" ;;
+        000|"")     echo "UNREACHABLE" ;;
+        5??)        echo "UNREACHABLE" ;;
+        4??)        echo "FAIL-other" ;;
+        *)          echo "UNREACHABLE" ;;
+    esac
+}
+
+# .env.local is gitignored? — git check-ignore (in a repo) OR a .gitignore pattern grep.
+_env_local_ignored() {  # $1=project-dir
+    local d="$1"
+    ( cd "$d" && git rev-parse --git-dir >/dev/null 2>&1 && git check-ignore -q .env.local ) 2>/dev/null && return 0
+    grep -qE '(^|/)\.env(\.local|\.\*)?[[:space:]]*$' "$d/.gitignore" 2>/dev/null
+}
+
+cmd_keys() {
+    umask 077
+    local executor="" store="env-local" project_dir="." from_stdin=0
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --executor)    executor="$2"; shift 2 ;;
+            --store)       store="$2"; shift 2 ;;
+            --project-dir) project_dir="$2"; shift 2 ;;
+            --stdin)       from_stdin=1; shift ;;
+            *) echo "keys: unknown option '$1'" >&2; return 2 ;;
+        esac
+    done
+    [ -n "$executor" ] || { echo "keys: --executor required" >&2; return 2; }
+
+    # --- read the key WITHOUT argv exposure --------------------------------------
+    local KEY=""
+    if [ "$from_stdin" -eq 1 ]; then
+        IFS= read -r KEY || true                       # piped in — not in any argv
+    elif [ -t 0 ]; then
+        printf 'Paste %s API key (input hidden): ' "$executor" >&2
+        IFS= read -rs KEY || true; printf '\n' >&2     # -s: no terminal echo
+    else
+        echo "keys: no TTY and no --stdin — refusing to read a key non-interactively without --stdin" >&2
+        return 2
+    fi
+    [ -n "$KEY" ] || { echo "keys: empty key — nothing stored" >&2; return 2; }
+
+    local var; var="$(_keyvar_for "$executor")"
+    case "$store" in
+        env-local)
+            _env_local_ignored "$project_dir" || {
+                echo "keys: .env.local is NOT gitignored in $project_dir — refusing to write a key to a trackable file" >&2
+                unset KEY; return 1; }
+            local envf="$project_dir/.env.local" tmp
+            tmp="$(mktemp)"; chmod 600 "$tmp"
+            [ -f "$envf" ] && grep -vE "^${var}=" "$envf" > "$tmp" 2>/dev/null
+            { printf '%s=%s\n' "$var" "$KEY"; } >> "$tmp"   # printf is a BUILTIN → key not in any ps argv
+            mv "$tmp" "$envf"; chmod 600 "$envf"
+            echo "  ✓ ${var} stored in .env.local (chmod 600, gitignored)" >&2
+            ;;
+        keychain)
+            # CAVEAT: macOS `security add-generic-password -w VALUE` puts VALUE in argv
+            # for the lifetime of the call (no stdin-password mode exists). Mitigated:
+            # single-operator box, value never lands on disk/tracked file. The probe READ
+            # path is argv-safe (find-generic-password -w emits to stdout, key→env only).
+            security add-generic-password -U -a "$USER" -s "$var" -w "$KEY" >/dev/null 2>&1 \
+                && echo "  ✓ ${var} stored in login keychain (service=${var})" >&2 \
+                || { echo "keys: keychain store failed" >&2; unset KEY; return 1; }
+            ;;
+        *) echo "keys: unknown --store '$store' (env-local|keychain)" >&2; unset KEY; return 2 ;;
+    esac
+    unset KEY
+    return 0
+}
+
+# resolve a key for the probe WITHOUT argv: env > .env.local > keychain.
+_resolve_key() {  # $1=executor  $2=project-dir → key on stdout (or empty)
+    local var k=""; var="$(_keyvar_for "$1")"
+    k="${!var:-}"
+    [ -z "$k" ] && [ -f "$2/.env.local" ] && k="$(grep -E "^${var}=" "$2/.env.local" 2>/dev/null | head -1 | cut -d= -f2-)"
+    [ -z "$k" ] && k="$(security find-generic-password -a "$USER" -s "$var" -w 2>/dev/null || true)"
+    printf '%s' "$k"
+}
+
+cmd_probe() {
+    umask 077
+    local executor="" project_dir="." endpoint=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --executor)    executor="$2"; shift 2 ;;
+            --project-dir) project_dir="$2"; shift 2 ;;
+            --endpoint)    endpoint="$2"; shift 2 ;;
+            *) echo "probe: unknown option '$1'" >&2; return 2 ;;
+        esac
+    done
+    [ -n "$executor" ] || { echo "probe: --executor required" >&2; return 2; }
+
+    local pinned; pinned="$(_endpoint_for "$executor")" || { echo "probe[$executor]: no pinned endpoint — unknown executor" >&2; return 2; }
+    if [ -n "$endpoint" ]; then
+        _endpoint_allowed "$endpoint" || { echo "probe[$executor]: endpoint '$endpoint' host NOT in the pinned allowlist — rejected" >&2; return 3; }
+    else
+        endpoint="$pinned"
+    fi
+
+    local KEY; KEY="$(_resolve_key "$executor" "$project_dir")"
+    [ -n "$KEY" ] || { echo "  probe[$executor]: NO KEY stored — run 'keys --executor $executor' first" >&2; return 2; }
+    command -v curl >/dev/null 2>&1 || { unset KEY; echo "  probe[$executor]: curl absent → UNREACHABLE (install curl)" >&2; return 4; }
+
+    local hdr
+    case "$executor" in
+        gemini|google|gemini-cli) hdr="x-goog-api-key: $KEY" ;;
+        *) hdr="Authorization: Bearer $KEY" ;;
+    esac
+    # key reaches curl ONLY via the -K - stdin config (printf builtin → no ps argv);
+    # no -L (cross-host redirects off); body discarded (--output /dev/null = redaction).
+    local status
+    status="$(printf 'header = "%s"\nurl = "%s"\n' "$hdr" "$endpoint" \
+              | curl -K - --silent --show-error --max-time 10 --output /dev/null --write-out '%{http_code}' 2>/dev/null)"
+    unset KEY hdr
+    local outcome; outcome="$(_classify_probe "$status")"
+    case "$outcome" in
+        PASS)        echo "  probe[$executor] ${endpoint} → PASS (HTTP $status)"; return 0 ;;
+        FAIL-auth)   echo "  probe[$executor] ${endpoint} → FAIL-auth (HTTP $status) — invalid key, re-key: 'keys --executor $executor'" >&2; return 10 ;;
+        UNREACHABLE) echo "  probe[$executor] ${endpoint} → UNREACHABLE (HTTP $status) — check connectivity" >&2; return 11 ;;
+        *)           echo "  probe[$executor] ${endpoint} → ${outcome} (HTTP $status) — visible non-PASS" >&2; return 12 ;;
+    esac
+}
+
+# ── dispatch (source-safe: when sourced, only the functions load) ─────────────
+if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
+    SUB="${1:-}"; shift || true
+    case "$SUB" in
+        routing) cmd_routing "$@" ;;
+        keys)    cmd_keys "$@" ;;
+        probe)   cmd_probe "$@" ;;
+        ""|-h|--help)
+            sed -n '2,40p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+            exit 0 ;;
+        *) echo "forge-setup-executors: unknown subcommand '$SUB' (have: routing keys probe)" >&2; exit 2 ;;
+    esac
+fi
