@@ -61,7 +61,8 @@
     "scripts/forge/render-skill-gate.sh",
     "scripts/forge/test-gate-config.sh",
     "scripts/forge/validate-gate-config.sh",
-    "scripts/forge/test-manifest-reconcile.sh"
+    "scripts/forge/test-manifest-reconcile.sh",
+    ".claude/settings.json.template"
   ],
   "protected": [
     "CLAUDE.md",

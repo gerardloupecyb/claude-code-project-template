@@ -305,9 +305,12 @@ build_answers() {  # → token-keyed JSON on stdout
     rag="";  [ -f "$fc" ] && rag=$(jq -r '.memory_backend.rag // ""' "$fc")
     cf1="";  [ -f "$fc" ] && cf1=$(jq -r '(.compliance_frameworks // [])[0] // ""' "$fc")
     lang=""; [ -f "$gc" ] && lang=$(jq -r '.language // ""' "$gc")
+    # GATED_MCP_PREFIXES: generic default "mcp__" (pre-mcp-gate fires on any MCP call,
+    # gate.config.gated_mcp decides the actual block). The Plan-05 questionnaire can
+    # override with the consumer's specific prefixes via --answers.
     jq -n --arg PROJECT "$pn" --arg project "$pl" --arg PROJECT_UPPER "$pu" \
-          --arg RAG "$rag" --arg CF1 "$cf1" --arg LANG "$lang" '
-        { PROJECT: $PROJECT, project: $project, PROJECT_UPPER: $PROJECT_UPPER }
+          --arg RAG "$rag" --arg CF1 "$cf1" --arg LANG "$lang" --arg GMP "mcp__" '
+        { PROJECT: $PROJECT, project: $project, PROJECT_UPPER: $PROJECT_UPPER, GATED_MCP_PREFIXES: $GMP }
         | if $RAG  != "" then . + { RAG_BACKEND: $RAG, rag_backend: ($RAG|ascii_downcase), KNOWLEDGE_BACKEND: $RAG, knowledge_backend: ($RAG|ascii_downcase) } else . end
         | if $CF1  != "" then . + { COMPLIANCE_FRAMEWORK_PRIMARY: $CF1, compliance_framework_primary: ($CF1|ascii_downcase) } else . end
         | if $LANG != "" then . + { SCRIPTING_LANG: $LANG, scripting_lang: ($LANG|ascii_downcase) } else . end
@@ -330,6 +333,24 @@ if [ -n "$ANSWERS_FILE" ]; then
 fi
 resolve_tree "$PROJECT_DIR" "$ANSWERS_TMP" || { echo "ERROR: token resolution failed (fail-closed). See above." >&2; rm -f "$ANSWERS_TMP"; exit 5; }
 rm -f "$ANSWERS_TMP"
+
+# ── settings.json placement (AC-4-2) — the resolver already substituted the
+#    template's tokens; place it as the consumer settings.json with NO-CLOBBER,
+#    jq-validate the resolved form (fail-closed), then install .githooks so the
+#    gate fires for real. The domain matchers stay in gate.config.json. ─────────
+echo "→ Placing .claude/settings.json (NO-CLOBBER)..."
+place_settings "$PROJECT_DIR" || { echo "ERROR: settings placement failed (fail-closed)." >&2; exit 5; }
+
+if [ -f "${PROJECT_DIR}/scripts/setup-hooks.sh" ]; then
+    # ensure the project is its OWN git repo root before setting core.hooksPath
+    _top=$(cd "$PROJECT_DIR" && git rev-parse --show-toplevel 2>/dev/null || echo "")
+    [ "$_top" = "$(cd "$PROJECT_DIR" && pwd)" ] || ( cd "$PROJECT_DIR" && git init -q ) || true
+    if ( cd "$PROJECT_DIR" && bash scripts/setup-hooks.sh ) >/dev/null 2>&1; then
+        echo "→ installed .githooks (core.hooksPath=.githooks) — gate active."
+    else
+        echo "  WARN: setup-hooks.sh did not complete — run 'git init && bash scripts/setup-hooks.sh' manually to arm the gate." >&2
+    fi
+fi
 
 # ── AC-4-8 TRIPWIRE — fail-closed on residual {{tokens}} in the FORGE tree ──
 # Scope = the extracted/copied FORGE tree only (generated user stubs in

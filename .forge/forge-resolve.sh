@@ -109,6 +109,23 @@ resolve_tree() {  # $1=dir  $2=answers.json
     return 0
 }
 
+# AC-4-2 — place the resolved settings.json.template as the consumer settings.json
+# with a NO-CLOBBER guard (never overwrite an existing consumer settings.json) and a
+# fail-closed jq validity assert on the resolved form. The resolver has already
+# substituted the template's tokens before this runs.
+place_settings() {  # $1=project-dir
+    local proj="$1" tpl="$1/.claude/settings.json.template" dst="$1/.claude/settings.json"
+    [ -f "$tpl" ] || return 0
+    if [ -e "$dst" ]; then
+        echo "  settings.json already present — left untouched (NO-CLOBBER); discarding template." >&2
+        rm -f "$tpl"
+        return 0
+    fi
+    jq -e . "$tpl" >/dev/null 2>&1 || { echo "ERROR: resolved settings template is invalid JSON (fail-closed): ${tpl#"${proj}"/}" >&2; return 1; }
+    mv "$tpl" "$dst"
+    return 0
+}
+
 # AC-4-8 — fail-closed unresolved-{{token}} TRIPWIRE. F11 detector
 #   {{[A-Za-z0-9_][A-Za-z0-9_-]*}}   (the narrow {{[A-Za-z_]+}} would MISS
 #   {{COMPLIANCE_FRAMEWORK_1}} / any digit- or hyphen-bearing token).

@@ -1,10 +1,11 @@
 {
   "generated": "2026-06-15T00:00:00Z",
-  "source_commit": "2784f9e836345da411e122fe8bc5ebe718e44643",
-  "files": 119,
+  "source_commit": "089798794cd48dca557b1b2910f245bfde95971f",
+  "files": 120,
   "materialized_scattered": [
     ".claude/forge.config.json",
     ".claude/gate.config.json",
+    ".claude/settings.json.template",
     "CLAUDE.md",
     "scripts/forge/render-skill-gate.sh",
     "scripts/forge/test-gate-config.sh",
