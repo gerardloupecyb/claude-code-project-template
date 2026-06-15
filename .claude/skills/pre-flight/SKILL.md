@@ -135,13 +135,13 @@ Review the plan for:
 - Incomplete state transitions
 - Flows that dead-end without user feedback
 
-### Agent 4b: Quebec Privacy Lens (parallel with Agents 1-4, conditional)
+### Agent 4b: {{JURISDICTION}} Privacy Lens (parallel with Agents 1-4, conditional)
 
 ```
 subagent_type: quebec-privacy-lens-reviewer
 ```
 
-**Activate only if** the plan touches any of these Quebec/Canada privacy signals:
+**Activate only if** the plan touches any of these {{JURISDICTION}}/Canada privacy signals:
 - Renseignements personnels, renseignements de santé, or prospection data
 - Cross-border storage/transit ({{CLOUD_PROVIDER}} region choice, SaaS routing, backup geo-replication)
 - {{CRM_PLATFORM}}, {{ACCOUNTING_PLATFORM}}, or any US-hosted SaaS carrying {{PROJECT}} client data
@@ -212,7 +212,7 @@ After all 4 agents complete, synthesize their findings into a structured report.
 - {finding 1 — severity: LOW/MEDIUM/HIGH/CRITICAL}
 - {finding 2}
 
-### Quebec Privacy (if activated)
+### {{JURISDICTION}} Privacy (if activated)
 - {finding 1 — law article anchor — severity: À RISQUE/NON-CONFORME}
 - {finding 2 — law article anchor — severity: À RISQUE/NON-CONFORME}
 

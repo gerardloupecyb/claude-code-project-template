@@ -360,7 +360,7 @@ PY
     echo ""
 fi
 
-# Loupe GSD cherry-picks self-healing check (runs silently, announces only on action/error)
+# {{PROJECT}} GSD cherry-picks self-healing check (runs silently, announces only on action/error)
 # Reapplies 3 fixes from GSD 1.35.0 if they go missing after an npm update.
 # Source: ~/.claude/gsd-local-patches/LOUPE-CHERRY-PICKS-2026-04-14.md
 if [ "$SOURCE" = "startup" ] && [ -x ~/.claude/gsd-local-patches/reapply-loupe-cherry-picks.py ]; then

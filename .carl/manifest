@@ -1,19 +1,19 @@
-# CARL Project Manifest — Loupe Technologies
+# CARL Project Manifest — {{PROJECT}}
 # ====================================
 # Project-level domains. Merged with global ~/.carl/manifest.
 # Project config values override global for same domain name.
 # New domains here are added to the global set.
 
 # ============================================================================
-# LOUPETECH - Règles du projet Loupe Technologies
+# {{PROJECT}} - Règles du projet {{PROJECT}}
 # ============================================================================
 LOUPETECH_STATE=active
 LOUPETECH_ALWAYS_ON=false
-LOUPETECH_RECALL=loupe,onboarding,contracts,agents,automation,ghl,azure,m365,highlevel,leadconnector,n8n,workflow,expression,validation,node,keyvault,traefik,backup,postgresql,cipp,ninjaone,quickbooks,promote,promotion,cutover,merge,graft,divergence
+LOUPETECH_RECALL={{project}},onboarding,contracts,agents,automation,ghl,azure,m365,highlevel,leadconnector,n8n,workflow,expression,validation,node,keyvault,traefik,backup,postgresql,cipp,ninjaone,quickbooks,promote,promotion,cutover,merge,graft,divergence
 
 # ============================================================================
-# AZUREM365 - Override global setting: always-on for Loupe project
-# Loupe is an MSSP — nearly every task touches Azure/M365.
+# AZUREM365 - Override global setting: always-on for {{PROJECT}} project
+# {{PROJECT}} is an MSSP — nearly every task touches Azure/M365.
 # Global manifest has ALWAYS_ON=false (keyword-triggered for other projects).
 # Project override forces the skill loading rules to be injected every prompt.
 # ============================================================================
@@ -21,7 +21,7 @@ AZUREM365_STATE=active
 AZUREM365_ALWAYS_ON=false
 
 # ============================================================================
-# N8NAUTOMATION - Override global setting: always-on for Loupe project
+# N8NAUTOMATION - Override global setting: always-on for {{PROJECT}} project
 # n8n is the core automation engine — nearly every session touches it.
 # Global manifest has ALWAYS_ON=false (keyword-triggered for other projects).
 # ============================================================================

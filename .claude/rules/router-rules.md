@@ -40,7 +40,7 @@ de routing, c'est moins cher qu'une mauvaise délégation.
 
 - Si la tâche est **de la rédaction structurée ou du scan / extraction sur des fichiers existants** (pas de génération de code compilable ou exécutable), → Sonnet subagent.
 - Si la tâche est **de la génération de code qui doit compiler / passer des tests / être déployée**, → external executor via task-brief.
-- Si la tâche est **un audit large-context** (> 200k tokens de logs, > 50 fichiers à corréler), → Gemini via task-brief même si c'est un "audit" — voir domain override {{CLOUD_PROVIDER}} pour le pattern.
+- Si la tâche est **un audit large-context** (> 200k tokens de logs, > 50 fichiers à corréler), → Gemini via task-brief même si c'est un "audit" (large-context path — voir Executor Registry ci-dessus).
 
 ## Executor Registry
 
@@ -52,7 +52,7 @@ de routing, c'est moins cher qu'une mauvaise délégation.
 
 | Model family | Preferred transport | Fallback |
 |---|---|---|
-| OpenAI (`gpt-5.3-codex`, `o3`, `gpt-4.1-mini`, etc.) | **Codex CLI** | **OpenRouter** — modèle canonique `openai/gpt-5.5` (clé en KV, cf. `services-and-access.md` § OpenRouter) — quand Codex CLI indisponible (quota/auth), Copilot absent, ou GSD autonome. **Voix OpenAI canonique du cross-vendor D-15 quand Codex CLI est down** (cf. `verification-discipline.md` § Cross-vendor) |
+| OpenAI (`gpt-5.3-codex`, `o3`, `gpt-4.1-mini`, etc.) | **Codex CLI** | **OpenRouter** — modèle canonique `openai/gpt-5.5` (clé dans le secrets manager — cf. la doc services & accès du projet § OpenRouter) — quand Codex CLI indisponible (quota/auth), Copilot absent, ou GSD autonome. **Voix OpenAI canonique du cross-vendor D-15 quand Codex CLI est down** (cf. `verification-discipline.md` § Cross-vendor) |
 | Google Gemini — architecture review | **Gemini CLI** (`gemini-3-pro-preview`) | `gemini-3-flash-preview` (cascade quota) |
 | Google Gemini — code/diff review | **Gemini CLI** (`gemini-3-pro-preview`) | `gemini-3-flash-preview` |
 | Google Gemini — large context ({{CLOUD_PROVIDER}} audit) | **Gemini CLI** (`gemini-3-pro-preview`) | OpenRouter |
@@ -63,12 +63,12 @@ de routing, c'est moins cher qu'une mauvaise délégation.
 - **Sonnet** (subagent intra-Anthropic) : écriture de **texte** (docs, SUMMARY, prose, rédaction structurée).
 - **DeepSeek** (`~/.claude/scripts/deepseek-exec.sh`, headless, endpoint direct) : écriture de **code** / exécution substantielle.
 - **Exclusion confidentialité** : logique sensible à valeur de reconnaissance (rôles GDAP exacts, design break-glass, scoping SP) reste Anthropic/Codex — pas DeepSeek.
-- **Review** : DeepSeek = 3ᵉ voix adversariale (`{{project}}-review` Step 6.5), **règle auteur ≠ reviewer** (s'il a écrit le diff, il ne le review pas). Détails + accès : memory `reference_deepseek_executor.md`, `docs/codebase/services-and-access.md` § DeepSeek executor, `.claude/integrations.md`.
+- **Review** : DeepSeek = 3ᵉ voix adversariale (`{{project}}-review` Step 6.5), **règle auteur ≠ reviewer** (s'il a écrit le diff, il ne le review pas). Détails + accès : memory `reference_deepseek_executor.md`, la doc services & accès du projet § DeepSeek executor, `.claude/integrations.md`.
 
 ## Handoff — ce que Claude fait pour chaque tâche "external"
 
 0. **Lire `memory/agents-feedback.md` § Codex CLI (ou § Gemini CLI selon le transport)** — appliquer les mitigations connues upfront au brief (enumération explicite in-scope/out-of-scope, literal vs semantic ACs, Codex Observations section obligatoire). Ne pas redécouvrir les incidents passés à la vérification.
-1. Collecter le contexte pertinent depuis `docs/codebase/` (L1-L3 selon la tâche)
+1. Collecter le contexte pertinent depuis la doc codebase du projet (L1-L3 selon la tâche)
 2. Extraire les snippets de code pertinents (pas les fichiers entiers)
 3. Écrire `.task-briefs/{NNN}-{slug}.md` avec frontmatter (status + target_model) — **enumérer explicitement Files to CREATE, Files to EDIT, et Out of Scope**
 4. Self-check : "Le brief contient-il tout pour que l'executor produise du code qui compile et passe les AC sans lire d'autres fichiers ?"
@@ -106,29 +106,8 @@ Jamais plus de 2 retries. Si l'executor ne peut pas, le contexte est insuffisant
 
 ## Sources de contexte pour les briefs
 
-Le task-router consulte `docs/references/Reference-files-index-routing.md` :
-- **Tâche archi/security** → extraire de L1 (architecture-security.md)
-- **Tâche code** → extraire de L2 (coding-patterns.md) + L3 (codebase-context.md)
-- **Tâche infra** → extraire de L3 (services-and-access.md)
+Le task-router consulte l'index de références du projet :
+- **Tâche archi/security** → extraire de la doc architecture & sécurité (niveau L1)
+- **Tâche code** → extraire de la doc patterns de code (L2) + contexte codebase (L3)
+- **Tâche infra** → extraire de la doc services & accès (L3)
 
-## Domain override: {{CLOUD_PROVIDER}} / {{IDENTITY_PLATFORM}} / Power Platform
-
-Quand le domaine CARL {{CLOUD_PROVIDER}}{{IDENTITY_PLATFORM}} est actif, ce routing spécifique prend précédence :
-
-| Task Type | Preferred Model | Preferred Transport | Notes |
-|-----------|-----------------|---------------------|-------|
-| {{SCRIPTING_LANG}}, Bicep, KQL, Graph API | `openai/gpt-5.3-codex` | **Codex CLI** | Default for Microsoft code generation |
-| Architecture, security trade-offs, design | `openai/o3` | **Codex CLI** | Reasoning-first |
-| {{CLOUD_PROVIDER}} CLI one-liners, quick queries | `openai/gpt-4.1-mini` | **Codex CLI** | Fast path |
-| Full tenant audits, large log analysis | `gemini-3-pro-preview` | **Gemini CLI** | Large context path |
-
-Pas de `.task-briefs/` pour le code Microsoft — handoff direct Copilot.
-**Quality gate** : voir `delegation-prompts-and-gates.md` dans le skill `{{cloud_provider}}-{{identity_platform}}-architect`.
-**Détails workflow** : voir `.claude/skills/{{cloud_provider}}-{{identity_platform}}-architect/SKILL.md`.
-
-## Autres domain overrides
-
-When CARL domain rules define model routing for a specific technology,
-those rules take precedence over the generic Classification v1 above —
-including handoff mechanism and quality gates.
-This file governs technologies not covered by a domain-specific CARL rule.

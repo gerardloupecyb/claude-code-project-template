@@ -343,7 +343,7 @@ Reports stale artefacts with recommendation to review.
 ```
 
 **Sources canoniques :**
-- Lois : `docs/references/frameworks/loi25.md`, `docs/references/frameworks/pipeda.md`, `docs/references/frameworks/loi5.md`
+- Lois : `docs/references/frameworks/{{compliance_framework_primary}}.md`, `docs/references/frameworks/{{compliance_framework_federal}}.md`, `docs/references/frameworks/{{compliance_framework_health}}.md`
 - DCA integration patterns : `.claude/skills/data-compliance-advisor/references/integration-patterns.md`
 
 ---

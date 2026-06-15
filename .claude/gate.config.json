@@ -1,0 +1,59 @@
+{
+  "_description": "FORGE gate config — the SINGLE source of project-stack-GATING truth the security hooks source on the hot path (pre-tool-use.sh, pre-mcp-gate.sh, .githooks/pre-commit). Hot-path-only: doc-rendering keys live in forge.config.json (D-11 split). Edit this file, not the executable hooks, to change protected domains / gated MCP / linters. skill-gate.md's Domain Routing table is RENDERED from this file (scripts/forge/render-skill-gate.sh) — do not hand-edit the rendered region. See .claude/rules/skill-gate.md.",
+  "_fidelity_note": "file_patterns / command_patterns are grep -E REGEX (not globs) — preserved verbatim from the pre-refactor hooks so behavior is byte-identical. A glob→regex translation in a security hot-path hook was rejected as a behavior-change risk (Plan 22-02).",
+  "language": [
+    "powershell",
+    "bash",
+    "python",
+    "javascript"
+  ],
+  "code_extensions": [
+    "js",
+    "py",
+    "sh"
+  ],
+  "linters": {
+    "ps1": "PSScriptAnalyzer",
+    "psm1": "PSScriptAnalyzer",
+    "js": "semgrep",
+    "py": "semgrep",
+    "sh": "semgrep"
+  },
+  "mutation_verbs": "create|update|delete|remove|send|upsert|patch|add-tags|remove-tags|edit",
+  "dep_ecosystems": {
+    "python": "\\b(pip3?|uv)\\s+(install|add)\\b",
+    "node": "\\bnpm\\s+(install|i)\\b|\\b(yarn|pnpm|bun)\\s+add\\b",
+    "mcp": "\\bclaude\\s+mcp\\s+add\\b"
+  },
+  "protected_domains": [],
+  "gated_mcp": [],
+  "copresence_guards": [
+    {
+      "trigger_pattern": "\\.mcp\\.json$|\\.mcp-servers\\.json$",
+      "required_file": ".claude/integrations.md",
+      "message": "MCP/integration files changed but .claude/integrations.md not staged. If the active integration inventory changed, update it in the same commit."
+    },
+    {
+      "trigger_pattern": "^infra/|^n8n/|^scripts/|^docker/|traefik|systemd|keyvault|keeper|^\\.env$|/\\.env$",
+      "required_file": "docs/codebase/services-and-access.md",
+      "message": "Infra/access files changed but docs/codebase/services-and-access.md not staged. If endpoints, hostnames, ports, access methods, or secret locations changed, update the doc in the same commit."
+    }
+  ],
+  "_example_protected_domain": {
+    "name": "example",
+    "marker": "example",
+    "label": "Example domain — filled by the Plan 05 deploy questionnaire",
+    "triggers_doc": "<files / commands that require the domain skill>",
+    "file_patterns": "<ERE matched against staged file paths>",
+    "command_patterns": "<ERE matched against Bash command text, or empty>",
+    "required_skills": "<skill(s) to load before editing this domain>",
+    "lessons_domain": "<LESSONS.md domain tag>",
+    "unlock": "mkdir -p .skill-locks && touch .skill-locks/example"
+  },
+  "_example_gated_mcp": {
+    "server_prefix": "mcp__<server>__",
+    "marker": "example",
+    "message": "Required: load <skill> + mkdir -p .skill-locks && touch .skill-locks/<marker>"
+  },
+  "_domains_note": "protected_domains / gated_mcp were SLICED by forge-extract (source-specific domains removed). Fill them via the Plan 05 deploy questionnaire, then re-render skill-gate.md with scripts/forge/render-skill-gate.sh. Empty arrays are safe: SCAG keeps its built-in fallback and pre-mcp warn_inert observes an empty gated_mcp."
+}

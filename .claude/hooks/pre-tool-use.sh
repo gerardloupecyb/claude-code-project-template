@@ -1,17 +1,38 @@
 #!/bin/bash
-# Pre-tool-use hook: enforce skill gate
-# Blocks Write/Edit/MultiEdit/Bash on domain files if .skill-locks/{domain} marker is absent.
-# See .claude/rules/skill-gate.md for domain routing and maintenance rules.
+# Pre-tool-use hook: enforce skill gate (DATA-DRIVEN — sources .claude/gate.config.json)
+# Blocks Write/Edit/MultiEdit/Bash on protected-domain files if .skill-locks/{domain} marker is absent.
+# Domains, SCAG ecosystems, and Lessons mappings are read from gate.config.json — NO inline domain literals.
+# See .claude/rules/skill-gate.md (its Domain Routing table is RENDERED from the same gate.config.json).
 # Fires for every tool use. Exits 0 = allow, exits 2 = block with message.
+#
+# FAIL-OPEN (AC-2-3): on missing/malformed config the hook allows (exit 0) but LOUDLY — stdout+stderr
+# warning + a one-line audit append wrapped `|| true` so the append can NEVER fail-CLOSE the hook.
+# NEVER-SILENTLY-DISABLE (AC-2-2): SCAG (dep_ecosystems) is parsed independently of protected_domains AND
+# falls back to a built-in default if the key is absent/empty — an empty protected_domains (legit greenfield)
+# disables ONLY the domain skill-gate, never supply-chain protection.
 
 PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 LOCKS_DIR="${PROJECT_ROOT}/.skill-locks"
+GATE_CONFIG="${PROJECT_ROOT}/.claude/gate.config.json"
+
+# Built-in universal SCAG default — used when dep_ecosystems is absent/empty so SCAG can never be
+# silently disabled by a gutted-but-valid config (review F1/C-1, convergent BLOCKER).
+SCAG_DEFAULT='\b(pip3?|uv)\s+(install|add)\b|\bnpm\s+(install|i)\b|\b(yarn|pnpm|bun)\s+add\b|\bclaude\s+mcp\s+add\b'
 
 # Worktree fix: .skill-locks/ is gitignored so it won't exist in linked worktrees.
-# Resolve locks from the main worktree instead.
+# Resolve locks from the main worktree instead. (gate.config.json is TRACKED, so it lives in each worktree.)
 COMMON_GIT=$(cd "$PROJECT_ROOT" && git rev-parse --git-common-dir 2>/dev/null)
 if [ -n "$COMMON_GIT" ] && [ "$COMMON_GIT" != ".git" ]; then
   LOCKS_DIR="$(dirname "$COMMON_GIT")/.skill-locks"
+fi
+
+# Shared gate-config chokepoint: ONE place validates file + JSON + shape/type + regex-compilability.
+GATE_LIB="$(dirname "${BASH_SOURCE[0]}")/lib/gate-config.sh"
+if [ -f "$GATE_LIB" ]; then
+  . "$GATE_LIB"
+else
+  echo "⚠ GATE FAIL-OPEN (pre-tool-use): gate-config lib missing ($GATE_LIB) — skill-gate NOT enforced this call." >&2
+  exit 0
 fi
 
 # Read tool name and input from stdin JSON — parse tool_name first with jq, fall back to python3
@@ -34,69 +55,64 @@ d=json.load(sys.stdin)
 print(d.get('file_path', d.get('command', '')))
 " 2>/dev/null || echo "")
 
-check_lock() {
-  local domain="$1"
-  local lock_file="${LOCKS_DIR}/${domain}"
-  if [ ! -f "$lock_file" ]; then
-    echo "⛔ SKILL GATE BLOCKED — domain: ${domain}"
+# --- A2 RUNTIME FLOOR (Option-3 / AC-2-7). TRUST the write-time-validated config (validate-gate-config.sh
+# runs in .githooks/pre-commit on the STAGED BLOB + CI). At runtime keep ONLY the minimal floor: present +
+# valid JSON + array-type. Deep validation (regex-compilability, per-element non-emptiness, R3 vacuity) is
+# WRITE-TIME ONLY — deliberately NOT re-run on every tool call (that per-call chokepoint was the Option-3
+# removal). Fail-OPEN OBSERVABLY (exit 0 = allow) on a floor miss; an empty protected_domains:[] PASSES the
+# floor so the always-on SCAG gate below still fires (AC-2-2 greenfield-still-protected).
+gate_runtime_floor_ok "$GATE_CONFIG" || { gate_fail_open "pre-tool-use" "$GATE_CONFIG_REASON"; exit 0; }
+
+# --- Domain skill-gate (data-driven from protected_domains) ---
+# Records are NUL-delimited (process substitution, read -d '') so a field value containing a newline can
+# never corrupt the stream (review HIGH). Fields are US-separated (); join() under jq keeps regex
+# backslashes verbatim (@tsv would double them). The while loop runs in the MAIN shell (process
+# substitution, NOT a pipe) so `exit 2` propagates and actually blocks.
+# file_patterns checked for every gated tool; command_patterns checked for Bash only (mirrors pre-refactor).
+while IFS=$'\037' read -r -d '' d_name d_marker d_fpat d_cpat d_skills d_lessons d_unlock; do
+  [ -n "$d_marker" ] || continue
+  matched=0
+  # D2 (Option-3 seam): capture grep rc. rc 0 = match, rc 1 = no-match, rc>=2 = ERROR (a non-compiling
+  # file/command_pattern in a dirty-tree config the write-time validator has not yet vetted). An rc>=2 is
+  # routed to OBSERVABLE fail-open — NEVER swallowed as a silent no-match that would un-gate the domain.
+  if [ -n "$d_fpat" ]; then
+    printf '%s' "$FILE_PATH" | grep -qE "$d_fpat"; _gp_rc=$?
+    [ "$_gp_rc" -ge 2 ] && { gate_fail_open "pre-tool-use" "uncompilable file_patterns for domain ${d_name}: ${d_fpat}"; exit 0; }
+    [ "$_gp_rc" -eq 0 ] && matched=1
+  fi
+  if [ "$matched" -eq 0 ] && [ "$TOOL_NAME" = "Bash" ] && [ -n "$d_cpat" ]; then
+    printf '%s' "$FILE_PATH" | grep -qE "$d_cpat"; _gp_rc=$?
+    [ "$_gp_rc" -ge 2 ] && { gate_fail_open "pre-tool-use" "uncompilable command_patterns for domain ${d_name}: ${d_cpat}"; exit 0; }
+    [ "$_gp_rc" -eq 0 ] && matched=1
+  fi
+  if [ "$matched" -eq 1 ] && [ ! -f "${LOCKS_DIR}/${d_marker}" ]; then
+    echo "⛔ SKILL GATE BLOCKED — domain: ${d_name}"
     echo ""
     echo "You must invoke the required skill(s) and create the unlock marker before proceeding."
     echo ""
-    case "$domain" in
-      azure)
-        echo "Required: azure-m365-architect + loupe-powershell-script-writer"
-        echo "Unlock:   mkdir -p .skill-locks && touch .skill-locks/azure"
-        ;;
-      n8n)
-        echo "Required: n8n skill (workflow-architect / node-expert / code-nodes)"
-        echo "Unlock:   mkdir -p .skill-locks && touch .skill-locks/n8n"
-        ;;
-      ghl)
-        echo "Required: ghl-architect"
-        echo "Unlock:   mkdir -p .skill-locks && touch .skill-locks/ghl"
-        ;;
-    esac
+    echo "Required: ${d_skills}"
+    echo "Unlock:   ${d_unlock}"
     echo ""
     echo "See .claude/rules/skill-gate.md for full instructions."
     exit 2
   fi
-}
-
-# --- Domain detection ---
-
-# Azure / M365 / PowerShell domain
-# Only match PowerShell files and scripts that are actually PowerShell/Azure
-# (not generic bash scripts like index-memory-to-agentdb.sh or setup-hooks.sh)
-if echo "$FILE_PATH" | grep -qE '\.(ps1|psm1|psd1)$|runbooks/'; then
-  check_lock "azure"
-elif echo "$FILE_PATH" | grep -qE 'scripts/' && echo "$FILE_PATH" | grep -qE '\.(ps1|psm1|psd1)$'; then
-  check_lock "azure"
-fi
-
-# Azure CLI / ARM operations (Bash commands touching AA, KV, Graph)
-if [ "$TOOL_NAME" = "Bash" ]; then
-  if echo "$FILE_PATH" | grep -qE 'az rest|az automation|az keyvault|Microsoft\.Automation|management\.azure\.com'; then
-    check_lock "azure"
-  fi
-fi
-
-# n8n domain
-if echo "$FILE_PATH" | grep -qE 'n8n/|loupe-cascade|loupe-audit|loupe-onboarding|\.workflow\.json'; then
-  check_lock "n8n"
-fi
-
-# GHL domain
-if echo "$FILE_PATH" | grep -qE 'ghl/|highlevel|leadconnector'; then
-  check_lock "ghl"
-fi
+done < <(jq -j '.protected_domains[]? | ([(.name//""),(.marker//""),(.file_patterns//""),(.command_patterns//""),(.required_skills//""),(.lessons_domain//""),(.unlock//"")] | join("\u001f")) + "\u0000"' "$GATE_CONFIG" 2>/dev/null)
 
 # --- SCAG gate: block package installs without prior supply-chain audit ---
-# Detects: pip/pip3/uv install|add, npm install|i, yarn/pnpm/bun add, claude mcp add
+# ALWAYS-ON (AC-2-2): built from dep_ecosystems, INDEPENDENT of protected_domains, with a built-in default
+# so an empty/absent dep_ecosystems cannot silently disable it. An empty/greenfield protected_domains
+# disables only the domain skill-gate above — it can NEVER silently kill SCAG here.
 # Requires .skill-locks/scag-approved marker (created by /supply-chain-audit on APPROVE/CONDITIONAL).
 # One-shot: marker is consumed (deleted) on first allowed install.
 # See .claude/rules/supply-chain-audit.md and docs/architecture/forge/dependency-install-gate.md
 if [ "$TOOL_NAME" = "Bash" ]; then
-  if echo "$FILE_PATH" | grep -qE '\b(pip3?|uv)\s+(install|add)\b|\bnpm\s+(install|i)\b|\b(yarn|pnpm|bun)\s+add\b|\bclaude\s+mcp\s+add\b'; then
+  # D2 always-on non-vacuity (AC-2-2 / AC-2-7): resolve the SCAG regex from dep_ecosystems with PER-MEMBER
+  # vacuity detection — a single blank member would silently DROP one ecosystem's coverage from the join.
+  # Any vacuous / empty / uncompilable case falls back to the full built-in SCAG_DEFAULT (gate STAYS ON,
+  # every ecosystem covered), OBSERVABLE via gate_degraded. SCAG can NEVER be silently disabled.
+  gate_resolve_scag "$GATE_CONFIG" "$SCAG_DEFAULT" "pre-tool-use"
+  SCAG_RE="$GATE_ALWAYSON_RE"
+  if printf '%s' "$FILE_PATH" | grep -qE "$SCAG_RE"; then
     SCAG_MARKER="${LOCKS_DIR}/scag-approved"
     if [ ! -f "$SCAG_MARKER" ]; then
       echo "⛔ SCAG GATE — package install blocked"
@@ -120,7 +136,8 @@ fi
 
 # --- Lessons auto-surfacing (OPT-03, per D-03) ---
 # Runs AFTER skill gate checks. Non-blocking: all in subshell with || true.
-# Source 1: grep LESSONS.md hot cache for file stem or domain tag matches.
+# Domain tag is derived from the SAME protected_domains (lessons_domain) — no inline domain literals.
+# Uses a simple (file_patterns, lessons_domain) stream — both fields are single-line regex/tag values.
 # Max 3 lines injected as additionalContext. Never blocks (no exit 2).
 (
     LESSONS_FILE="${PROJECT_ROOT}/LESSONS.md"
@@ -144,15 +161,18 @@ fi
         LESSONS) exit 0 ;;
     esac
 
-    # Determine domain tag from file path
+    # Determine domain tag: protected-domain lessons_domain (data-driven), else FORGE-universal generic map
     DOMAIN=""
-    case "$FILE_PATH" in
-        *.ps1|*.psm1|*.psd1)        DOMAIN="azure-automation|powershell|azure" ;;
-        */runbooks/*)                DOMAIN="azure-automation" ;;
-        */n8n/*|*workflow*.json)     DOMAIN="n8n" ;;
-        */.planning/*|*.planning/*)  DOMAIN="process" ;;
-        */ghl/*|*highlevel*)         DOMAIN="ghl" ;;
-    esac
+    LESSONS_MAP=$(jq -r '.protected_domains[]? | [(.file_patterns//""),(.lessons_domain//"")] | join("\u001f")' "$GATE_CONFIG" 2>/dev/null)
+    while IFS=$'\037' read -r l_fpat l_lessons; do
+        [ -n "$l_lessons" ] || continue
+        if [ -n "$l_fpat" ] && printf '%s' "$FILE_PATH" | grep -qE "$l_fpat"; then DOMAIN="$l_lessons"; break; fi
+    done <<< "$LESSONS_MAP"
+    if [ -z "$DOMAIN" ]; then
+        case "$FILE_PATH" in
+            */.planning/*|*.planning/*)  DOMAIN="process" ;;
+        esac
+    fi
 
     MATCHES=""
 

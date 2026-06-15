@@ -5,7 +5,7 @@ paths:
   - "docs/audits/dependencies/**"
 ---
 
-# Protected Files Registry — Loupe Technologies
+# Protected Files Registry — {{PROJECT}}
 #
 # Source canonique : fichiers de gouvernance que AUCUN package externe ne doit
 # modifier lors de son install. Consommé par Install Behavior Audit (IBA) —
@@ -40,13 +40,13 @@ critical:
   - ".claude/settings.local.json"
   - ".mcp.json"
 
-  # Loupe governance rules (auto-injected runtime rules)
+  # {{PROJECT}} governance rules (auto-injected runtime rules)
   - ".claude/rules/**"
 
-  # Loupe skills (executable agent behaviors)
+  # {{PROJECT}} skills (executable agent behaviors)
   - ".claude/skills/**"
 
-  # Loupe governance hooks
+  # {{PROJECT}} governance hooks
   - ".claude/hooks/**"
   - ".githooks/**"
 

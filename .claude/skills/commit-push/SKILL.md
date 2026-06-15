@@ -143,7 +143,7 @@ Produce a classified report:
 
 Likely bugs (restore these):
   - .planning/phases/03-auth/SUMMARY.md  [worktree artifact — wrong base]
-  - docs/standards/loi25.md              [no delete intent in commits]
+  - docs/standards/{{compliance_framework_primary}}.md              [no delete intent in commits]
 
 Likely intentional (safe to keep):
   - scripts/old-migration.sh             [commit: "remove deprecated script"]

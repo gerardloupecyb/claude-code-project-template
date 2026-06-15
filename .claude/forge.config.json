@@ -1,0 +1,47 @@
+{
+  "_description": "FORGE doc-rendering config (D-11 split). NEVER sourced by the security hooks — those read ONLY gate.config.json on the hot path. Parameterizes documentation rendering, memory/RAG wiring, model-routing display, and compliance framing. Empty fields are filled via the deploy-time questionnaire (Plan 05).",
+  "project_name": "",
+  "doc_language": "en",
+  "doc_language_secondary": "",
+  "compliance_frameworks": [],
+  "memory_backend": {
+    "session_journal": "memory/MEMORY.md",
+    "auto_memory": true,
+    "rag": "chromadb"
+  },
+  "rag_collections": [
+    "reference",
+    "knowledge",
+    "planning",
+    "governance-ops"
+  ],
+  "model_router": {
+    "_canonical_source": ".claude/rules/router-rules.md — exact model IDs and the Executor Registry live there; this block is display/wiring only, do not pin model versions here (D-13).",
+    "primary_executor": "claude-opus (main loop)",
+    "subagent_executor": "claude-sonnet",
+    "cross_vendor_voices": {
+      "openai": [
+        "codex-cli",
+        "openrouter"
+      ],
+      "google": [
+        "gemini-cli"
+      ]
+    }
+  },
+  "canonical_files": {
+    "bootstrap": "CLAUDE.md",
+    "project_rules": "AGENTS.md",
+    "session_journal": "memory/MEMORY.md",
+    "lessons_cache": "LESSONS.md",
+    "decisions": "DECISIONS.md",
+    "integrations_inventory": ".claude/integrations.md",
+    "services_and_access": "docs/codebase/services-and-access.md",
+    "source_of_truth_map": "docs/references/source-of-truth-map.md"
+  },
+  "_example_project_name": "Example Corp",
+  "_example_compliance_frameworks": [
+    "<your applicable framework(s), e.g. GDPR / HIPAA / SOC 2>"
+  ],
+  "_note_unfilled": "project_name / compliance_frameworks were SLICED by forge-extract (source display identity + legal-regime labels removed). Fill them via the Plan 05 deploy questionnaire. EMPTY here is the UNFILLED sentinel: the Plan 05 deploy-block (AC-5-7) BLOCKS deploy while project_name is empty or compliance_frameworks is empty. Do NOT pre-seed a default framework — a wrong inherited legal regime is worse than an honest empty."
+}

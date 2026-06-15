@@ -17,15 +17,16 @@ Les markers sont session-scoped et gitignored. Ils doivent être recréés à ch
 
 ## Domain Routing
 
-| Domaine | Triggers | Skills requis | Marker |
+> **Source unique : `.claude/gate.config.json`.** Le tableau ci-dessous est **généré** depuis ce fichier —
+> le même que sourcent `pre-tool-use.sh` / `pre-mcp-gate.sh`. Régénérer avec
+> `scripts/forge/render-skill-gate.sh`. **Ne pas éditer à la main entre les marqueurs.** Pour changer un
+> domaine, éditer `gate.config.json` puis re-render : ceci supprime la dérive doc↔hook↔settings (AC-2-5,
+> mirror collapsé en une source).
+
+<!-- BEGIN GENERATED: domain-routing (source: .claude/gate.config.json — regenerate via scripts/forge/render-skill-gate.sh; do NOT hand-edit between markers) -->
+| Domaine | Triggers (fichiers / commandes) | Skills requis | Marker (unlock) |
 |---|---|---|---|
-| {{CLOUD_PROVIDER}} / {{IDENTITY_PLATFORM}} / {{IDENTITY_PROVIDER}} / Graph / {{SCRIPTING_LANG}} | `.ps1`, `.psm1`, `.psd1`, `scripts/`, Graph, Exchange, Intune, {{IDENTITY_PROVIDER}}, {{IDENTITY_PLATFORM}} | `{{cloud_provider}}-{{identity_platform}}-architect` + `{{project}}-{{scripting_lang}}-script-writer` si script/module {{SCRIPTING_LANG}} | `mkdir -p .skill-locks && touch .skill-locks/{{cloud_provider}}` |
-| {{CLOUD_PROVIDER}} infra | Bicep, ARM, `azd`, Storage, Compute, quotas, diagnostics, cost, deploy | `{{cloud_provider}}-infra-architect` | `mkdir -p .skill-locks && touch .skill-locks/{{cloud_provider}}` |
-| {{CLOUD_PROVIDER}} AI / Foundry | OpenAI, Foundry, AI Search, RAG, Speech, Document Intelligence | `{{cloud_provider}}-ai-architect` | `mkdir -p .skill-locks && touch .skill-locks/{{cloud_provider}}` |
-| {{WORKFLOW_ENGINE}} workflow design / architecture | `{{WORKFLOW_ENGINE}}/`, workflow JSON, architecture workflow, orchestration | `{{WORKFLOW_ENGINE}}-workflow-architect` | `mkdir -p .skill-locks && touch .skill-locks/{{WORKFLOW_ENGINE}}` |
-| {{WORKFLOW_ENGINE}} node config / expressions | IF/Switch, expressions, validation, property dependencies | `{{WORKFLOW_ENGINE}}-node-expert` | `mkdir -p .skill-locks && touch .skill-locks/{{WORKFLOW_ENGINE}}` |
-| {{WORKFLOW_ENGINE}} code nodes | JavaScript/Python dans Code nodes {{WORKFLOW_ENGINE}} | `{{WORKFLOW_ENGINE}}-code-nodes` | `mkdir -p .skill-locks && touch .skill-locks/{{WORKFLOW_ENGINE}}` |
-| {{CRM_PLATFORM}} / {{CRM_PLATFORM}} / webhooks | {{CRM_PLATFORM}}, {{CRM_PLATFORM}}, {{CRM_PLATFORM}}, snapshots, workflows, API v2 | `{{crm_platform}}-architect` | `mkdir -p .skill-locks && touch .skill-locks/{{crm_platform}}` |
+<!-- END GENERATED: domain-routing -->
 
 ## Règles de sélection
 
@@ -54,29 +55,37 @@ Ces rules ne bloquent pas mécaniquement (hooks couvrent les domaines {{cloud_pr
 
 ## Correspondance avec le hook
 
-Deux hooks vérifient les markers :
+Deux hooks **sourcent `.claude/gate.config.json`** (aucun domaine codé en dur) et vérifient les markers :
 
-- `pre-tool-use.sh` — bloque Write/Edit/MultiEdit/Bash sur fichiers de domaine protégé
-- `pre-mcp-gate.sh` — bloque les mutations MCP prod ({{WORKFLOW_ENGINE}}-mcp, prod-{{crm_platform}}-mcp, prod-{{crm_platform}}-care-mcp)
+- `pre-tool-use.sh` — bloque Write/Edit/MultiEdit/Bash sur fichiers de domaine protégé (`protected_domains`)
+  + applique le gate SCAG (`dep_ecosystems`, toujours actif, indépendant de `protected_domains`)
+- `pre-mcp-gate.sh` — bloque les mutations MCP prod listées dans `gated_mcp` :
 
-Markers vérifiés : `{{cloud_provider}}`, `{{WORKFLOW_ENGINE}}`, `{{crm_platform}}`
+<!-- BEGIN GENERATED: mcp-gating (source: .claude/gate.config.json — regenerate via scripts/forge/render-skill-gate.sh; do NOT hand-edit between markers) -->
+| Serveur MCP (préfixe) | Domaine (marker) | Mutation prod bloquée sans lock |
+|---|---|---|
+<!-- END GENERATED: mcp-gating -->
+
+Markers vérifiés : dérivés des `marker` de `gate.config.json` ({{PROJECT}} : `{{cloud_provider}}`, `{{WORKFLOW_ENGINE}}`, `{{crm_platform}}`).
 
 Les lectures MCP prod et tous les appels MCP dev ne sont pas bloqués.
 
-Toute évolution de ce fichier qui change les domaines ou markers doit être reflétée dans :
-
-- `.claude/hooks/pre-tool-use.sh`
-- `.claude/hooks/pre-mcp-gate.sh`
-- `.claude/settings.json` (PreToolUse matchers)
+**Single-source (AC-2-5).** Pour ajouter/modifier un domaine ou un MCP gated : éditer **uniquement**
+`.claude/gate.config.json`, puis `scripts/forge/render-skill-gate.sh` pour re-générer les tables ci-dessus.
+Les hooks lisent le même fichier — **ne plus éditer les regex de domaine dans les `.sh`**. `settings.json`
+garde des matchers génériques (`Write|Edit|MultiEdit|Bash` ; préfixes MCP). Fail-open observable si
+`gate.config.json` est absent/invalide (warning stdout+stderr + `~/.claude/gate-failopen.log`).
 
 ## Règle de maintenance
 
-Mettre à jour ce fichier dans le même commit si :
+Les domaines / skills / markers / MCP gated vivent dans `.claude/gate.config.json` (**source unique**).
+Après toute modification de ce fichier, exécuter `scripts/forge/render-skill-gate.sh` pour re-générer les
+tables et committer les deux ensemble (le pre-commit / CI peut lancer `render-skill-gate.sh --check` pour
+bloquer une dérive). Mettre à jour la **prose** de ce fichier (hors régions générées) dans le même commit si :
 
-- un nouveau domaine protégé est ajouté
-- un skill requis change
-- un marker change
-- le hook `pre-tool-use.sh` ou `pre-mcp-gate.sh` change sa logique de contrôle
+- un nouveau domaine protégé est ajouté (→ d'abord `gate.config.json`, puis re-render)
+- une variante de skill de **sélection** change (table « Skill variants », hors région générée)
+- la logique de contrôle d'un hook change (fail-open, ordre des gates, SCAG, mutation verbs)
 
 ## Ce qui ne va pas ici
 

@@ -16,6 +16,76 @@ BOLD='\033[1m'
 NC='\033[0m'
 EXIT_CODE=0
 
+# ─── Gate config (data-driven SAST surface — AC-2-4) ─────────────────────────
+# Universal checks (gitleaks, concurrency-warn, CLAUDE.md budget) run regardless of this config.
+# Only the per-language SAST surface + co-presence guards are parameterized. Safe fail direction for a
+# COMMIT gate = RUN the scanners: a missing/invalid config falls back to the default SAST surface
+# (js/py/sh + PowerShell-if-staged), never to "skip scanning".
+GATE_CONFIG=".claude/gate.config.json"
+SEMGREP_EXTS="js py sh"
+PSA_EXTS="ps1 psm1"
+LANG_HAS_PS=1
+GATE_CONFIG_OK=0
+# Read the SAST surface from the WORKTREE config with a LIGHT read-guard (valid JSON only). The
+# AUTHORITATIVE write-time validation is the staged-blob validator below (Option-3 Task 9: the heavy
+# gate_config_shape_ok now lives ONLY in scripts/forge/validate-gate-config.sh + its oracle, not in this
+# read). A wrong-shape worktree config simply yields the default SAST surface via the empty-fallbacks
+# below — safe for a commit gate (keep scanning).
+if [ -f "$GATE_CONFIG" ] && jq -e . "$GATE_CONFIG" >/dev/null 2>&1; then
+    GATE_CONFIG_OK=1
+    _exts=$(jq -r '(.code_extensions // []) | join(" ")' "$GATE_CONFIG" 2>/dev/null)
+    [ -n "$_exts" ] && SEMGREP_EXTS="$_exts"
+    _psa=$(jq -r '[(.linters // {}) | to_entries[] | select(.value == "PSScriptAnalyzer") | .key] | join(" ")' "$GATE_CONFIG" 2>/dev/null)
+    [ -n "$_psa" ] && PSA_EXTS="$_psa"
+    if jq -e 'has("language")' "$GATE_CONFIG" >/dev/null 2>&1; then
+        # language key present: PSA only if it includes powershell (AC-2-4)
+        if jq -e '(.language // []) | map(ascii_downcase) | index("powershell")' "$GATE_CONFIG" >/dev/null 2>&1; then
+            LANG_HAS_PS=1
+        else
+            LANG_HAS_PS=0
+        fi
+    else
+        # language key absent (unconfigured): default ON — safe direction for a commit gate (review HIGH)
+        LANG_HAS_PS=1
+    fi
+else
+    printf "${YELLOW}Gate config: WARN — .claude/gate.config.json missing or invalid JSON; default SAST surface (js/py/sh + PowerShell if staged).${NC}\n" >&2
+fi
+SEMGREP_RE=$(echo "$SEMGREP_EXTS" | tr ' ' '|')
+PSA_RE=$(echo "$PSA_EXTS" | tr ' ' '|')
+# Never let the SAST surface collapse to an empty regex (defense-in-depth — empty would match nothing).
+[ -n "$SEMGREP_RE" ] || SEMGREP_RE="js|py|sh"
+[ -n "$PSA_RE" ] || PSA_RE="ps1|psm1"
+
+# ─── Gate config WRITE-TIME validation (Option-3 / AC-2-6, Gemini F3 staged-blob) ─────────────
+# When .claude/gate.config.json is STAGED, validate the STAGED BLOB (git show :path into a temp file) —
+# NOT the worktree path. A worktree-path check is BYPASSABLE: stage a malicious config, restore a clean
+# worktree, and the hook would validate the clean worktree while the malicious blob commits. The staged
+# blob is exactly what is about to land. validate-gate-config.sh is the SINGLE source of write-time
+# validation (R1+R2 via gate_config_shape_ok + R3a vacuity + R3c mandatory-field); non-zero => BLOCK, so a
+# malformed / vacuous / missing-mandatory gate config can NEVER reach main.
+GATE_VALIDATOR="scripts/forge/validate-gate-config.sh"
+if git diff --cached --name-only --diff-filter=d 2>/dev/null | grep -qx "$GATE_CONFIG"; then
+    if [ -f "$GATE_VALIDATOR" ]; then
+        _staged_cfg=$(mktemp)
+        if git show ":$GATE_CONFIG" > "$_staged_cfg" 2>/dev/null; then
+            if bash "$GATE_VALIDATOR" "$_staged_cfg" >/dev/null 2>&1; then
+                echo -e "Gate config (staged blob): ${GREEN}OK${NC}"
+            else
+                echo -e "Gate config (staged blob): ${RED}BLOCKED${NC}"
+                bash "$GATE_VALIDATOR" "$_staged_cfg" 2>&1 | sed 's/^/  /'
+                echo -e "${YELLOW}Fix:${NC} staged .claude/gate.config.json failed validate-gate-config.sh (shape / vacuity / mandatory-field). Edit and re-stage."
+                EXIT_CODE=1
+            fi
+        else
+            printf "${YELLOW}Gate config (staged blob): WARN — could not extract staged blob; not validated.${NC}\n" >&2
+        fi
+        rm -f "$_staged_cfg"
+    else
+        printf "${YELLOW}Gate config (staged blob): WARN — validator %s absent; staged gate.config.json NOT write-time-validated.${NC}\n" "$GATE_VALIDATOR" >&2
+    fi
+fi
+
 # ─── 0. Concurrency warn — commits on main with multiple Claude sessions ─────
 # Mirrors scripts/git-hooks/pre-commit-concurrency-warn.sh (R6 mitigation).
 # Non-blocking by design — visibility is the value. Folded inline so that
@@ -79,7 +149,7 @@ fi
 
 # ─── 2. Semgrep — scan staged .js/.py/.sh files for SAST findings ─────────────
 
-STAGED_CODE=$(git diff --cached --name-only --diff-filter=d -- '*.js' '*.py' '*.sh' 2>/dev/null || true)
+STAGED_CODE=$(git diff --cached --name-only --diff-filter=d 2>/dev/null | grep -E "\.(${SEMGREP_RE})$" || true)
 if [ -n "$STAGED_CODE" ] && command -v semgrep &>/dev/null; then
     (echo "$STAGED_CODE" | tr '\n' '\0' | xargs -0 semgrep \
         --config p/security-audit \
@@ -94,7 +164,16 @@ fi
 
 # ─── 3. PSScriptAnalyzer — scan staged .ps1/.psm1 files ─────────────────────
 
-STAGED_PS=$(git diff --cached --name-only --diff-filter=d -- '*.ps1' '*.psm1' 2>/dev/null || true)
+# PSScriptAnalyzer runs ONLY if config `language` includes powershell (AC-2-4). language=python only -> skip,
+# but if .ps1/.psm1 ARE staged while powershell is excluded, WARN (observable — never a silent SAST skip).
+if [ "$LANG_HAS_PS" -eq 1 ]; then
+    STAGED_PS=$(git diff --cached --name-only --diff-filter=d 2>/dev/null | grep -E "\.(${PSA_RE})$" || true)
+else
+    STAGED_PS=""
+    if git diff --cached --name-only --diff-filter=d 2>/dev/null | grep -qE "\.(${PSA_RE})$"; then
+        echo -e "SAST (PSScriptAnalyzer): ${YELLOW}WARN${NC} — PowerShell files staged but 'powershell' not in gate.config.json language[]; PSA skipped." >&2
+    fi
+fi
 if [ -n "$STAGED_PS" ] && command -v pwsh &>/dev/null; then
     PSA_WORKDIR=$(mktemp -d "${TMPDIR:-/tmp}/psa.XXXXXX")
     PSA_SCRIPT="$PSA_WORKDIR/run.ps1"
@@ -247,23 +326,33 @@ for f in CLAUDE.md CLAUDE.md.disabled; do
     fi
 done
 
-# ─── 4. Governance — MCP/integration co-presence (soft warning) ─────────────
-
-MCP_PATTERN='\.mcp\.json$|\.mcp-servers\.json$'
-if echo "$STAGED_FILES" | grep -qiE "$MCP_PATTERN"; then
-    if ! echo "$STAGED_FILES" | grep -qx '.claude/integrations.md'; then
-        echo -e "Governance (MCP): ${YELLOW}WARN${NC} — MCP/integration files changed but .claude/integrations.md not staged."
-        echo "  If the active integration inventory changed, update .claude/integrations.md in the same commit."
+# ─── 4. Governance — canonical co-presence guards (soft warning, data-driven AC-2-4) ─────
+# Each guard: if a staged file matches trigger_pattern but the required_file is not staged, WARN.
+# Parameterized from gate.config.json copresence_guards; falls back to the FORGE-universal pair
+# (.mcp.json -> integrations.md ; infra -> services-and-access.md) if the config is unreadable.
+if [ "$GATE_CONFIG_OK" -eq 1 ]; then
+    CP_COUNT=$(jq -r '(.copresence_guards // []) | length' "$GATE_CONFIG" 2>/dev/null)
+    [ -n "$CP_COUNT" ] || CP_COUNT=0
+    cp_i=0
+    while [ "$cp_i" -lt "$CP_COUNT" ]; do
+        cp_trig=$(jq -r ".copresence_guards[$cp_i].trigger_pattern // \"\"" "$GATE_CONFIG" 2>/dev/null)
+        cp_file=$(jq -r ".copresence_guards[$cp_i].required_file // \"\"" "$GATE_CONFIG" 2>/dev/null)
+        cp_msg=$(jq -r ".copresence_guards[$cp_i].message // \"\"" "$GATE_CONFIG" 2>/dev/null)
+        if [ -n "$cp_trig" ] && [ -n "$cp_file" ] && echo "$STAGED_FILES" | grep -qiE "$cp_trig"; then
+            if ! echo "$STAGED_FILES" | grep -qx "$cp_file"; then
+                echo -e "Governance (co-presence): ${YELLOW}WARN${NC} — ${cp_msg}"
+            fi
+        fi
+        cp_i=$((cp_i + 1))
+    done
+else
+    if echo "$STAGED_FILES" | grep -qiE '\.mcp\.json$|\.mcp-servers\.json$'; then
+        echo "$STAGED_FILES" | grep -qx '.claude/integrations.md' || \
+            echo -e "Governance (MCP): ${YELLOW}WARN${NC} — MCP/integration files changed but .claude/integrations.md not staged."
     fi
-fi
-
-# ─── 5. Governance — infra/access co-presence (soft warning) ────────────────
-
-INFRA_PATTERN='^infra/|^n8n/|^scripts/|^docker/|traefik|systemd|keyvault|keeper|^\.env$|/\.env$'
-if echo "$STAGED_FILES" | grep -qiE "$INFRA_PATTERN"; then
-    if ! echo "$STAGED_FILES" | grep -qx 'docs/codebase/services-and-access.md'; then
-        echo -e "Governance (infra): ${YELLOW}WARN${NC} — Infra/access files changed but docs/codebase/services-and-access.md not staged."
-        echo "  If endpoints, hostnames, ports, access methods, or secret locations changed, update the doc in the same commit."
+    if echo "$STAGED_FILES" | grep -qiE '^infra/|^n8n/|^scripts/|^docker/|traefik|systemd|keyvault|keeper|^\.env$|/\.env$'; then
+        echo "$STAGED_FILES" | grep -qx 'docs/codebase/services-and-access.md' || \
+            echo -e "Governance (infra): ${YELLOW}WARN${NC} — Infra/access files changed but docs/codebase/services-and-access.md not staged."
     fi
 fi
 

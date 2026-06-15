@@ -14,6 +14,25 @@ slug: forge
 
 ---
 
+## Scope honnête (D-10)
+
+Ce template est **dé-identifié** (l'identité du projet source est retirée — noms, comptes,
+hôtes, vendeurs tokenisés en `{{PLACEHOLDER}}`) et **sans gate de stack hardcodé** (les
+domaines protégés ne sont pas pré-câblés : `protected_domains` / `gated_mcp` arrivent vides,
+remplis par projet via le questionnaire de déploiement).
+
+Il n'est **PAS** « stack-neutre » au sens magique du terme. Le modèle opérationnel reste
+celui de FORGE : **FORGE + GSD + {{RAG_BACKEND}} (RAG) + CARL**. Adopter ce template, c'est adopter
+ce modèle opérationnel — pas un squelette agnostique qui marcherait identiquement sur
+n'importe quelle stack. Les exemples de stack (cloud / workflow engine / CRM…) sont
+tokenisés, mais la **forme** du système (mémoire persistante, knowledge RAG, discipline de
+phases, gates de domaine) est ce que vous adoptez.
+
+> ⚠️ Ne pas lire ce guide comme « FORGE marche pour n'importe quelle stack ». Il marche pour
+> un projet qui **adopte le modèle opérationnel FORGE** et y instancie sa propre stack.
+
+---
+
 ## Prerequis
 
 - Claude Code installe (`claude` CLI)
@@ -39,7 +58,8 @@ PROJECT="{your-project-path}"
 # Rules (copier tel quel)
 cp /tmp/forge-template/.claude/rules/verification-discipline.md "$PROJECT/.claude/rules/"
 cp /tmp/forge-template/.claude/rules/cognitive-patterns.md "$PROJECT/.claude/rules/"
-cp /tmp/forge-template/.claude/rules/tool-routing.md "$PROJECT/.claude/rules/"
+# tool-routing.md : NON fourni par le template (project-specific jusqu'a la genericization Phase 22.1).
+# Redigez le votre — caps / pagination / filtres / anti-patterns MCP de VOTRE stack.
 cp /tmp/forge-template/.claude/rules/workflow-guide.md "$PROJECT/.claude/rules/"
 cp /tmp/forge-template/.claude/rules/todo-discipline.md "$PROJECT/.claude/rules/"
 cp /tmp/forge-template/.claude/rules/phase-lifecycle.md "$PROJECT/.claude/rules/"
@@ -110,7 +130,8 @@ cd "$PROJECT" && claude
 
 ```bash
 # Rules
-cp /tmp/forge-template/.claude/rules/governance.md "$PROJECT/.claude/rules/"
+# governance.md : NON fourni par le template (project-specific jusqu'a la genericization Phase 22.1).
+# Redigez le votre — obligations de co-update + table d'enforcement de VOTRE projet.
 cp /tmp/forge-template/.claude/rules/skill-gate.md "$PROJECT/.claude/rules/"
 cp /tmp/forge-template/.claude/rules/supply-chain-audit.md "$PROJECT/.claude/rules/"
 cp /tmp/forge-template/.claude/rules/dependency-surveillance.md "$PROJECT/.claude/rules/"

@@ -1,9 +1,20 @@
 {
-  "generated": "2026-06-10T00:00:00Z",
-  "source_commit": "aa91f3f7ca28b247a2d96d0b1a8a741f4089d313",
-  "files": 125,
+  "generated": "2026-06-15T00:00:00Z",
+  "source_commit": "2784f9e836345da411e122fe8bc5ebe718e44643",
+  "files": 119,
+  "materialized_scattered": [
+    ".claude/forge.config.json",
+    ".claude/gate.config.json",
+    "CLAUDE.md",
+    "scripts/forge/render-skill-gate.sh",
+    "scripts/forge/test-gate-config.sh",
+    "scripts/forge/test-manifest-reconcile.sh",
+    "scripts/forge/validate-gate-config.sh",
+    "scripts/setup-hooks.sh",
+    ".forge/sync-allowlist.json"
+  ],
   "scrub": "PASS",
-  "dca_verdict": "CONFORME interne ; À RISQUE en attente D-8 public",
+  "dca_verdict": "CONFORME interne ; A RISQUE en attente D-8 public",
   "art17_destination_assessed": false,
   "deviations": [
     {
@@ -13,7 +24,7 @@
         "D-3"
       ],
       "resolution": "Template tier = verbatim EXCEPT universal identity-scrub",
-      "detail": "IDENTITY split by hardness — HARD scrub-blocking literals (owner full-names, infra hostnames, DB names, vendors, client names) tokenize UNIVERSALLY (all tiers); SOFT de-identification literals (bare project name / owner-handle) are .md-prose-only, same gating as STRUCTURAL. Executables receive hard-scrub only and keep functional domain vocab + project-prefixed workflow names; Plan 02 config-sources them. owner:/maintained_by: frontmatter tokenized to {{OWNER}} universally. Loupe-specific danger keyword dropped from DANGER_RE so the tokenized regex stays valid ERE.",
+      "detail": "IDENTITY split by hardness — HARD scrub-blocking literals (owner full-names, infra hostnames, DB names, vendors, client names) tokenize UNIVERSALLY (all tiers); display-identity literals (bare project name / org name / jurisdiction / regime labels) tokenize by POSITION (prose/comment, any file). Executables keep functional project-prefixed vocab (workflow/skill names); Plan 02 config-sources them. owner:/maintained_by: frontmatter tokenized to {{OWNER}} universally. A source-specific danger keyword was dropped from DANGER_RE so the tokenized regex stays valid ERE.",
       "ref": ".forge/DEVIATION-ac14-d3.md",
       "date": "2026-06-08"
     }

@@ -166,9 +166,9 @@ query(
 ```
 
 **Sources canoniques :**
-- `docs/references/frameworks/loi25.md`
-- `docs/references/frameworks/loi5.md`
-- `docs/references/frameworks/pipeda.md`
+- `docs/references/frameworks/{{compliance_framework_primary}}.md`
+- `docs/references/frameworks/{{compliance_framework_health}}.md`
+- `docs/references/frameworks/{{compliance_framework_federal}}.md`
 - `data-compliance-advisor/references/integration-patterns.md`
 ```
 
@@ -180,6 +180,6 @@ query(
 
 ## Related FORGE patterns
 
-- `upstream-source-watcher` — maintient à jour les sources que l'advisor consulte (loi25, loi5, pipeda)
+- `upstream-source-watcher` — maintient à jour les sources que l'advisor consulte ({{compliance_framework_primary}}, {{compliance_framework_health}}, {{compliance_framework_federal}})
 - `artifact-staleness-watcher` — même philosophie de "frontmatter as first-class metadata" appliquée aux artefacts
 - `supply-chain-audit-triad` — pattern advisor parallèle pour les dépendances externes (3 agents simultanés)

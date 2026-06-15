@@ -70,7 +70,7 @@ Chaque couche expose ses artefacts sous forme **structurée et exportable** (JSO
 
 | Domaine | Frameworks actuellement ingérés | Phase |
 |---|---|---|
-| Privacy | {{COMPLIANCE_FRAMEWORK_PRIMARY}} (Québec), {{COMPLIANCE_FRAMEWORK_HEALTH}} / {{COMPLIANCE_FRAMEWORK_HEALTH}} (santé QC), {{COMPLIANCE_FRAMEWORK_FEDERAL}} (Canada), GDPR (UE) | 27.1 ({{COMPLIANCE_FRAMEWORK_PRIMARY}} + NIST CSF), 29 (autres) |
+| Privacy | {{COMPLIANCE_FRAMEWORK_PRIMARY}} ({{JURISDICTION}}), {{COMPLIANCE_FRAMEWORK_HEALTH}} / {{COMPLIANCE_FRAMEWORK_HEALTH}} (santé QC), {{COMPLIANCE_FRAMEWORK_FEDERAL}} (Canada), GDPR (UE) | 27.1 ({{COMPLIANCE_FRAMEWORK_PRIMARY}} + NIST CSF), 29 (autres) |
 | Security | NIST CSF 2.0, OWASP ASVS + Top 10, CIS Controls v8, MITRE ATT&CK | 27.1 (NIST CSF), 29 (autres) |
 | AI Governance | NIST AI RMF, EU AI Act, AIDA (Canada, si adopté), ISO/IEC 42001 | 29 |
 | General Governance | ISO/IEC 27001, COBIT (optionnel) | 29 |
@@ -500,8 +500,8 @@ my-project/
 ├─ criteria/                       # Frameworks Layer projection (YAML referentials)
 │  ├─ authorization.yaml           # authn/authz constraints
 │  ├─ sensitive_data.yaml          # DataClass + minimisation rules
-│  ├─ loi25.yaml                   # {{COMPLIANCE_FRAMEWORK_PRIMARY}} obligations extracted
-│  ├─ loi5.yaml                    # {{COMPLIANCE_FRAMEWORK_HEALTH}} {{COMPLIANCE_FRAMEWORK_HEALTH}} obligations
+│  ├─ {{compliance_framework_primary}}.yaml                   # {{COMPLIANCE_FRAMEWORK_PRIMARY}} obligations extracted
+│  ├─ {{compliance_framework_health}}.yaml                    # {{COMPLIANCE_FRAMEWORK_HEALTH}} {{COMPLIANCE_FRAMEWORK_HEALTH}} obligations
 │  └─ gdpr.yaml                    # GDPR obligations (if clients EU)
 │
 ├─ reports/                        # EvidenceBundle output
@@ -651,8 +651,8 @@ step:
       evidence_bundle_out: <+pipeline.variables.reports_dir>/final-review.json
       fail_on: high   # gate: pipeline fails if any HIGH finding uncovered by Exception
     envVariables:
-      COGNEE_MCP_URL: <+secrets.getValue("knowledge-layer-mcp-url")>
-      COGNEE_API_KEY: <+secrets.getValue("knowledge-layer-api-key-harness")>
+      {{KNOWLEDGE_BACKEND}}_MCP_URL: <+secrets.getValue("knowledge-layer-mcp-url")>
+      {{KNOWLEDGE_BACKEND}}_API_KEY: <+secrets.getValue("knowledge-layer-api-key-harness")>
       COSIGN_KEY: <+secrets.getValue("forged-evidence-signing-key")>
   timeout: 30m
   failureStrategies:
@@ -693,7 +693,7 @@ Le pattern "orchestrator + archetypes + criteria + reports + harness step" se r�
 
 | Verticale | Archetypes types | Criteria |
 |---|---|---|
-| **Privacy Review** | data_privacy, retention_analyst, consent_analyst | loi25.yaml, loi5.yaml, gdpr.yaml |
+| **Privacy Review** | data_privacy, retention_analyst, consent_analyst | {{compliance_framework_primary}}.yaml, {{compliance_framework_health}}.yaml, gdpr.yaml |
 | **AI Governance Review** | ai_risk_analyst, model_auditor, bias_reviewer | nist_ai_rmf.yaml, eu_ai_act.yaml, aida.yaml |
 | **Compliance Review** | compliance_auditor, evidence_collector | iso27001.yaml, cis_v8.yaml |
 | **Architecture Review** | architect, scalability_analyst, reliability_analyst | arc_principles.yaml, reliability_targets.yaml |

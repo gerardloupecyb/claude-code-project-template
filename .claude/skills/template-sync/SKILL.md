@@ -33,7 +33,7 @@ Pour le localiser, chercher dans cet ordre :
 
 1. Variable `TEMPLATE_DIR` dans le fichier `.claude/integrations.md` du projet courant
    (ligne contenant `template-path:` ou `TEMPLATE_DIR`)
-2. Chemin par defaut : `/Users/{{owner}}/Claude code/Claude Projects/project-template-v2`
+2. Chemin par defaut : `{{TEMPLATE_REPO}}`
 3. Si aucun trouve : demander a l'utilisateur
 
 Verifier que `sync-project.sh` existe au chemin trouve.
