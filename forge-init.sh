@@ -33,13 +33,20 @@ TEMPLATE_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORKSPACE="${WORKSPACE_DIR:-$(dirname "$TEMPLATE_DIR")}"
 ALLOWLIST="$TEMPLATE_DIR/.forge/sync-allowlist.json"
 
+# injection-safe {{token}} resolver (AC-4-7) — sourced so it is unit-testable
+RESOLVER_LIB="$TEMPLATE_DIR/.forge/forge-resolve.sh"
+# shellcheck source=.forge/forge-resolve.sh
+[ -f "$RESOLVER_LIB" ] && . "$RESOLVER_LIB"
+
 usage() {
     cat <<'EOF'
-Usage: ./forge-init.sh [--tier 1|2|3] "Project Name" carl_domain "keyword1,keyword2"
+Usage: ./forge-init.sh [--tier 1|2|3] [--answers FILE] "Project Name" carl_domain "keyword1,keyword2"
 
-  --tier 1   Foundation only (memory, verification, todo, lesson, commit-push)
-  --tier 2   + Governance (gates, supply-chain, pre-flight, sparc, prepare-phase…)
-  --tier 3   + Intelligence (knowledge, graphify, swarm, task-router…)   [default]
+  --tier 1        Foundation only (memory, verification, todo, lesson, commit-push)
+  --tier 2        + Governance (gates, supply-chain, pre-flight, sparc, prepare-phase…)
+  --tier 3        + Intelligence (knowledge, graphify, swarm, task-router…)   [default]
+  --answers FILE  token-keyed JSON of Plan-05 questionnaire answers (overrides config-
+                  derived values; fills the stack-vocabulary {{TOKENS}}).
 
 Example:
   ./forge-init.sh --tier 2 "Mon SaaS" saasworkflow "saas,api,subscription,billing"
@@ -48,11 +55,14 @@ EOF
 
 # ── argument parsing (flags before/after positionals) ──────────────────────
 TIER=3
+ANSWERS_FILE=""
 POSITIONAL=()
 while [ $# -gt 0 ]; do
     case "$1" in
-        --tier)   TIER="${2:?--tier requires an argument (1|2|3)}"; shift 2 ;;
-        --tier=*) TIER="${1#*=}"; shift ;;
+        --tier)      TIER="${2:?--tier requires an argument (1|2|3)}"; shift 2 ;;
+        --tier=*)    TIER="${1#*=}"; shift ;;
+        --answers)   ANSWERS_FILE="${2:?--answers requires a file}"; shift 2 ;;
+        --answers=*) ANSWERS_FILE="${1#*=}"; shift ;;
         -h|--help) usage; exit 0 ;;
         --) shift; while [ $# -gt 0 ]; do POSITIONAL+=("$1"); shift; done ;;
         -*) echo "ERROR: unknown flag: $1" >&2; usage; exit 2 ;;
@@ -281,6 +291,46 @@ for d in .planning docs/solutions docs/plans docs/brainstorms docs/references \
     [ -z "$(ls -A "${PROJECT_DIR}/${d}" 2>/dev/null)" ] && touch "${PROJECT_DIR}/${d}/.gitkeep"
 done
 
+# ── TOKEN RESOLUTION (AC-4-7) — injection-safe, fail-closed ────────────────
+# Assemble a token-keyed answers map from the copied configs + args, optionally
+# overridden by a Plan-05 questionnaire file (--answers). Empty config values are
+# DROPPED so the token survives for the AC-4-8 tripwire / Plan-05 deploy-block.
+build_answers() {  # → token-keyed JSON on stdout
+    local fc="${PROJECT_DIR}/.claude/forge.config.json" gc="${PROJECT_DIR}/.claude/gate.config.json"
+    local pn pl pu rag cf1 lang
+    pn=""; [ -f "$fc" ] && pn=$(jq -r '.project_name // ""' "$fc")
+    [ -z "$pn" ] && pn="$PROJECT_NAME"
+    pl=$(printf '%s' "$pn" | tr '[:upper:]' '[:lower:]')
+    pu=$(printf '%s' "$pn" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9' '_')
+    rag="";  [ -f "$fc" ] && rag=$(jq -r '.memory_backend.rag // ""' "$fc")
+    cf1="";  [ -f "$fc" ] && cf1=$(jq -r '(.compliance_frameworks // [])[0] // ""' "$fc")
+    lang=""; [ -f "$gc" ] && lang=$(jq -r '.language // ""' "$gc")
+    jq -n --arg PROJECT "$pn" --arg project "$pl" --arg PROJECT_UPPER "$pu" \
+          --arg RAG "$rag" --arg CF1 "$cf1" --arg LANG "$lang" '
+        { PROJECT: $PROJECT, project: $project, PROJECT_UPPER: $PROJECT_UPPER }
+        | if $RAG  != "" then . + { RAG_BACKEND: $RAG, rag_backend: ($RAG|ascii_downcase), KNOWLEDGE_BACKEND: $RAG, knowledge_backend: ($RAG|ascii_downcase) } else . end
+        | if $CF1  != "" then . + { COMPLIANCE_FRAMEWORK_PRIMARY: $CF1, compliance_framework_primary: ($CF1|ascii_downcase) } else . end
+        | if $LANG != "" then . + { SCRIPTING_LANG: $LANG, scripting_lang: ($LANG|ascii_downcase) } else . end
+        | with_entries(select(.value != ""))
+    '
+}
+
+if ! command -v resolve_tree >/dev/null 2>&1 && ! declare -F resolve_tree >/dev/null 2>&1; then
+    echo "ERROR: resolver lib not loaded ($RESOLVER_LIB) — cannot safely resolve tokens." >&2
+    exit 5
+fi
+echo "→ Resolving {{tokens}} (injection-safe; validity + gitleaks fail-closed)..."
+ANSWERS_TMP=$(mktemp)
+build_answers > "$ANSWERS_TMP"
+if [ -n "$ANSWERS_FILE" ]; then
+    [ -f "$ANSWERS_FILE" ] || { echo "ERROR: --answers file not found: $ANSWERS_FILE" >&2; exit 2; }
+    jq -e . "$ANSWERS_FILE" >/dev/null 2>&1 || { echo "ERROR: --answers file is not valid JSON: $ANSWERS_FILE" >&2; exit 2; }
+    MERGED=$(mktemp)
+    jq -s '.[0] * .[1]' "$ANSWERS_TMP" "$ANSWERS_FILE" > "$MERGED" && mv "$MERGED" "$ANSWERS_TMP"
+fi
+resolve_tree "$PROJECT_DIR" "$ANSWERS_TMP" || { echo "ERROR: token resolution failed (fail-closed). See above." >&2; rm -f "$ANSWERS_TMP"; exit 5; }
+rm -f "$ANSWERS_TMP"
+
 # ── summary ────────────────────────────────────────────────────────────────
 echo ""
 echo "✓ Project initialized (tier ${TIER})."
@@ -291,7 +341,8 @@ echo "    files copied  : ${#COPIED_FILES[@]}"
 echo ""
 echo "  Next steps:"
 echo "    1. cd \"${PROJECT_DIR}\""
-echo "    2. Resolve remaining {{PLACEHOLDER}} tokens (forge-init resolver / questionnaire)."
+echo "    2. Fill remaining {{TOKENS}} (stack vocabulary) via the Plan-05 questionnaire"
+echo "       (re-run with --answers <file>); residuals are flagged by the deploy-block."
 echo "    3. Author .carl/${CARL_DOMAIN} project rules + fill CLAUDE.md / docs/references."
 echo "    4. Run check-setup.sh to verify the setup is GREEN."
 echo ""
