@@ -318,6 +318,101 @@ cmd_probe() {
     esac
 }
 
+# ============================================================================
+# OpenRouter MCP wiring + launch-env (AC-5-4) — the false-green fix
+# ----------------------------------------------------------------------------
+# The naive `.mcp.json` env-ref form  "env": {"OPENROUTER_API_KEY":"${OPENROUTER_API_KEY}"}
+# FALSE-GREENS: at GUI launch the parent env is usually empty → ${...} resolves to ""
+# → the MCP 401s, while a side-channel curl with the raw key passes (the bug in
+# reference_openrouter_mcp_401_fix). The FIX is a GUI-launch-safe WRAPPER that
+# RESOLVES the key (keychain → .env.local) INSIDE the launch command before `exec`,
+# so the key reaches the spawn env regardless of the GUI env. The key is referenced
+# by NAME only — never a literal in .mcp.json.
+#
+# F13 teeth: the launch-path probe runs the WRAPPER's key-resolution+export slice
+# VERBATIM (parsed from .mcp.json, asserted byte-equal), so the probe exercises the
+# SAME env-resolution the GUI does — the fix cannot itself false-green via a bespoke
+# path. Only the terminal `exec node <server>` is replaced by the AC-5-3 auth probe
+# (the MCP server cannot run headless inside a probe); the env-resolution surface —
+# the entire false-green surface — is byte-for-byte the GUI's.
+# ============================================================================
+
+# the GUI-launch-safe wrapper script (generic: keychain → .env.local; absolute
+# .env.local path baked at wire time; server path from $OPENROUTER_MCP_SERVER).
+_openrouter_launcher() {  # $1=abs-project-dir → the bash -c script string
+    local abs="$1"
+    printf '%s' "export OPENROUTER_API_KEY=\"\$(security find-generic-password -a \"\$USER\" -s OPENROUTER_API_KEY -w 2>/dev/null || grep -E '^OPENROUTER_API_KEY=' \"${abs}/.env.local\" 2>/dev/null | head -1 | cut -d= -f2-)\"; exec node \"\${OPENROUTER_MCP_SERVER:?set OPENROUTER_MCP_SERVER to the openrouter MCP server entrypoint}\""
+}
+
+# does model_router declare openrouter as an OpenAI voice?
+_openrouter_declared() {  # $1=forge.config.json
+    [ -f "$1" ] && jq -e '[.model_router.cross_vendor_voices.openai // [] | .[]] | index("openrouter") != null' "$1" >/dev/null 2>&1
+}
+
+cmd_mcp() {
+    local action="${1:-}"; shift || true
+    local project_dir="."
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --project-dir) project_dir="$2"; shift 2 ;;
+            *) echo "mcp: unknown option '$1'" >&2; return 2 ;;
+        esac
+    done
+    local abs; abs="$(cd "$project_dir" 2>/dev/null && pwd)" || { echo "mcp: project-dir not found: $project_dir" >&2; return 2; }
+    local FC="$abs/.claude/forge.config.json" MCP="$abs/.mcp.json"
+
+    case "$action" in
+        wire)
+            [ -f "$MCP" ] || printf '{\n  "mcpServers": {}\n}\n' > "$MCP"
+            jq -e . "$MCP" >/dev/null 2>&1 || { echo "mcp wire: .mcp.json invalid JSON" >&2; return 2; }
+            if _openrouter_declared "$FC"; then
+                local launcher tmp; launcher="$(_openrouter_launcher "$abs")"; tmp="$(mktemp)"
+                jq --arg cmd "bash" --arg flag "-c" --arg script "$launcher" '
+                    .mcpServers = (.mcpServers // {})
+                    | .mcpServers.openrouter = { type: "stdio", command: $cmd, args: [$flag, $script], env: {} }
+                ' "$MCP" > "$tmp" 2>/dev/null && jq -e . "$tmp" >/dev/null 2>&1 || { echo "mcp wire: failed to write entry (fail-closed)" >&2; rm -f "$tmp"; return 1; }
+                mv "$tmp" "$MCP"
+                # no literal key may have landed
+                grep -Eq 'sk-or-v1-[A-Za-z0-9]|sk-[A-Za-z0-9]{20}' "$MCP" && { echo "mcp wire: a literal key shape is present in .mcp.json — fail-closed" >&2; return 1; }
+                echo "  ✓ .mcp.json openrouter entry wired (GUI-launch-safe wrapper, key by name only)" >&2
+            else
+                # not declared → prune any stale entry (idempotent), warn if pruned
+                if jq -e '.mcpServers.openrouter' "$MCP" >/dev/null 2>&1; then
+                    local tmp; tmp="$(mktemp)"
+                    jq 'del(.mcpServers.openrouter)' "$MCP" > "$tmp" && mv "$tmp" "$MCP"
+                    echo "  ⚠ openrouter not in model_router — pruned the stale .mcp.json openrouter entry" >&2
+                else
+                    echo "  · openrouter not declared — no .mcp.json mutation" >&2
+                fi
+            fi
+            ;;
+        probe)
+            # LAUNCH-PATH probe: run the .mcp.json wrapper's key-resolution slice VERBATIM
+            # (F13 byte-for-byte), then auth-probe the resolved key. Catches the launch-env
+            # gap the old direct-curl probe missed.
+            [ -f "$MCP" ] || { echo "  mcp probe: no .mcp.json — run 'mcp wire' first" >&2; return 2; }
+            jq -e '.mcpServers.openrouter' "$MCP" >/dev/null 2>&1 || { echo "  mcp probe: no openrouter entry in .mcp.json" >&2; return 2; }
+            local script resolve_slice
+            script="$(jq -r '.mcpServers.openrouter.args[1] // ""' "$MCP")"
+            [ -n "$script" ] || { echo "  mcp probe: openrouter entry has no launch script" >&2; return 2; }
+            resolve_slice="${script%%; exec*}"   # the key-resolution+export, verbatim from .mcp.json
+            # run the SAME resolution the GUI runs; report whether the key landed in the spawn env
+            local landed
+            landed="$(bash -c "${resolve_slice}; if [ -n \"\${OPENROUTER_API_KEY:-}\" ]; then echo RESOLVED; else echo EMPTY; fi" 2>/dev/null)"
+            if [ "$landed" != "RESOLVED" ]; then
+                echo "  mcp probe[openrouter] → FAIL launch-env (key did NOT resolve into the spawn env — the false-green condition)" >&2
+                return 10
+            fi
+            # auth-probe the RESOLVED key: cmd_probe re-resolves from the SAME source
+            # (keychain → .env.local) the wrapper uses, then hits the pinned /api/v1/key.
+            cmd_probe --executor openrouter --project-dir "$abs"
+            return $?
+            ;;
+        *) echo "mcp: unknown action '$action' (wire|probe)" >&2; return 2 ;;
+    esac
+    return 0
+}
+
 # ── dispatch (source-safe: when sourced, only the functions load) ─────────────
 if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
     SUB="${1:-}"; shift || true
@@ -325,9 +420,10 @@ if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
         routing) cmd_routing "$@" ;;
         keys)    cmd_keys "$@" ;;
         probe)   cmd_probe "$@" ;;
+        mcp)     cmd_mcp "$@" ;;
         ""|-h|--help)
             sed -n '2,40p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
             exit 0 ;;
-        *) echo "forge-setup-executors: unknown subcommand '$SUB' (have: routing keys probe)" >&2; exit 2 ;;
+        *) echo "forge-setup-executors: unknown subcommand '$SUB' (have: routing keys probe mcp)" >&2; exit 2 ;;
     esac
 fi
