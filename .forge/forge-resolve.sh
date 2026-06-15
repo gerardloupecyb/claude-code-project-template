@@ -108,3 +108,25 @@ resolve_tree() {  # $1=dir  $2=answers.json
     _forge_gitleaks_scan "$dir" || return 1
     return 0
 }
+
+# AC-4-8 — fail-closed unresolved-{{token}} TRIPWIRE. F11 detector
+#   {{[A-Za-z0-9_][A-Za-z0-9_-]*}}   (the narrow {{[A-Za-z_]+}} would MISS
+#   {{COMPLIANCE_FRAMEWORK_1}} / any digit- or hyphen-bearing token).
+# Scans the given paths — the FORGE-managed (extracted/copied) tree. Generated
+# starter stubs (docs/references, contexts, integrations, codex) carry free-form
+# manual-fill placeholders and are intentionally OUT of scope. Empty config slice
+# values (project_name:"" / []) are NOT tokens → never caught here (D1 sentinel,
+# enforced by the Plan-05 deploy-block + surfaced by check-setup). Exits non-zero
+# listing every offender (file:line:token) if any residual token remains.
+tripwire_scan() {  # $@ = paths to scan
+    local existing=() p hits
+    for p in "$@"; do [ -e "$p" ] && existing+=("$p"); done
+    [ "${#existing[@]}" -eq 0 ] && return 0
+    hits="$(grep -rnoE '\{\{[A-Za-z0-9_][A-Za-z0-9_-]*\}\}' "${existing[@]}" 2>/dev/null | sort -u)"
+    if [ -n "$hits" ]; then
+        echo "ERROR: AC-4-8 tripwire — unresolved placeholder token(s) remain (fill via the questionnaire):" >&2
+        printf '%s\n' "$hits" | sed 's/^/  /' >&2
+        return 1
+    fi
+    return 0
+}

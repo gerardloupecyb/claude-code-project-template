@@ -331,6 +331,17 @@ fi
 resolve_tree "$PROJECT_DIR" "$ANSWERS_TMP" || { echo "ERROR: token resolution failed (fail-closed). See above." >&2; rm -f "$ANSWERS_TMP"; exit 5; }
 rm -f "$ANSWERS_TMP"
 
+# ── AC-4-8 TRIPWIRE — fail-closed on residual {{tokens}} in the FORGE tree ──
+# Scope = the extracted/copied FORGE tree only (generated user stubs in
+# docs/references, contexts, integrations, codex are manual-fill, out of scope).
+echo "→ Tripwire: scanning the FORGE tree for unresolved {{tokens}}..."
+TRIPWIRE_RC=0
+tripwire_scan \
+    "${PROJECT_DIR}/.claude/rules" "${PROJECT_DIR}/.claude/skills" "${PROJECT_DIR}/.claude/hooks" \
+    "${PROJECT_DIR}/.githooks" "${PROJECT_DIR}/scripts/forge" "${PROJECT_DIR}/CLAUDE.md" \
+    "${PROJECT_DIR}/.claude/gate.config.json" "${PROJECT_DIR}/.claude/forge.config.json" \
+    "${PROJECT_DIR}/.carl/manifest" || TRIPWIRE_RC=1
+
 # ── summary ────────────────────────────────────────────────────────────────
 echo ""
 echo "✓ Project initialized (tier ${TIER})."
@@ -346,3 +357,10 @@ echo "       (re-run with --answers <file>); residuals are flagged by the deploy
 echo "    3. Author .carl/${CARL_DOMAIN} project rules + fill CLAUDE.md / docs/references."
 echo "    4. Run check-setup.sh to verify the setup is GREEN."
 echo ""
+
+# fail-closed on residual FORGE-tree tokens (AC-4-8) — RED until the questionnaire fills them
+if [ "${TRIPWIRE_RC:-0}" -ne 0 ]; then
+    echo "⚠ RED: unresolved {{tokens}} remain in the FORGE tree (listed above)." >&2
+    echo "  Supply the full questionnaire (--answers <file>) on a fresh init, or fill them in place." >&2
+    exit 6
+fi
