@@ -332,6 +332,12 @@ if [ -n "$ANSWERS_FILE" ]; then
     jq -s '.[0] * .[1]' "$ANSWERS_TMP" "$ANSWERS_FILE" > "$MERGED" && mv "$MERGED" "$ANSWERS_TMP"
 fi
 resolve_tree "$PROJECT_DIR" "$ANSWERS_TMP" || { echo "ERROR: token resolution failed (fail-closed). See above." >&2; rm -f "$ANSWERS_TMP"; exit 5; }
+# persist the merged answers so sync-project.sh can RE-RESOLVE after a template
+# overwrite (else a sync would re-tokenize the consumer's resolved files). Answers
+# are non-secret by construction — the resolver's gitleaks pass fails closed on a
+# key-shape, so a secret can never reach this file.
+mkdir -p "${PROJECT_DIR}/.forge"
+cp "$ANSWERS_TMP" "${PROJECT_DIR}/.forge/answers.json"
 rm -f "$ANSWERS_TMP"
 
 # ── settings.json placement (AC-4-2) — the resolver already substituted the

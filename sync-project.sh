@@ -2,232 +2,126 @@
 set -euo pipefail
 
 # ============================================================================
-# Project Sync — Update existing project from template
-# Syncs universal files (skills, rules, hooks, settings) without touching
-# project-specific files (CLAUDE.md, MEMORY.md, LESSONS.md, DECISIONS.md, CARL).
+# sync-project.sh — update an existing FORGE project from the template (v1 SIMPLE)
 # ============================================================================
+# FORGE Phase 22 Plan 04, AC-4-3 (D-12). The set of syncable files is DRIVEN by
+# the forge-extract-derived `.forge/sync-allowlist.json` — the SAME single source
+# forge-init reads. A skill/rule/hook NOT in the allowlist is NEVER pushed (a domain
+# skill — ghl/n8n/azure — can never reach a consumer). Behaviour:
+#   - overwrite the allowlisted UNIVERSAL files (skills, rules, hooks, forge tooling)
+#   - never touch project-specific / consumer-owned files (protected[] + CLAUDE.md +
+#     the consumer-filled configs + settings.json) → reported [SKIP]
+#   - write a forge-template-version (commit-SHA) drift marker on --apply
+#   - NO 3-way merge (overwrite-on-apply, dry-run-reviewed) → 3-way deferred to 22.1
 #
 # Usage:
-#   ./sync-project.sh /path/to/project          # dry-run (default)
-#   ./sync-project.sh /path/to/project --apply   # apply changes
-#
-# What it does:
-#   1. Compares universal files between template and project
-#   2. Reports: NEW (missing in project), MODIFIED (differs), OK (identical)
-#   3. With --apply: copies new and modified universal files to project
-#
-# What it does NOT touch (project-specific):
-#   - CLAUDE.md, memory/MEMORY.md, LESSONS.md, DECISIONS.md
-#   - .claude/integrations.md
-#   - .carl/* (manifest, domain files)
-#   - docs/, todos/, src/ (project content)
-#
-# For CLAUDE.md template changes: shows a warning with diff guidance.
+#   ./sync-project.sh /path/to/project           # dry-run (default)
+#   ./sync-project.sh /path/to/project --apply    # apply
+# ============================================================================
 
 TEMPLATE_DIR="$(cd "$(dirname "$0")" && pwd)"
+ALLOWLIST="${TEMPLATE_DIR}/.forge/sync-allowlist.json"
+RESOLVER_LIB="${TEMPLATE_DIR}/.forge/forge-resolve.sh"
+# shellcheck source=.forge/forge-resolve.sh
+[ -f "$RESOLVER_LIB" ] && . "$RESOLVER_LIB"
 
 if [ $# -lt 1 ]; then
-    echo "Usage: $0 /path/to/project [--apply]"
-    echo ""
-    echo "  Default: dry-run (show what would change)"
-    echo "  --apply: actually copy files"
-    echo ""
-    echo "Example:"
-    echo "  $0 \"/Users/me/Claude code/MonProjet\""
-    echo "  $0 \"/Users/me/Claude code/MonProjet\" --apply"
+    echo "Usage: $0 /path/to/project [--apply]" >&2
     exit 1
 fi
-
 PROJECT_DIR="$1"
 MODE="${2:-dry-run}"
 
-if [ ! -d "$PROJECT_DIR" ]; then
-    echo "ERROR: Project directory not found: ${PROJECT_DIR}"
-    exit 1
-fi
-
-if [ ! -f "$PROJECT_DIR/CLAUDE.md" ] && [ ! -f "$PROJECT_DIR/memory/MEMORY.md" ]; then
-    echo "ERROR: ${PROJECT_DIR} does not look like a template project"
-    echo "       (missing CLAUDE.md and memory/MEMORY.md)"
-    exit 1
-fi
+[ -d "$PROJECT_DIR" ] || { echo "ERROR: project directory not found: ${PROJECT_DIR}" >&2; exit 1; }
+[ -f "$ALLOWLIST" ] || { echo "ERROR: derived allowlist missing: ${ALLOWLIST} (run forge-extract --apply)" >&2; exit 1; }
+command -v jq >/dev/null 2>&1 || { echo "ERROR: jq is required to read the derived allowlist." >&2; exit 1; }
+jq -e . "$ALLOWLIST" >/dev/null 2>&1 || { echo "ERROR: derived allowlist is not valid JSON." >&2; exit 1; }
 
 echo "═══════════════════════════════════════════"
-echo "  Project Sync"
+echo "  FORGE template sync (${MODE})"
 echo "═══════════════════════════════════════════"
-echo ""
 echo "  Template:  ${TEMPLATE_DIR}"
 echo "  Project:   ${PROJECT_DIR}"
-echo "  Mode:      ${MODE}"
 echo ""
 
-# Counters
-NEW=0
-MODIFIED=0
-OK=0
-SKIPPED=0
+NEW=0; MODIFIED=0; OK=0; SKIPPED=0
 
-# ── Compare a universal file ──────────────────────────────────────────────
-# Usage: sync_file "relative/path/to/file"
-sync_file() {
-    local REL_PATH="$1"
-    local SRC="${TEMPLATE_DIR}/${REL_PATH}"
-    local DST="${PROJECT_DIR}/${REL_PATH}"
-
-    if [ ! -f "$SRC" ]; then
-        return
-    fi
-
-    if [ ! -f "$DST" ]; then
-        echo "  [NEW]       ${REL_PATH}"
-        NEW=$((NEW + 1))
-        if [ "$MODE" = "--apply" ]; then
-            mkdir -p "$(dirname "$DST")"
-            cp "$SRC" "$DST"
-            echo "              → copied"
-        fi
-    elif ! diff -q "$SRC" "$DST" > /dev/null 2>&1; then
-        echo "  [MODIFIED]  ${REL_PATH}"
-        MODIFIED=$((MODIFIED + 1))
-        if [ "$MODE" = "--apply" ]; then
-            cp "$SRC" "$DST"
-            echo "              → updated"
-        fi
+sync_file() {  # $1=relative path (overwrite-on-apply)
+    local rel="$1" src="${TEMPLATE_DIR}/$1" dst="${PROJECT_DIR}/$1"
+    [ -f "$src" ] || return 0
+    if [ ! -f "$dst" ]; then
+        echo "  [NEW]       ${rel}"; NEW=$((NEW+1))
+        if [ "$MODE" = "--apply" ]; then mkdir -p "$(dirname "$dst")"; cp "$src" "$dst"; case "$rel" in *.sh) chmod +x "$dst" 2>/dev/null || true;; esac; fi
+    elif ! diff -q "$src" "$dst" >/dev/null 2>&1; then
+        echo "  [MODIFIED]  ${rel}"; MODIFIED=$((MODIFIED+1))
+        if [ "$MODE" = "--apply" ]; then cp "$src" "$dst"; case "$rel" in *.sh) chmod +x "$dst" 2>/dev/null || true;; esac; fi
     else
-        OK=$((OK + 1))
+        OK=$((OK+1))
     fi
+    return 0
 }
 
-# ── Allowlist (D-6) ───────────────────────────────────────────────────────
-# Source of truth for WHAT may be synced. Replaces the former blind
-# `skills/*/` + `rules/*.md` globs (which could push a domain skill, e.g.
-# ghl-architect / n8n-*, into a consumer). A skill/rule NOT in the allowlist
-# is NEVER synced. Adopts the allowlist model formerly carried by the retired
-# project-template-sync skill.
-ALLOWLIST="${TEMPLATE_DIR}/.forge/sync-allowlist.json"
-if [ ! -f "$ALLOWLIST" ]; then
-    echo "ERROR: sync allowlist not found: ${ALLOWLIST}"
-    echo "       (D-6: sync-project.sh requires .forge/sync-allowlist.json to know what is safe to push)"
-    exit 1
-fi
-if ! command -v jq > /dev/null 2>&1; then
-    echo "ERROR: jq is required to read the sync allowlist (${ALLOWLIST})"
-    exit 1
-fi
+echo "→ Skills (allowlist-driven, full dir)"
+while IFS= read -r skill; do
+    [ -z "$skill" ] && continue
+    sdir="${TEMPLATE_DIR}/.claude/skills/${skill}"
+    [ -d "$sdir" ] || continue
+    while IFS= read -r f; do sync_file "${f#${TEMPLATE_DIR}/}"; done < <(find "$sdir" -type f)
+done < <(jq -r '.skills[]?' "$ALLOWLIST")
 
-# ── Universal files: skills (ALLOWLIST-driven, not blind glob) ─────────────
-echo "→ Skills (allowlist)"
-while IFS= read -r SKILL_NAME; do
-    [ -z "$SKILL_NAME" ] && continue
-    sync_file ".claude/skills/${SKILL_NAME}/SKILL.md"
-done < <(jq -r '.skills[]' "$ALLOWLIST")
+echo "→ Rules (allowlist-driven)"
+while IFS= read -r rule; do [ -z "$rule" ] && continue; sync_file ".claude/rules/${rule}"; done < <(jq -r '.rules[]?' "$ALLOWLIST")
 
-# ── Universal files: rules (ALLOWLIST-driven, not blind glob) ──────────────
-echo "→ Rules (allowlist)"
-while IFS= read -r RULE_NAME; do
-    [ -z "$RULE_NAME" ] && continue
-    sync_file ".claude/rules/${RULE_NAME}"
-done < <(jq -r '.rules[]' "$ALLOWLIST")
+echo "→ Hooks (allowlist globs)"
+while IFS= read -r glob; do
+    [ -z "$glob" ] && continue
+    shopt -s nullglob
+    for f in "${TEMPLATE_DIR}"/${glob}; do [ -f "$f" ] && sync_file "${f#${TEMPLATE_DIR}/}"; done
+    shopt -u nullglob
+done < <(jq -r '.hooks_glob[]?' "$ALLOWLIST")
 
-# ── Universal files: hooks ────────────────────────────────────────────────
-echo "→ Hooks"
-for HOOK_FILE in "${TEMPLATE_DIR}"/.claude/hooks/*.sh; do
-    HOOK_NAME=$(basename "$HOOK_FILE")
-    sync_file ".claude/hooks/${HOOK_NAME}"
+echo "→ Forge tooling (allowlist files[], universal only)"
+while IFS= read -r relf; do
+    [ -z "$relf" ] && continue
+    # consumer-owned scattered files are NEVER overwritten on sync (they carry the
+    # consumer's identity/config): CLAUDE.md + the sliced configs.
+    case "$relf" in
+        CLAUDE.md|*.config.json) echo "  [SKIP]      ${relf} (consumer-owned)"; SKIPPED=$((SKIPPED+1)); continue ;;
+        *.json.template)         echo "  [SKIP]      ${relf} (init-only; consumer manages settings.json)"; SKIPPED=$((SKIPPED+1)); continue ;;
+        *) sync_file "$relf" ;;
+    esac
+done < <(jq -r '.files[]?' "$ALLOWLIST")
+
+echo "→ Protected / consumer-owned (never synced)"
+while IFS= read -r pf; do [ -z "$pf" ] && continue; echo "  [SKIP]      ${pf}"; SKIPPED=$((SKIPPED+1)); done < <(jq -r '.protected[]?' "$ALLOWLIST")
+for extra in ".claude/settings.json" ".claude/gate.config.json" ".claude/forge.config.json"; do
+    [ -e "${PROJECT_DIR}/${extra}" ] && { echo "  [SKIP]      ${extra} (consumer-owned)"; SKIPPED=$((SKIPPED+1)); }
 done
-# Ensure hooks are executable after sync
-if [ "$MODE" = "--apply" ] && [ -d "${PROJECT_DIR}/.claude/hooks" ]; then
-    chmod +x "${PROJECT_DIR}/.claude/hooks/"*.sh 2>/dev/null || true
+
+# ── forge-template-version drift marker (commit-SHA) ───────────────────────
+TPL_SHA="$(git -C "$TEMPLATE_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+if [ "$MODE" = "--apply" ]; then
+    mkdir -p "${PROJECT_DIR}/.forge"
+    printf 'forge-template-version: %s\nsynced_from: %s\n' "$TPL_SHA" "$TEMPLATE_DIR" > "${PROJECT_DIR}/.forge/forge-template-version"
+    echo ""
+    echo "→ wrote .forge/forge-template-version (${TPL_SHA})"
+    # re-resolve {{tokens}} the overwrite re-introduced, from the consumer's stored
+    # answers — keeps the consumer's resolved files resolved (non-destructive sync).
+    if [ $((NEW + MODIFIED)) -gt 0 ] && declare -F resolve_tree >/dev/null 2>&1 && [ -f "${PROJECT_DIR}/.forge/answers.json" ]; then
+        if resolve_tree "$PROJECT_DIR" "${PROJECT_DIR}/.forge/answers.json" >/dev/null 2>&1; then
+            echo "→ re-resolved {{tokens}} from .forge/answers.json (consumer files kept resolved)"
+        else
+            echo "  WARN: re-resolution after sync failed — review residual {{tokens}} manually." >&2
+        fi
+    fi
 fi
 
-# ── Universal files: settings.json ────────────────────────────────────────
-echo "→ Settings"
-sync_file ".claude/settings.json"
-
-# ── Bootstrap missing reference files ──────────────────────────────────────
-# These files are project-specific once they exist, but if they're missing
-# entirely, we bootstrap them from the template (without placeholder substitution).
-echo ""
-echo "→ Reference files (bootstrap if missing)"
-
-bootstrap_if_missing() {
-    local TEMPLATE_FILE="$1"
-    local TARGET_FILE="$2"
-    local DISPLAY_NAME="$3"
-    local SRC="${TEMPLATE_DIR}/${TEMPLATE_FILE}"
-    local DST="${PROJECT_DIR}/${TARGET_FILE}"
-
-    if [ ! -f "$SRC" ]; then
-        return
-    fi
-
-    if [ ! -f "$DST" ]; then
-        echo "  [MISSING]   ${DISPLAY_NAME} — will bootstrap from template"
-        NEW=$((NEW + 1))
-        if [ "$MODE" = "--apply" ]; then
-            mkdir -p "$(dirname "$DST")"
-            # Copy template, strip {{PLACEHOLDER}} markers but keep structure
-            sed -e 's|{{PROJECT_NAME}}|TODO-set-project-name|g' \
-                -e 's|{{DATE}}|'"$(date +%Y-%m-%d)"'|g' \
-                -e 's|{{PROJECT_PATH}}|'"${PROJECT_DIR}"'|g' \
-                "$SRC" > "$DST"
-            echo "              → bootstrapped (edit placeholders if any)"
-        fi
-    else
-        SKIPPED=$((SKIPPED + 1))
-        echo "  [ok]        ${DISPLAY_NAME} (exists, not modified)"
-    fi
-}
-
-bootstrap_if_missing "DECISIONS.md.template" "DECISIONS.md" "DECISIONS.md"
-bootstrap_if_missing "LESSONS.md.template" "LESSONS.md" "LESSONS.md"
-
-# ── Template-generated files: warn only ───────────────────────────────────
-echo ""
-echo "→ Template files (never synced — project-specific)"
-
-check_template_drift() {
-    local TEMPLATE_FILE="$1"
-    local DISPLAY_NAME="$2"
-
-    if [ -f "${TEMPLATE_DIR}/${TEMPLATE_FILE}" ]; then
-        SKIPPED=$((SKIPPED + 1))
-        echo "  [SKIP]      ${DISPLAY_NAME} (project-specific, manual review if needed)"
-    fi
-}
-
-check_template_drift "CLAUDE.md.template" "CLAUDE.md"
-check_template_drift "memory/MEMORY.md.template" "memory/MEMORY.md"
-check_template_drift ".claude/integrations.md.template" ".claude/integrations.md"
-check_template_drift ".carl/manifest.template" ".carl/manifest"
-check_template_drift ".carl/domain.template" ".carl/{domain}"
-
-# ── Summary ───────────────────────────────────────────────────────────────
 echo ""
 echo "─────────────────────────────────────────"
-echo "  Summary:"
-echo "    ${NEW} new file(s)"
-echo "    ${MODIFIED} modified file(s)"
-echo "    ${OK} up-to-date file(s)"
-echo "    ${SKIPPED} skipped (project-specific)"
-echo ""
-
+echo "  ${NEW} new · ${MODIFIED} modified · ${OK} up-to-date · ${SKIPPED} skipped"
+echo "  template version: ${TPL_SHA}"
 if [ "$MODE" != "--apply" ] && [ $((NEW + MODIFIED)) -gt 0 ]; then
-    echo "  Run with --apply to sync:"
-    echo "    $0 \"${PROJECT_DIR}\" --apply"
     echo ""
+    echo "  Review the diff above, then apply:  $0 \"${PROJECT_DIR}\" --apply"
 fi
-
-if [ "$MODE" = "--apply" ] && [ $((NEW + MODIFIED)) -gt 0 ]; then
-    echo "  ✓ ${NEW} new + ${MODIFIED} modified file(s) synced."
-    echo ""
-    echo "  Note: CLAUDE.md was not updated (project-specific)."
-    echo "  To check for template changes:"
-    echo "    diff \"${TEMPLATE_DIR}/CLAUDE.md.template\" \"${PROJECT_DIR}/CLAUDE.md\""
-    echo ""
-fi
-
-if [ $((NEW + MODIFIED)) -eq 0 ]; then
-    echo "  ✓ Project is up to date with template."
-    echo ""
-fi
+echo ""
