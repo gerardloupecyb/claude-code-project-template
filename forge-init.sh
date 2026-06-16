@@ -351,7 +351,10 @@ mkdir -p "${PROJECT_DIR}/.forge"
 cp "$ANSWERS_TMP" "${PROJECT_DIR}/.forge/answers.json"
 rm -f "$ANSWERS_TMP"
 if command -v gitleaks >/dev/null 2>&1; then
-    gitleaks detect --no-git --source "${PROJECT_DIR}/.forge/answers.json" --redact --no-banner >/dev/null 2>&1 || {
+    # re-review residue (Gemini P1): honour the consumer's project-local .gitleaks.toml (custom
+    # secret shapes) if present — same as _forge_gitleaks_scan; default rules alone would miss them.
+    _AJ_CFG=""; [ -f "${PROJECT_DIR}/.gitleaks.toml" ] && _AJ_CFG="--config ${PROJECT_DIR}/.gitleaks.toml"
+    gitleaks detect --no-git --source "${PROJECT_DIR}/.forge/answers.json" $_AJ_CFG --redact --no-banner >/dev/null 2>&1 || {
         echo "ERROR: a secret-shape was found in .forge/answers.json (an answer carried a key). Fail-closed — removing it; do not paste API keys as questionnaire answers." >&2
         rm -f "${PROJECT_DIR}/.forge/answers.json"; exit 5; }
 fi

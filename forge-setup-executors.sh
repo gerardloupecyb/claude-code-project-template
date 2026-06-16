@@ -311,6 +311,11 @@ cmd_probe() {
 
     local KEY; KEY="$(_resolve_key "$executor" "$project_dir")"
     [ -n "$KEY" ] || { echo "  probe[$executor]: NO KEY stored — run 'keys --executor $executor' first" >&2; return 2; }
+    # re-review residue (Gemini P3): a key containing a double-quote would terminate the `header = "..."`
+    # value early in the curl -K - config (unpredictable parse). Real keys never contain `"`; reject a
+    # malformed one cleanly rather than building a broken config. (mcp probe is already non-false-green
+    # on a malformed key — a broken config yields a non-2xx → non-PASS, never a false GREEN.)
+    case "$KEY" in *'"'*) unset KEY; echo "  probe[$executor]: stored key contains a double-quote — malformed; refusing (re-key)." >&2; return 2 ;; esac
     command -v curl >/dev/null 2>&1 || { unset KEY; echo "  probe[$executor]: curl absent → UNREACHABLE (install curl)" >&2; return 4; }
 
     local hdr

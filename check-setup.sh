@@ -78,7 +78,7 @@ else fail "compliance_frameworks empty AND not affirmed (set frameworks OR _no_c
 SJ="$PROJ/.claude/settings.json"
 if [ ! -f "$SJ" ]; then fail "settings.json MISSING (run forge-init to place it)"
 elif ! jq -e . "$SJ" >/dev/null 2>&1; then fail "settings.json is not valid JSON"
-elif ! jq -e '[.hooks.PreToolUse[]?.hooks[]?.command // ""] | any(test("pre-tool-use\\.sh"))' "$SJ" >/dev/null 2>&1; then
+elif ! jq -e '[.hooks.PreToolUse[]?.hooks[]?.command // ""] | any(test("\\.claude/hooks/pre-tool-use\\.sh"))' "$SJ" >/dev/null 2>&1; then
     fail "settings.json present but the PreToolUse pre-tool-use.sh hook is NOT registered — the gate will not fire (a bare {} passes file-existence but wires nothing)"
 elif grep -q '{{[A-Za-z0-9_]' "$SJ"; then
     fail "settings.json has an unresolved {{token}} (e.g. {{GATED_MCP_PREFIXES}} in a matcher → inert prod-MCP gate) — re-run forge-init"

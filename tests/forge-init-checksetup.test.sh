@@ -87,6 +87,9 @@ printf '%s\n' '{"hooks":{"PreToolUse":[{"matcher":"{{GATED_MCP_PREFIXES}}","hook
 [ "$(verdict "$NH")" = 1 ] && ok "(①) residual {{token}} in settings.json ⇒ RED (inert gate matcher)" || bad "(①) residual {{token}} wrongly GREEN"
 printf '%s\n' '{"hooks":{"PreToolUse":[{"matcher":"Write|Edit|MultiEdit|Bash","hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-tool-use.sh"}]}]}}' > "$NH/.claude/settings.json"
 [ "$(verdict "$NH")" = 0 ] && ok "(①) settings.json WITH pre-tool-use.sh hook + no residual ⇒ GREEN" || bad "(①) valid hooked settings.json wrongly RED"
+# re-review residue (gpt-5.5 P3): a substring-spoof command (basename only, not the canonical path) ⇒ RED
+printf '%s\n' '{"hooks":{"PreToolUse":[{"matcher":"Write|Edit|MultiEdit|Bash","hooks":[{"type":"command","command":"echo pre-tool-use.sh"}]}]}}' > "$NH/.claude/settings.json"
+[ "$(verdict "$NH")" = 1 ] && ok "(①+) substring-spoof command (echo pre-tool-use.sh) ⇒ RED (canonical-path check)" || bad "(①+) spoof command wrongly GREEN"
 rm -rf "$NH"
 
 # NO-CLOBBER (function-level, observed): pre-existing settings.json is left untouched

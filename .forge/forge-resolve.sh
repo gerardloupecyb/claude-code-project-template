@@ -164,6 +164,11 @@ resolve_files() {  # $1=dir  $2=answers.json  $3..=files
             esac
         done
     done < <(jq -r 'keys[]' "$answers")
+    # re-review residue (gpt-5.5 P2): a template update can introduce a NEW {{token}} the consumer's
+    # answers.json has no value for → it survives substitution. Tripwire the COPIED files (not the whole
+    # tree — consumer-owned files are out of scope) and fail-closed, so a sync never ships a residual
+    # token silently (e.g. an inert {{...}} matcher in a copied hook/config).
+    tripwire_scan "$@" || return 1
     _forge_validate_tree "$dir" || return 1
     _forge_gitleaks_scan "$dir" || return 1
     return 0

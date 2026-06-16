@@ -105,6 +105,15 @@ else
     ok "(⑦) forge-init.sh uses no raw-sed token substitution (gen_from_template ⇒ injection-safe resolver)"
 fi
 
+echo "── re-review residue — resolve_files tripwires a residual token (scoped sync fail-closed) ──"
+FIX6="$(mktemp -d)"; printf 'a {{ANSWERED}} b {{UNANSWERED}} c\n' > "$FIX6/copied.md"; ANS6="$(mktemp)"; jq -n '{ANSWERED:"x"}' > "$ANS6"
+if resolve_files "$FIX6" "$ANS6" "$FIX6/copied.md" >/dev/null 2>&1; then
+    bad "(⑧+) resolve_files GREEN with a residual {{UNANSWERED}} in a copied file (should fail-closed)"
+else
+    ok "(⑧+) resolve_files fail-closed on a residual {{token}} in a copied file (new template token, no answer)"
+fi
+rm -rf "$FIX6" "$ANS6"
+
 rm -rf "$FIX" "$FIX2" "$WORKDIR" "$ANS" "$ANS2"
 echo ""
 echo "── result: ${PASS} passed, ${FAIL} failed ──"
