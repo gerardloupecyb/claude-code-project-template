@@ -114,6 +114,40 @@ else
 fi
 rm -rf "$FIX6" "$ANS6"
 
+echo "── confirmation-pass residue (#3) — answers.json gitleaks --config is word-split-safe on a SPACED path ──"
+# (a) SOURCE guard: forge-init.sh must use an argv ARRAY for the optional --config, not an unquoted
+#     string that word-splits when PROJECT_DIR has a space; + the set -u/bash-3.2-safe empty expansion.
+if grep -qE '_AJ_CFG="--config' "$REPO/forge-init.sh"; then
+    bad "(#3a) forge-init.sh still builds _AJ_CFG as an UNQUOTED string ⇒ word-splits on a spaced PROJECT_DIR"
+elif grep -qF '_AJ_CFG=(--config' "$REPO/forge-init.sh" && grep -qF '${_AJ_CFG[@]+"${_AJ_CFG[@]}"}' "$REPO/forge-init.sh"; then
+    ok "(#3a) forge-init.sh uses an argv array + set-u/bash-3.2-safe empty expansion for --config"
+else
+    bad '(#3a) forge-init.sh argv-array form not found (expected _AJ_CFG=(--config ...) + ${_AJ_CFG[@]+"${_AJ_CFG[@]}"})'
+fi
+# (b) BEHAVIOURAL: reproduce the failure on a SPACED path — the fixed array form keeps --config <path>
+#     as ONE argv element, while the OLD unquoted form splits it (proves the test discriminates).
+SP3="$(mktemp -d)"; SPP="$SP3/sp ace"; mkdir -p "$SPP/.forge"; printf '[allowlist]\n' > "$SPP/.gitleaks.toml"; printf '{"x":"ok"}\n' > "$SPP/.forge/answers.json"
+AF3="$(mktemp)"
+bash -c '
+  set -uo pipefail
+  PROJECT_DIR="$1"; argv_file="$2"
+  gitleaks() { : > "$argv_file"; for a in "$@"; do printf "%s\n" "$a" >> "$argv_file"; done; }
+  _AJ_CFG=(); [ -f "${PROJECT_DIR}/.gitleaks.toml" ] && _AJ_CFG=(--config "${PROJECT_DIR}/.gitleaks.toml")
+  gitleaks detect --no-git --source "${PROJECT_DIR}/.forge/answers.json" ${_AJ_CFG[@]+"${_AJ_CFG[@]}"} --redact --no-banner
+  grep -qxF "${PROJECT_DIR}/.gitleaks.toml" "$argv_file" || exit 7      # fixed form failed to keep path whole
+  _OLD=""; [ -f "${PROJECT_DIR}/.gitleaks.toml" ] && _OLD="--config ${PROJECT_DIR}/.gitleaks.toml"
+  : > "$argv_file"; gitleaks detect --no-git --source "${PROJECT_DIR}/.forge/answers.json" $_OLD --redact --no-banner
+  if grep -qxF "${PROJECT_DIR}/.gitleaks.toml" "$argv_file"; then exit 8; fi   # old form kept it whole ⇒ no repro
+  exit 0
+' _ "$SPP" "$AF3"; RC3=$?
+case "$RC3" in
+  0) ok "(#3b) spaced-path: argv array keeps --config <path> as ONE arg; unquoted form splits it (regression reproduced + fixed)" ;;
+  7) bad "(#3b) argv-array form STILL split the spaced config path (fix ineffective)" ;;
+  8) bad "(#3b) could not reproduce the word-split on the spaced path (test no longer discriminates)" ;;
+  *) bad "(#3b) spaced-path regression test errored rc=$RC3" ;;
+esac
+rm -rf "$SP3" "$AF3"
+
 rm -rf "$FIX" "$FIX2" "$WORKDIR" "$ANS" "$ANS2"
 echo ""
 echo "── result: ${PASS} passed, ${FAIL} failed ──"

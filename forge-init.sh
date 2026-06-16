@@ -353,8 +353,14 @@ rm -f "$ANSWERS_TMP"
 if command -v gitleaks >/dev/null 2>&1; then
     # re-review residue (Gemini P1): honour the consumer's project-local .gitleaks.toml (custom
     # secret shapes) if present — same as _forge_gitleaks_scan; default rules alone would miss them.
-    _AJ_CFG=""; [ -f "${PROJECT_DIR}/.gitleaks.toml" ] && _AJ_CFG="--config ${PROJECT_DIR}/.gitleaks.toml"
-    gitleaks detect --no-git --source "${PROJECT_DIR}/.forge/answers.json" $_AJ_CFG --redact --no-banner >/dev/null 2>&1 || {
+    # confirmation-pass residue (gpt-5.5 + Gemini, CONVERGENT): argv ARRAY, not an unquoted string.
+    # An unquoted `--config $PROJECT_DIR/.gitleaks.toml` WORD-SPLITS when PROJECT_DIR contains a space
+    # (common on macOS, e.g. "Claude code") → gitleaks gets a broken --config + a stray positional →
+    # non-zero → the fail-closed trap below rm's answers.json + exit 5, blocking a legit spaced-path
+    # consumer that ships a .gitleaks.toml. The ${arr[@]+"${arr[@]}"} form is the set -u + bash-3.2-safe
+    # empty-array expansion (cf. line 72 POSITIONAL) — empty → nothing, set → quoted (space preserved).
+    _AJ_CFG=(); [ -f "${PROJECT_DIR}/.gitleaks.toml" ] && _AJ_CFG=(--config "${PROJECT_DIR}/.gitleaks.toml")
+    gitleaks detect --no-git --source "${PROJECT_DIR}/.forge/answers.json" ${_AJ_CFG[@]+"${_AJ_CFG[@]}"} --redact --no-banner >/dev/null 2>&1 || {
         echo "ERROR: a secret-shape was found in .forge/answers.json (an answer carried a key). Fail-closed — removing it; do not paste API keys as questionnaire answers." >&2
         rm -f "${PROJECT_DIR}/.forge/answers.json"; exit 5; }
 fi

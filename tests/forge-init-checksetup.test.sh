@@ -90,6 +90,36 @@ printf '%s\n' '{"hooks":{"PreToolUse":[{"matcher":"Write|Edit|MultiEdit|Bash","h
 # re-review residue (gpt-5.5 P3): a substring-spoof command (basename only, not the canonical path) ⇒ RED
 printf '%s\n' '{"hooks":{"PreToolUse":[{"matcher":"Write|Edit|MultiEdit|Bash","hooks":[{"type":"command","command":"echo pre-tool-use.sh"}]}]}}' > "$NH/.claude/settings.json"
 [ "$(verdict "$NH")" = 1 ] && ok "(①+) substring-spoof command (echo pre-tool-use.sh) ⇒ RED (canonical-path check)" || bad "(①+) spoof command wrongly GREEN"
+
+# confirmation-pass residue (#2, 3rd fix — SEMANTIC, not substring): the prior basename/canonical-substring
+# forms were spoofable; the single-case test above passed while the code stayed spoofable. Assert the WHOLE
+# CLASS (path-as-argument / commented / foreign-abs / suffixed / wrong-basename) ⇒ RED, and the real
+# invocation FORMS ⇒ GREEN. Lesson: tests-under-cover-the-edges — enumerate the class, not one example.
+mkset() { jq -n --arg c "$1" '{hooks:{PreToolUse:[{matcher:"Write|Edit|MultiEdit|Bash",hooks:[{type:"command",command:$c}]}]}}' > "$NH/.claude/settings.json"; }
+SPOOFS=(
+  'echo .claude/hooks/pre-tool-use.sh'                       # path is an ARGUMENT to echo, not the program
+  'true # .claude/hooks/pre-tool-use.sh'                     # commented out
+  '/some/other/project/.claude/hooks/pre-tool-use.sh'        # foreign absolute path (not this project)
+  '.claude/hooks/pre-tool-use.sh.disabled'                   # suffixed (not the .sh)
+  'printf %s .claude/hooks/pre-tool-use.sh'                  # path is an ARGUMENT to printf
+  ': .claude/hooks/pre-tool-use.sh'                          # no-op colon builtin
+  'echo pre-tool-use.sh'                                     # basename-only mention
+)
+SC_RED=0; for s in "${SPOOFS[@]}"; do mkset "$s"; [ "$(verdict "$NH")" = 1 ] && SC_RED=$((SC_RED+1)); done
+[ "$SC_RED" = "${#SPOOFS[@]}" ] \
+  && ok "(②class) all ${#SPOOFS[@]} spoof vectors (arg/comment/foreign-abs/suffix/basename) ⇒ RED — class closed" \
+  || bad "(②class) only $SC_RED/${#SPOOFS[@]} spoof vectors RED — substring-spoof CLASS still open (STILL spoofable)"
+REALS=(
+  '"$CLAUDE_PROJECT_DIR"/.claude/hooks/pre-tool-use.sh'      # canonical shipped form
+  '$CLAUDE_PROJECT_DIR/.claude/hooks/pre-tool-use.sh'        # unquoted var
+  '.claude/hooks/pre-tool-use.sh'                            # relative
+  'bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/pre-tool-use.sh' # via interpreter
+  '"$CLAUDE_PROJECT_DIR"/.claude/hooks/pre-tool-use.sh --x'  # with trailing args
+)
+SC_GREEN=0; for r in "${REALS[@]}"; do mkset "$r"; [ "$(verdict "$NH")" = 0 ] && SC_GREEN=$((SC_GREEN+1)); done
+[ "$SC_GREEN" = "${#REALS[@]}" ] \
+  && ok "(②class) all ${#REALS[@]} real invocation forms ⇒ GREEN — no false-RED on legit consumers" \
+  || bad "(②class) only $SC_GREEN/${#REALS[@]} real forms GREEN — over-tightened (would block legit setups)"
 rm -rf "$NH"
 
 # NO-CLOBBER (function-level, observed): pre-existing settings.json is left untouched

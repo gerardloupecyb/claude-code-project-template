@@ -72,17 +72,24 @@ elif [ "$cfa" = "true" ]; then pass "compliance_frameworks empty, affirmed (_no_
 else fail "compliance_frameworks empty AND not affirmed (set frameworks OR _no_compliance_frameworks_affirmed: true in forge.config.json)"; fi
 
 # (iv) settings.json placed (gate wired)
-# Validate the gate-firing hook is REGISTERED (not just that the file exists — a bare `{}`
-# passes existence but wires no hook → the gate never fires), the file is valid JSON, and
-# carries no residual {{token}} (an unresolved {{GATED_MCP_PREFIXES}} matcher → inert prod-MCP gate).
+# Validate the gate-firing hook is actually INVOKED (not just that the file exists — a bare `{}`
+# passes existence but wires no hook → the gate never fires), the file is valid JSON, and carries
+# no residual {{token}} (an unresolved {{GATED_MCP_PREFIXES}} matcher → inert prod-MCP gate).
+# SEMANTIC check (confirmation-pass residue, 3rd fix on this): the prior basename / canonical-substring
+# forms were SPOOFABLE — `echo .claude/hooks/pre-tool-use.sh`, `true # …`, `/other/project/…/…sh`,
+# `…sh.disabled` all matched a substring while NOT invoking the hook. We now parse the hooks array,
+# keep only `type=="command"` entries, and require the command to INVOKE the canonical hook as the
+# PROGRAM — anchored: optional `VAR=… ` env-prefix, optional `bash|sh `, optional `"$CLAUDE_PROJECT_DIR"/`
+# or `./` prefix, then `.claude/hooks/pre-tool-use.sh`, then whitespace/EOL. This closes the spoof CLASS
+# by construction (path-as-argument / commented / suffixed / foreign-abs-path all fail the anchor).
 SJ="$PROJ/.claude/settings.json"
 if [ ! -f "$SJ" ]; then fail "settings.json MISSING (run forge-init to place it)"
 elif ! jq -e . "$SJ" >/dev/null 2>&1; then fail "settings.json is not valid JSON"
-elif ! jq -e '[.hooks.PreToolUse[]?.hooks[]?.command // ""] | any(test("\\.claude/hooks/pre-tool-use\\.sh"))' "$SJ" >/dev/null 2>&1; then
-    fail "settings.json present but the PreToolUse pre-tool-use.sh hook is NOT registered — the gate will not fire (a bare {} passes file-existence but wires nothing)"
+elif ! jq -e '[ .hooks.PreToolUse[]?.hooks[]? | select(.type=="command") | .command // "" ] | any(test("^\\s*([A-Za-z_][A-Za-z0-9_]*=[^ ]*\\s+)*((/usr/bin/env\\s+)?(ba)?sh\\s+)?(\"?\\$\\{?CLAUDE_PROJECT_DIR\\}?\"?/|\\./)?\\.claude/hooks/pre-tool-use\\.sh(\\s|$)"))' "$SJ" >/dev/null 2>&1; then
+    fail "settings.json present but no PreToolUse command entry INVOKES .claude/hooks/pre-tool-use.sh — the gate will not fire (a bare {}, or a command that only mentions the path without running it, wires nothing)"
 elif grep -q '{{[A-Za-z0-9_]' "$SJ"; then
     fail "settings.json has an unresolved {{token}} (e.g. {{GATED_MCP_PREFIXES}} in a matcher → inert prod-MCP gate) — re-run forge-init"
-else pass "settings.json present + pre-tool-use.sh hook registered + no residual {{token}}"; fi
+else pass "settings.json present + pre-tool-use.sh hook actually invoked + no residual {{token}}"; fi
 
 # (v) githooks installed
 hp=$(git -C "$PROJ" config --get core.hooksPath 2>/dev/null || echo "")
