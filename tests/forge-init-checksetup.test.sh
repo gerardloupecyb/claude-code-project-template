@@ -91,35 +91,41 @@ printf '%s\n' '{"hooks":{"PreToolUse":[{"matcher":"Write|Edit|MultiEdit|Bash","h
 printf '%s\n' '{"hooks":{"PreToolUse":[{"matcher":"Write|Edit|MultiEdit|Bash","hooks":[{"type":"command","command":"echo pre-tool-use.sh"}]}]}}' > "$NH/.claude/settings.json"
 [ "$(verdict "$NH")" = 1 ] && ok "(①+) substring-spoof command (echo pre-tool-use.sh) ⇒ RED (canonical-path check)" || bad "(①+) spoof command wrongly GREEN"
 
-# confirmation-pass residue (#2, 3rd fix — SEMANTIC, not substring): the prior basename/canonical-substring
-# forms were spoofable; the single-case test above passed while the code stayed spoofable. Assert the WHOLE
-# CLASS (path-as-argument / commented / foreign-abs / suffixed / wrong-basename) ⇒ RED, and the real
-# invocation FORMS ⇒ GREEN. Lesson: tests-under-cover-the-edges — enumerate the class, not one example.
-mkset() { jq -n --arg c "$1" '{hooks:{PreToolUse:[{matcher:"Write|Edit|MultiEdit|Bash",hooks:[{type:"command",command:$c}]}]}}' > "$NH/.claude/settings.json"; }
-SPOOFS=(
-  'echo .claude/hooks/pre-tool-use.sh'                       # path is an ARGUMENT to echo, not the program
-  'true # .claude/hooks/pre-tool-use.sh'                     # commented out
-  '/some/other/project/.claude/hooks/pre-tool-use.sh'        # foreign absolute path (not this project)
-  '.claude/hooks/pre-tool-use.sh.disabled'                   # suffixed (not the .sh)
-  'printf %s .claude/hooks/pre-tool-use.sh'                  # path is an ARGUMENT to printf
-  ': .claude/hooks/pre-tool-use.sh'                          # no-op colon builtin
+# confirmation-pass residue (#2, Path A — STRUCTURED exact-match after the text-match BACKSTOP): three
+# regex-on-command-string fixes LEAKED non-invoking forms AND false-RED real ones — proving a regex cannot
+# parse shell grammar. The check now compares structured DATA: the canonical command (read from
+# settings.json.template, the SSOT beside the tool) must be registered as a type==command under a SINGLE
+# PreToolUse entry whose matcher COVERS the gate verbs. Assert the CLASS by construction: every leak form
+# (incl. the 3 that GREENed the regex: trailing-space-in-quote, string-assign, array-assign) ⇒ RED; a
+# wrong TUPLE (right command, wrong event / too-narrow matcher) ⇒ RED; the exact forge-placed command ⇒
+# GREEN; a broader/catch-all matcher ⇒ GREEN. EXP is derived the SAME way check-setup derives it (same SSOT).
+EXP="$(jq -r 'first(.hooks.PreToolUse[]?.hooks[]? | select(.type=="command") | .command | select(endswith("/pre-tool-use.sh"))) // empty' "$REPO/.claude/settings.json.template")"
+[ -n "$EXP" ] && ok "(②struct) canonical command derivable from settings.json.template SSOT" || bad "(②struct) could not derive canonical command from template SSOT"
+# drift guard: check-setup's pinned-constant fallback MUST equal the SSOT template command — else a run
+# detached from the template (fallback path) would validate against a stale canonical → silent mis-verdict.
+CONST="$(grep -oE "EXPECTED_HOOK_CMD='[^']*'" "$CHECK" | head -1 | sed "s/^EXPECTED_HOOK_CMD='//; s/'\$//")"
+[ "$CONST" = "$EXP" ] && ok "(②struct) check-setup pinned-constant fallback == template SSOT (no drift)" || bad "(②struct) DRIFT: check-setup constant <$CONST> != template SSOT <$EXP>"
+mkset() { jq -n --arg c "$1" --arg ev "${2:-PreToolUse}" --arg mt "${3:-Write|Edit|MultiEdit|Bash}" '{hooks:{($ev):[{matcher:$mt,hooks:[{type:"command",command:$c}]}]}}' > "$NH/.claude/settings.json"; }
+# RED class — non-invoking / non-exact (none EQUALS the exact canonical entry). First 3 GREENed the regex.
+REDS=(
+  '"$CLAUDE_PROJECT_DIR"/.claude/hooks/pre-tool-use.sh '     # trailing space INSIDE quote (leaked the regex — not the hook)
+  'X=" .claude/hooks/pre-tool-use.sh "'                      # string assignment (leaked the regex — never invokes)
+  'HOOKS=( .claude/hooks/pre-tool-use.sh )'                  # array assignment (leaked the regex — never invokes)
+  'echo .claude/hooks/pre-tool-use.sh'                       # mention (path is an argument)
   'echo pre-tool-use.sh'                                     # basename-only mention
+  '/some/other/project/.claude/hooks/pre-tool-use.sh'        # foreign absolute path
+  '.claude/hooks/pre-tool-use.sh.disabled'                   # suffixed (not the .sh)
 )
-SC_RED=0; for s in "${SPOOFS[@]}"; do mkset "$s"; [ "$(verdict "$NH")" = 1 ] && SC_RED=$((SC_RED+1)); done
-[ "$SC_RED" = "${#SPOOFS[@]}" ] \
-  && ok "(②class) all ${#SPOOFS[@]} spoof vectors (arg/comment/foreign-abs/suffix/basename) ⇒ RED — class closed" \
-  || bad "(②class) only $SC_RED/${#SPOOFS[@]} spoof vectors RED — substring-spoof CLASS still open (STILL spoofable)"
-REALS=(
-  '"$CLAUDE_PROJECT_DIR"/.claude/hooks/pre-tool-use.sh'      # canonical shipped form
-  '$CLAUDE_PROJECT_DIR/.claude/hooks/pre-tool-use.sh'        # unquoted var
-  '.claude/hooks/pre-tool-use.sh'                            # relative
-  'bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/pre-tool-use.sh' # via interpreter
-  '"$CLAUDE_PROJECT_DIR"/.claude/hooks/pre-tool-use.sh --x'  # with trailing args
-)
-SC_GREEN=0; for r in "${REALS[@]}"; do mkset "$r"; [ "$(verdict "$NH")" = 0 ] && SC_GREEN=$((SC_GREEN+1)); done
-[ "$SC_GREEN" = "${#REALS[@]}" ] \
-  && ok "(②class) all ${#REALS[@]} real invocation forms ⇒ GREEN — no false-RED on legit consumers" \
-  || bad "(②class) only $SC_GREEN/${#REALS[@]} real forms GREEN — over-tightened (would block legit setups)"
+R_RED=0; for s in "${REDS[@]}"; do mkset "$s"; [ "$(verdict "$NH")" = 1 ] && R_RED=$((R_RED+1)); done
+[ "$R_RED" = "${#REDS[@]}" ] \
+  && ok "(②struct) all ${#REDS[@]} non-invoking/non-exact commands ⇒ RED (exact-match closes the leak class by construction)" \
+  || bad "(②struct) only $R_RED/${#REDS[@]} ⇒ RED — leak class STILL open"
+# Note 1 — full TUPLE: the exact command under the WRONG event, or behind a too-narrow matcher, ⇒ RED.
+mkset "$EXP" 'PostToolUse' 'Write|Edit|MultiEdit|Bash'; [ "$(verdict "$NH")" = 1 ] && ok "(②struct) exact command under WRONG event (PostToolUse) ⇒ RED (tuple integrity)" || bad "(②struct) wrong-event exact command wrongly GREEN"
+mkset "$EXP" 'PreToolUse' 'Write|Edit'; [ "$(verdict "$NH")" = 1 ] && ok "(②struct) exact command, matcher MISSING Bash ⇒ RED (matcher coverage)" || bad "(②struct) too-narrow matcher wrongly GREEN"
+# GREEN — the exact forge-placed canonical command, with the default and a BROADER matcher (coverage, not exact).
+mkset "$EXP" 'PreToolUse' 'Write|Edit|MultiEdit|Bash'; [ "$(verdict "$NH")" = 0 ] && ok "(②struct) exact forge-placed command + full matcher ⇒ GREEN" || bad "(②struct) forge-placed canonical wrongly RED"
+mkset "$EXP" 'PreToolUse' 'Write|Edit|MultiEdit|Bash|Task'; [ "$(verdict "$NH")" = 0 ] && ok "(②struct) exact command + BROADER matcher (Task added) ⇒ GREEN (coverage)" || bad "(②struct) broader matcher wrongly RED"
 rm -rf "$NH"
 
 # NO-CLOBBER (function-level, observed): pre-existing settings.json is left untouched

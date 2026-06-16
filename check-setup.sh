@@ -71,25 +71,40 @@ if [ "${cfc:-0}" -gt 0 ]; then pass "compliance_frameworks configured (${cfc})"
 elif [ "$cfa" = "true" ]; then pass "compliance_frameworks empty, affirmed (_no_compliance_frameworks_affirmed: true)"
 else fail "compliance_frameworks empty AND not affirmed (set frameworks OR _no_compliance_frameworks_affirmed: true in forge.config.json)"; fi
 
-# (iv) settings.json placed (gate wired)
-# Validate the gate-firing hook is actually INVOKED (not just that the file exists — a bare `{}`
-# passes existence but wires no hook → the gate never fires), the file is valid JSON, and carries
-# no residual {{token}} (an unresolved {{GATED_MCP_PREFIXES}} matcher → inert prod-MCP gate).
-# SEMANTIC check (confirmation-pass residue, 3rd fix on this): the prior basename / canonical-substring
-# forms were SPOOFABLE — `echo .claude/hooks/pre-tool-use.sh`, `true # …`, `/other/project/…/…sh`,
-# `…sh.disabled` all matched a substring while NOT invoking the hook. We now parse the hooks array,
-# keep only `type=="command"` entries, and require the command to INVOKE the canonical hook as the
-# PROGRAM — anchored: optional `VAR=… ` env-prefix, optional `bash|sh `, optional `"$CLAUDE_PROJECT_DIR"/`
-# or `./` prefix, then `.claude/hooks/pre-tool-use.sh`, then whitespace/EOL. This closes the spoof CLASS
-# by construction (path-as-argument / commented / suffixed / foreign-abs-path all fail the anchor).
+# (iv) settings.json placed (gate wired) — STRUCTURED exact-match (Path A — post-backstop paradigm shift).
+# Three text-match fixes proved a regex on the command STRING cannot parse shell grammar: it both LEAKED
+# non-invoking forms (`"…/pre-tool-use.sh "` trailing-space-in-quote, `X="…"` / `HOOKS=(…)` assignments,
+# bare path mentions) AND false-RED real ones (fully-quoted, exec, bash -c, source). So we abandon
+# text-match and compare STRUCTURED DATA: the canonical command is read from settings.json.template (the
+# single source of truth, which ships beside this tool), and we assert the placed settings.json registers
+# THAT EXACT command as a `type=="command"` hook under a SINGLE PreToolUse entry whose matcher COVERS the
+# gate verbs (Write/Edit/MultiEdit/Bash). By construction a non-invoking command (≠ the exact string) → RED;
+# the forge-placed command → GREEN. The full TUPLE (event+matcher+command in the SAME entry) is matched, so
+# a hook under the wrong event or behind a too-narrow matcher cannot false-GREEN. A residual {{token}}
+# anywhere in settings.json still REDs (separate check below — Note 2: token non-resolution must not GREEN).
 SJ="$PROJ/.claude/settings.json"
+SJT="$(dirname "$0")/.claude/settings.json.template"
+# canonical gate command = the SSOT template's PreToolUse command ending in /pre-tool-use.sh (NOT the
+# -git-commit hook); pinned-constant fallback keeps the check usable if the tool is run detached from
+# the template (a suite test pins this constant == the template's command, so the SSOT never drifts).
+EXPECTED_HOOK_CMD='"$CLAUDE_PROJECT_DIR"/.claude/hooks/pre-tool-use.sh'
+if [ -f "$SJT" ]; then
+    _t="$(jq -r 'first(.hooks.PreToolUse[]?.hooks[]? | select(.type=="command") | .command | select(endswith("/pre-tool-use.sh"))) // empty' "$SJT" 2>/dev/null)"
+    [ -n "$_t" ] && EXPECTED_HOOK_CMD="$_t"
+fi
 if [ ! -f "$SJ" ]; then fail "settings.json MISSING (run forge-init to place it)"
 elif ! jq -e . "$SJ" >/dev/null 2>&1; then fail "settings.json is not valid JSON"
-elif ! jq -e '[ .hooks.PreToolUse[]?.hooks[]? | select(.type=="command") | .command // "" ] | any(test("^\\s*([A-Za-z_][A-Za-z0-9_]*=[^ ]*\\s+)*((/usr/bin/env\\s+)?(ba)?sh\\s+)?(\"?\\$\\{?CLAUDE_PROJECT_DIR\\}?\"?/|\\./)?\\.claude/hooks/pre-tool-use\\.sh(\\s|$)"))' "$SJ" >/dev/null 2>&1; then
-    fail "settings.json present but no PreToolUse command entry INVOKES .claude/hooks/pre-tool-use.sh — the gate will not fire (a bare {}, or a command that only mentions the path without running it, wires nothing)"
+elif ! jq -e --arg cmd "$EXPECTED_HOOK_CMD" '
+    [ .hooks.PreToolUse[]?
+      | . as $e | ($e.hooks // []) as $h
+      | select( [ $h[] | select(.type=="command") | .command ] | index($cmd) )      # entry registers the EXACT command
+      | ($e.matcher // "") as $m
+      | select( ["Write","Edit","MultiEdit","Bash"] | all( . as $v | $v | test($m) ) )  # ...and its matcher COVERS the gate verbs
+    ] | length > 0' "$SJ" >/dev/null 2>&1; then
+    fail "settings.json present but no PreToolUse entry registers the canonical gate command ($EXPECTED_HOOK_CMD) as a type==command under a matcher covering Write/Edit/MultiEdit/Bash — the gate is not wired as forge placed it (a command that only mentions/encodes the path, or a too-narrow matcher, does NOT count; re-run forge-init)"
 elif grep -q '{{[A-Za-z0-9_]' "$SJ"; then
     fail "settings.json has an unresolved {{token}} (e.g. {{GATED_MCP_PREFIXES}} in a matcher → inert prod-MCP gate) — re-run forge-init"
-else pass "settings.json present + pre-tool-use.sh hook actually invoked + no residual {{token}}"; fi
+else pass "settings.json present + canonical pre-tool-use.sh hook registered (exact command, covering matcher) + no residual {{token}}"; fi
 
 # (v) githooks installed
 hp=$(git -C "$PROJ" config --get core.hooksPath 2>/dev/null || echo "")
