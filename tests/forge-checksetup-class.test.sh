@@ -32,7 +32,8 @@ mkbase() {  # GREEN-base project with cross_vendor_voices; extra jq filter via $
             model_router:{cross_vendor_voices:{openai:["codex-cli","openrouter"], google:["gemini-cli"]}}}' \
         > "$d/.claude/forge.config.json"
     jq -n '{_no_protected_domains_affirmed:true, protected_domains:[], gated_mcp:[]}' > "$d/.claude/gate.config.json"
-    printf '{}' > "$d/.claude/settings.json"
+    # settings.json must register the pre-tool-use.sh hook (review batch ① — bare {} no longer GREEN)
+    printf '%s' '{"hooks":{"PreToolUse":[{"matcher":"Write|Edit|MultiEdit|Bash","hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-tool-use.sh"}]}]}}' > "$d/.claude/settings.json"
     ( cd "$d" && git init -q && git config core.hooksPath .githooks )
     if [ -n "${1:-}" ]; then jq "$1" "$d/.claude/forge.config.json" > "$d/.claude/fc.tmp" && mv "$d/.claude/fc.tmp" "$d/.claude/forge.config.json"; fi
     printf '%s' "$d"

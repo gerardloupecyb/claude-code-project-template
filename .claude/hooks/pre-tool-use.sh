@@ -102,7 +102,7 @@ done < <(jq -j '.protected_domains[]? | ([(.name//""),(.marker//""),(.file_patte
 # ALWAYS-ON (AC-2-2): built from dep_ecosystems, INDEPENDENT of protected_domains, with a built-in default
 # so an empty/absent dep_ecosystems cannot silently disable it. An empty/greenfield protected_domains
 # disables only the domain skill-gate above — it can NEVER silently kill SCAG here.
-# Requires .skill-locks/scag-approved marker (created by /supply-chain-audit on APPROVE/CONDITIONAL).
+# Requires .skill-locks/scag-approved marker (created on a supply-chain audit APPROVE/CONDITIONAL verdict).
 # One-shot: marker is consumed (deleted) on first allowed install.
 # See .claude/rules/supply-chain-audit.md and docs/architecture/forge/dependency-install-gate.md
 if [ "$TOOL_NAME" = "Bash" ]; then
@@ -120,7 +120,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
       echo "A supply-chain audit is required before installing external dependencies."
       echo ""
       echo "1. Clone/download the package to a temp dir"
-      echo "2. Run: /supply-chain-audit /tmp/{pkg}-audit --package {name} --version {ver}"
+      echo "2. Run your supply-chain audit on it (SAST + provenance + maintainer/version review)"
       echo "3. On APPROVE or CONDITIONAL verdict:"
       echo "   mkdir -p .skill-locks && touch .skill-locks/scag-approved"
       echo "4. Re-run this install command"

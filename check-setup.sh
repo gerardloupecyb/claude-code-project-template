@@ -54,7 +54,7 @@ if [ -n "$pn" ]; then pass "project_name set (\"$pn\")"; else fail "project_name
 # (ii) protected_domains configured OR affirmed-none (positive flag)
 pdc=0; pda="false"
 if [ -f "$GC" ]; then
-    pdc=$(jq '(.protected_domains // []) | length' "$GC" 2>/dev/null || echo 0)
+    pdc=$(jq '(.protected_domains // []) | if type=="array" then length else 0 end' "$GC" 2>/dev/null || echo 0)
     pda=$(jq -r '._no_protected_domains_affirmed // false' "$GC" 2>/dev/null || echo false)
 fi
 if [ "${pdc:-0}" -gt 0 ]; then pass "protected_domains configured (${pdc})"
@@ -64,7 +64,7 @@ else fail "protected_domains empty AND not affirmed (set domains OR _no_protecte
 # (iii) compliance_frameworks configured OR affirmed-none (positive flag)
 cfc=0; cfa="false"
 if [ -f "$FC" ]; then
-    cfc=$(jq '(.compliance_frameworks // []) | length' "$FC" 2>/dev/null || echo 0)
+    cfc=$(jq '(.compliance_frameworks // []) | if type=="array" then length else 0 end' "$FC" 2>/dev/null || echo 0)
     cfa=$(jq -r '._no_compliance_frameworks_affirmed // false' "$FC" 2>/dev/null || echo false)
 fi
 if [ "${cfc:-0}" -gt 0 ]; then pass "compliance_frameworks configured (${cfc})"
@@ -72,7 +72,17 @@ elif [ "$cfa" = "true" ]; then pass "compliance_frameworks empty, affirmed (_no_
 else fail "compliance_frameworks empty AND not affirmed (set frameworks OR _no_compliance_frameworks_affirmed: true in forge.config.json)"; fi
 
 # (iv) settings.json placed (gate wired)
-if [ -f "$PROJ/.claude/settings.json" ]; then pass "settings.json present (hooks registered)"; else fail "settings.json MISSING (run forge-init to place it)"; fi
+# Validate the gate-firing hook is REGISTERED (not just that the file exists — a bare `{}`
+# passes existence but wires no hook → the gate never fires), the file is valid JSON, and
+# carries no residual {{token}} (an unresolved {{GATED_MCP_PREFIXES}} matcher → inert prod-MCP gate).
+SJ="$PROJ/.claude/settings.json"
+if [ ! -f "$SJ" ]; then fail "settings.json MISSING (run forge-init to place it)"
+elif ! jq -e . "$SJ" >/dev/null 2>&1; then fail "settings.json is not valid JSON"
+elif ! jq -e '[.hooks.PreToolUse[]?.hooks[]?.command // ""] | any(test("pre-tool-use\\.sh"))' "$SJ" >/dev/null 2>&1; then
+    fail "settings.json present but the PreToolUse pre-tool-use.sh hook is NOT registered — the gate will not fire (a bare {} passes file-existence but wires nothing)"
+elif grep -q '{{[A-Za-z0-9_]' "$SJ"; then
+    fail "settings.json has an unresolved {{token}} (e.g. {{GATED_MCP_PREFIXES}} in a matcher → inert prod-MCP gate) — re-run forge-init"
+else pass "settings.json present + pre-tool-use.sh hook registered + no residual {{token}}"; fi
 
 # (v) githooks installed
 hp=$(git -C "$PROJ" config --get core.hooksPath 2>/dev/null || echo "")

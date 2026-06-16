@@ -252,33 +252,42 @@ fi
 # they are seeded fresh per project. {{PROJECT_NAME}}/{{DATE}}/… are resolved here
 # (legacy sed vocabulary); the extracted tree's {{PROJECT}} tokens are resolved by
 # the AC-4-7 resolver.
-gen_from_template() {  # $1=template path  $2=output path  (extra sed exprs follow)
+# injection-safe (review batch ⑦): a raw sed token-substitution corrupts/breaks on
+# operator values containing `&`, a pipe, `\`, or newlines (PROJECT_NAME is operator input).
+# Use the SAME awk/ENVIRON literal substitution as the AC-4-7 resolver — values round-trip
+# literally, never re-evaluated. Args are TOKEN=VALUE pairs (value may contain any char).
+gen_from_template() {  # $1=template path  $2=output path  $3..=TOKEN=VALUE
     local tpl="$1" out="$2"; shift 2
     [ -f "$tpl" ] || { echo "  WARN: template missing, skipped: ${tpl#${TEMPLATE_DIR}/}" >&2; return 0; }
     mkdir -p "$(dirname "$out")"
-    sed "$@" "$tpl" > "$out"
+    cp "$tpl" "$out"
+    local pair tok val
+    for pair in "$@"; do
+        tok="${pair%%=*}"; val="${pair#*=}"
+        _forge_sub_text_file "$out" "$tok" "$val" || { echo "  ERROR: gen_from_template substitution failed ($tok) for ${out#${PROJECT_DIR}/}" >&2; return 1; }
+    done
 }
 
 echo "→ Generating fresh scaffolds..."
 gen_from_template "${TEMPLATE_DIR}/memory/MEMORY.md.template" "${PROJECT_DIR}/memory/MEMORY.md" \
-    -e "s|{{PROJECT_NAME}}|${PROJECT_NAME}|g" -e "s|{{DATE}}|${TODAY}|g" -e "s|{{PROJECT_PATH}}|${PROJECT_DIR}|g"
+    "PROJECT_NAME=${PROJECT_NAME}" "DATE=${TODAY}" "PROJECT_PATH=${PROJECT_DIR}"
 gen_from_template "${TEMPLATE_DIR}/LESSONS.md.template" "${PROJECT_DIR}/LESSONS.md" \
-    -e "s|{{PROJECT_NAME}}|${PROJECT_NAME}|g"
+    "PROJECT_NAME=${PROJECT_NAME}"
 gen_from_template "${TEMPLATE_DIR}/DECISIONS.md.template" "${PROJECT_DIR}/DECISIONS.md" \
-    -e "s|{{PROJECT_NAME}}|${PROJECT_NAME}|g"
+    "PROJECT_NAME=${PROJECT_NAME}"
 gen_from_template "${TEMPLATE_DIR}/.claude/integrations.md.template" "${PROJECT_DIR}/.claude/integrations.md" \
-    -e "s|{{PROJECT_NAME}}|${PROJECT_NAME}|g"
+    "PROJECT_NAME=${PROJECT_NAME}"
 gen_from_template "${TEMPLATE_DIR}/docs/architecture/contexts.md.template" "${PROJECT_DIR}/docs/architecture/contexts.md" \
-    -e "s|{{PROJECT_NAME}}|${PROJECT_NAME}|g"
+    "PROJECT_NAME=${PROJECT_NAME}"
 gen_from_template "${TEMPLATE_DIR}/.codex/config.toml.template" "${PROJECT_DIR}/.codex/config.toml" \
-    -e "s|{{PROJECT_NAME}}|${PROJECT_NAME}|g"
+    "PROJECT_NAME=${PROJECT_NAME}"
 
-# reference files (glob of *.md.template)
+# reference files (glob of *.md.template) — same injection-safe path
 shopt -s nullglob
 for ref_template in "${TEMPLATE_DIR}"/docs/references/*.md.template; do
     ref_name=$(basename "$ref_template" .template)
-    sed -e "s|{{PROJECT_NAME}}|${PROJECT_NAME}|g" -e "s|{{PROJECT_ROOT}}|${PROJECT_DIR}|g" \
-        "$ref_template" > "${PROJECT_DIR}/docs/references/${ref_name}"
+    gen_from_template "$ref_template" "${PROJECT_DIR}/docs/references/${ref_name}" \
+        "PROJECT_NAME=${PROJECT_NAME}" "PROJECT_ROOT=${PROJECT_DIR}"
 done
 shopt -u nullglob
 
@@ -332,13 +341,20 @@ if [ -n "$ANSWERS_FILE" ]; then
     jq -s '.[0] * .[1]' "$ANSWERS_TMP" "$ANSWERS_FILE" > "$MERGED" && mv "$MERGED" "$ANSWERS_TMP"
 fi
 resolve_tree "$PROJECT_DIR" "$ANSWERS_TMP" || { echo "ERROR: token resolution failed (fail-closed). See above." >&2; rm -f "$ANSWERS_TMP"; exit 5; }
-# persist the merged answers so sync-project.sh can RE-RESOLVE after a template
-# overwrite (else a sync would re-tokenize the consumer's resolved files). Answers
-# are non-secret by construction — the resolver's gitleaks pass fails closed on a
-# key-shape, so a secret can never reach this file.
+# persist the merged answers so sync-project.sh can RE-RESOLVE after a template overwrite
+# (else a sync would re-tokenize the consumer's resolved files).
+# review batch ⑩: answers.json is gitignored (.gitignore ships `.forge/answers.json`) so it
+# can never be tracked, AND it is scanned explicitly here — the resolve_tree gitleaks pass scans
+# the materialized TREE, but an ORPHAN-token answer (a value with no matching tree token, e.g. a
+# key pasted into --answers) is never substituted → never reaches the tree → unseen there.
 mkdir -p "${PROJECT_DIR}/.forge"
 cp "$ANSWERS_TMP" "${PROJECT_DIR}/.forge/answers.json"
 rm -f "$ANSWERS_TMP"
+if command -v gitleaks >/dev/null 2>&1; then
+    gitleaks detect --no-git --source "${PROJECT_DIR}/.forge/answers.json" --redact --no-banner >/dev/null 2>&1 || {
+        echo "ERROR: a secret-shape was found in .forge/answers.json (an answer carried a key). Fail-closed — removing it; do not paste API keys as questionnaire answers." >&2
+        rm -f "${PROJECT_DIR}/.forge/answers.json"; exit 5; }
+fi
 
 # ── settings.json placement (AC-4-2) — the resolver already substituted the
 #    template's tokens; place it as the consumer settings.json with NO-CLOBBER,

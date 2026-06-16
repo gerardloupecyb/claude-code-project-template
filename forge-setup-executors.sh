@@ -203,10 +203,16 @@ _classify_probe() {  # $1=http_status
     esac
 }
 
-# .env.local is gitignored? — git check-ignore (in a repo) OR a .gitignore pattern grep.
+# .env.local is gitignored? Inside a git repo, `git check-ignore` is AUTHORITATIVE —
+# a NOT-ignored verdict must NEVER be overridden by a looser .gitignore-pattern grep
+# (a bare `.env` line false-matches `.env.local` → a key would be written to a TRACKED
+# file). Only fall back to the grep when the dir is NOT a git repo (check-ignore absent).
 _env_local_ignored() {  # $1=project-dir
     local d="$1"
-    ( cd "$d" && git rev-parse --git-dir >/dev/null 2>&1 && git check-ignore -q .env.local ) 2>/dev/null && return 0
+    if ( cd "$d" && git rev-parse --git-dir >/dev/null 2>&1 ); then
+        ( cd "$d" && git check-ignore -q .env.local ) 2>/dev/null   # authoritative; its rc IS the answer
+        return $?
+    fi
     grep -qE '(^|/)\.env(\.local|\.\*)?[[:space:]]*$' "$d/.gitignore" 2>/dev/null
 }
 
@@ -251,15 +257,15 @@ cmd_keys() {
             echo "  ✓ ${var} stored in .env.local (chmod 600, gitignored)" >&2
             ;;
         keychain)
-            # CAVEAT: macOS `security add-generic-password -w VALUE` puts VALUE in argv
-            # for the lifetime of the call (no stdin-password mode exists). Mitigated:
-            # single-operator box, value never lands on disk/tracked file. The probe READ
-            # path is argv-safe (find-generic-password -w emits to stdout, key→env only).
-            security add-generic-password -U -a "$USER" -s "$var" -w "$KEY" >/dev/null 2>&1 \
-                && echo "  ✓ ${var} stored in login keychain (service=${var})" >&2 \
-                || { echo "keys: keychain store failed" >&2; unset KEY; return 1; }
-            ;;
-        *) echo "keys: unknown --store '$store' (env-local|keychain)" >&2; unset KEY; return 2 ;;
+            # DROPPED for v1 (review batch): macOS `security add-generic-password -w VALUE`
+            # exposes VALUE in argv (no stdin-password mode), violating the NEVER-argv
+            # invariant on this [SENSIBLE] write path. The argv-safe `.env.local` store is
+            # the default. An argv-safe keychain write (interactive tty prompt) is Phase 22.1.
+            echo "keys: --store keychain is DROPPED for v1 (the 'security -w' write exposes the key in argv)." >&2
+            echo "      Use the argv-safe default (.env.local). The probe READ path already supports keychain;" >&2
+            echo "      an argv-safe keychain WRITE (tty prompt) is Phase 22.1." >&2
+            unset KEY; return 2 ;;
+        *) echo "keys: unknown --store '$store' (env-local; keychain DROPPED for v1)" >&2; unset KEY; return 2 ;;
     esac
     unset KEY
     return 0
@@ -288,8 +294,17 @@ cmd_probe() {
     [ -n "$executor" ] || { echo "probe: --executor required" >&2; return 2; }
 
     local pinned; pinned="$(_endpoint_for "$executor")" || { echo "probe[$executor]: no pinned endpoint — unknown executor" >&2; return 2; }
+    # EXACT-TUPLE pinning (scheme+host+PATH): a supplied --endpoint must EQUAL the pinned
+    # auth-gated endpoint byte-for-byte. Host-only acceptance would let the PUBLIC
+    # `…/api/v1/models` (200 with any key) through → false-GREEN. The default is the pinned
+    # endpoint; --endpoint can only re-state it (or is rejected). (_endpoint_allowed stays a
+    # host/scheme defense-in-depth helper; the exact match is the real guard.)
     if [ -n "$endpoint" ]; then
-        _endpoint_allowed "$endpoint" || { echo "probe[$executor]: endpoint '$endpoint' host NOT in the pinned allowlist — rejected" >&2; return 3; }
+        if [ "$endpoint" != "$pinned" ]; then
+            echo "probe[$executor]: --endpoint must EXACTLY equal the pinned auth-gated endpoint ($pinned)." >&2
+            echo "                  Arbitrary endpoints — incl. the PUBLIC ${pinned%/*}/models — are rejected (false-green guard)." >&2
+            return 3
+        fi
     else
         endpoint="$pinned"
     fi
@@ -396,17 +411,25 @@ cmd_mcp() {
             script="$(jq -r '.mcpServers.openrouter.args[1] // ""' "$MCP")"
             [ -n "$script" ] || { echo "  mcp probe: openrouter entry has no launch script" >&2; return 2; }
             resolve_slice="${script%%; exec*}"   # the key-resolution+export, verbatim from .mcp.json
-            # run the SAME resolution the GUI runs; report whether the key landed in the spawn env
-            local landed
-            landed="$(bash -c "${resolve_slice}; if [ -n \"\${OPENROUTER_API_KEY:-}\" ]; then echo RESOLVED; else echo EMPTY; fi" 2>/dev/null)"
-            if [ "$landed" != "RESOLVED" ]; then
-                echo "  mcp probe[openrouter] → FAIL launch-env (key did NOT resolve into the spawn env — the false-green condition)" >&2
-                return 10
-            fi
-            # auth-probe the RESOLVED key: cmd_probe re-resolves from the SAME source
-            # (keychain → .env.local) the wrapper uses, then hits the pinned /api/v1/key.
-            cmd_probe --executor openrouter --project-dir "$abs"
-            return $?
+            # F13 (review fix): run the auth probe in the SAME child shell that ran the
+            # launcher's resolve slice, so curl authenticates with the EXACT key the
+            # .mcp.json launcher exports — NOT an independent re-resolution that could
+            # diverge from the launcher (the old cmd_probe call re-read env/.env.local/
+            # keychain → could PASS on a good .env.local key while the launcher exported a
+            # bad one). Key reaches curl via -K - stdin (printf builtin → no argv); empty
+            # key (launch-env gap) → status 000; body discarded; status only is printed.
+            local op_endpoint; op_endpoint="$(_endpoint_for openrouter)"
+            local status
+            status="$(bash -c "${resolve_slice}
+if [ -z \"\${OPENROUTER_API_KEY:-}\" ]; then printf '000'; exit 0; fi
+printf 'header = \"Authorization: Bearer %s\"\nurl = \"%s\"\n' \"\$OPENROUTER_API_KEY\" \"${op_endpoint}\" | curl -K - --silent --show-error --max-time 15 --output /dev/null --write-out '%{http_code}'" 2>/dev/null)"
+            local outcome; outcome="$(_classify_probe "$status")"
+            case "$outcome" in
+                PASS)        echo "  mcp probe[openrouter] ${op_endpoint} (via .mcp.json launcher) → PASS (HTTP $status)"; return 0 ;;
+                UNREACHABLE) echo "  mcp probe[openrouter] → FAIL launch-env/unreachable (HTTP $status) — key did NOT resolve into the spawn env, or network" >&2; return 10 ;;
+                FAIL-auth)   echo "  mcp probe[openrouter] → FAIL-auth (HTTP $status) — the launcher resolved an INVALID key" >&2; return 10 ;;
+                *)           echo "  mcp probe[openrouter] → ${outcome} (HTTP $status) — visible non-PASS" >&2; return 12 ;;
+            esac
             ;;
         *) echo "mcp: unknown action '$action' (wire|probe)" >&2; return 2 ;;
     esac

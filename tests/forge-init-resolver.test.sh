@@ -82,6 +82,29 @@ else
     printf '  \033[33mSKIP\033[0m (6) S/F1 — gitleaks not installed in this env\n'
 fi
 
+echo "── review batch ⑥ — missing-tool ⇒ FAIL-CLOSED (not WARN+pass) ──"
+# gitleaks lives in /usr/local/bin; a PATH of /usr/bin:/bin keeps jq+python3 but drops gitleaks.
+FIX5="$(mktemp -d)"; printf 'x: {{Z}}\n' > "$FIX5/f.md"; ANS5="$(mktemp)"; jq -n '{Z:"ok"}' > "$ANS5"
+if command -v gitleaks >/dev/null 2>&1 && [ "$(command -v gitleaks)" != "/usr/bin/gitleaks" ]; then
+    if ( PATH="/usr/bin:/bin"; command -v gitleaks >/dev/null 2>&1 ) ; then
+        printf '  \033[33mSKIP\033[0m (⑥) gitleaks reachable via /usr/bin — cannot simulate absence here\n'
+    elif ( PATH="/usr/bin:/bin"; resolve_tree "$FIX5" "$ANS5" ) >/dev/null 2>&1; then
+        bad "(⑥) resolve_tree GREEN with gitleaks absent — fail-OPEN regression"
+    else
+        ok "(⑥) gitleaks absent ⇒ resolve_tree fail-CLOSED (non-zero) — S/F1 mandatory"
+    fi
+else
+    printf '  \033[33mSKIP\033[0m (⑥) gitleaks not installed / in /usr/bin\n'
+fi
+rm -rf "$FIX5" "$ANS5"
+
+echo "── review batch ⑦ — forge-init has no raw-sed token substitution ──"
+if grep -qF 's|{{' "$REPO/forge-init.sh"; then
+    bad "(⑦) forge-init.sh still uses raw 'sed s|{{TOKEN}}|VALUE' (operator-value injection: & | \\)"
+else
+    ok "(⑦) forge-init.sh uses no raw-sed token substitution (gen_from_template ⇒ injection-safe resolver)"
+fi
+
 rm -rf "$FIX" "$FIX2" "$WORKDIR" "$ANS" "$ANS2"
 echo ""
 echo "── result: ${PASS} passed, ${FAIL} failed ──"

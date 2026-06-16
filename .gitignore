@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 
+# FORGE — resolved questionnaire answers (may carry sensitive values; never track)
+.forge/answers.json
+
 # Claude workspace (session-scoped, not versioned)
 .claude/workspace/
 

@@ -45,16 +45,17 @@ echo "  Project:   ${PROJECT_DIR}"
 echo ""
 
 NEW=0; MODIFIED=0; OK=0; SKIPPED=0
+COPIED=()   # review batch ⑧: the files actually overwritten this --apply (re-resolve scope)
 
 sync_file() {  # $1=relative path (overwrite-on-apply)
     local rel="$1" src="${TEMPLATE_DIR}/$1" dst="${PROJECT_DIR}/$1"
     [ -f "$src" ] || return 0
     if [ ! -f "$dst" ]; then
         echo "  [NEW]       ${rel}"; NEW=$((NEW+1))
-        if [ "$MODE" = "--apply" ]; then mkdir -p "$(dirname "$dst")"; cp "$src" "$dst"; case "$rel" in *.sh) chmod +x "$dst" 2>/dev/null || true;; esac; fi
+        if [ "$MODE" = "--apply" ]; then mkdir -p "$(dirname "$dst")"; cp "$src" "$dst"; case "$rel" in *.sh) chmod +x "$dst" 2>/dev/null || true;; esac; COPIED+=("$dst"); fi
     elif ! diff -q "$src" "$dst" >/dev/null 2>&1; then
         echo "  [MODIFIED]  ${rel}"; MODIFIED=$((MODIFIED+1))
-        if [ "$MODE" = "--apply" ]; then cp "$src" "$dst"; case "$rel" in *.sh) chmod +x "$dst" 2>/dev/null || true;; esac; fi
+        if [ "$MODE" = "--apply" ]; then cp "$src" "$dst"; case "$rel" in *.sh) chmod +x "$dst" 2>/dev/null || true;; esac; COPIED+=("$dst"); fi
     else
         OK=$((OK+1))
     fi
@@ -105,13 +106,17 @@ if [ "$MODE" = "--apply" ]; then
     printf 'forge-template-version: %s\nsynced_from: %s\n' "$TPL_SHA" "$TEMPLATE_DIR" > "${PROJECT_DIR}/.forge/forge-template-version"
     echo ""
     echo "→ wrote .forge/forge-template-version (${TPL_SHA})"
-    # re-resolve {{tokens}} the overwrite re-introduced, from the consumer's stored
-    # answers — keeps the consumer's resolved files resolved (non-destructive sync).
-    if [ $((NEW + MODIFIED)) -gt 0 ] && declare -F resolve_tree >/dev/null 2>&1 && [ -f "${PROJECT_DIR}/.forge/answers.json" ]; then
-        if resolve_tree "$PROJECT_DIR" "${PROJECT_DIR}/.forge/answers.json" >/dev/null 2>&1; then
-            echo "→ re-resolved {{tokens}} from .forge/answers.json (consumer files kept resolved)"
+    # re-resolve {{tokens}} the overwrite re-introduced, SCOPED to the files this sync actually
+    # copied (review batch ⑧). A wholesale resolve_tree over $PROJECT_DIR would re-tokenize
+    # consumer-OWNED [SKIP] files (CLAUDE.md / settings.json / a doc with a literal {{PROJECT}}
+    # example) — undoing the [SKIP] protection. resolve_files touches only COPIED + runs the same
+    # fail-closed validity + secret backstop. A failed re-resolve is fail-closed (non-zero exit).
+    if [ "${#COPIED[@]}" -gt 0 ] && declare -F resolve_files >/dev/null 2>&1 && [ -f "${PROJECT_DIR}/.forge/answers.json" ]; then
+        if resolve_files "$PROJECT_DIR" "${PROJECT_DIR}/.forge/answers.json" "${COPIED[@]}"; then
+            echo "→ re-resolved {{tokens}} in the ${#COPIED[@]} synced file(s) from .forge/answers.json (consumer-owned files untouched)"
         else
-            echo "  WARN: re-resolution after sync failed — review residual {{tokens}} manually." >&2
+            echo "  ERROR: re-resolution after sync failed (fail-closed) — review residual {{tokens}} / secret-shape above." >&2
+            exit 5
         fi
     fi
 fi

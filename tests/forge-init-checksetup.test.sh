@@ -24,7 +24,9 @@ mkproj() {
     mkdir -p "$d/.claude" "$d/.githooks"
     printf '%s\n' "$1" > "$d/.claude/forge.config.json"
     printf '%s\n' "$2" > "$d/.claude/gate.config.json"
-    printf '{}\n' > "$d/.claude/settings.json"
+    # settings.json must REGISTER the pre-tool-use.sh hook (review batch ①): a bare {} no
+    # longer passes — check-setup validates the gate-firing hook is wired, not just present.
+    printf '%s\n' '{"hooks":{"PreToolUse":[{"matcher":"Write|Edit|MultiEdit|Bash","hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-tool-use.sh"}]}]}}' > "$d/.claude/settings.json"
     ( cd "$d" && git init -q && git config core.hooksPath .githooks )
     echo "$d"
 }
@@ -73,6 +75,19 @@ PROJ="$WP/WireProj"
 [ ! -e "$PROJ/.claude/settings.json.template" ] && ok "(place) template consumed" || bad "(place) template not consumed"
 grep -qiE '"matcher":[^,]*(azure|n8n|ghl)' "$PROJ/.claude/settings.json" && bad "(place) LEAKED a Loupe domain matcher" || ok "(place) no Loupe domain matcher in settings.json"
 [ "$(git -C "$PROJ" config --get core.hooksPath 2>/dev/null)" = ".githooks" ] && ok "(hooks) core.hooksPath = .githooks" || bad "(hooks) hooksPath not set"
+
+# ① review batch — check-setup validates the gate-firing hook is REGISTERED, not just present
+NH="$(mktemp -d)"; mkdir -p "$NH/.claude" "$NH/.githooks"
+printf '{"project_name":"Acme","_no_compliance_frameworks_affirmed":true}\n' > "$NH/.claude/forge.config.json"
+printf '{"protected_domains":[],"_no_protected_domains_affirmed":true}\n' > "$NH/.claude/gate.config.json"
+( cd "$NH" && git init -q && git config core.hooksPath .githooks )
+printf '{}\n' > "$NH/.claude/settings.json"
+[ "$(verdict "$NH")" = 1 ] && ok "(①) bare {} settings.json (no pre-tool-use.sh hook) ⇒ RED (gate would not fire)" || bad "(①) bare {} settings.json wrongly GREEN"
+printf '%s\n' '{"hooks":{"PreToolUse":[{"matcher":"{{GATED_MCP_PREFIXES}}","hooks":[{"type":"command","command":"x/pre-tool-use.sh"}]}]}}' > "$NH/.claude/settings.json"
+[ "$(verdict "$NH")" = 1 ] && ok "(①) residual {{token}} in settings.json ⇒ RED (inert gate matcher)" || bad "(①) residual {{token}} wrongly GREEN"
+printf '%s\n' '{"hooks":{"PreToolUse":[{"matcher":"Write|Edit|MultiEdit|Bash","hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-tool-use.sh"}]}]}}' > "$NH/.claude/settings.json"
+[ "$(verdict "$NH")" = 0 ] && ok "(①) settings.json WITH pre-tool-use.sh hook + no residual ⇒ GREEN" || bad "(①) valid hooked settings.json wrongly RED"
+rm -rf "$NH"
 
 # NO-CLOBBER (function-level, observed): pre-existing settings.json is left untouched
 NC="$(mktemp -d)"; mkdir -p "$NC/.claude"

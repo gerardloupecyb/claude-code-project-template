@@ -73,7 +73,10 @@ grep -Eq 'curl[^|]*\$KEY|curl[^|]*key=\$' "$SCRIPT" && bad "probe interpolates t
 probe_pid=$!
 ps_clean=1
 for _ in 1 2 3 4 5 6; do
-    ps -Ao args= 2>/dev/null | grep -qF "$FAKE" && ps_clean=0 && break
+    # snapshot ps to a var FIRST, then grep the snapshot — a `ps | grep -F "$FAKE"` PIPE
+    # self-matches (the grep's OWN argv carries the key), a false positive unrelated to the probe.
+    psout="$(ps -Ao args= 2>/dev/null)"
+    printf '%s\n' "$psout" | grep -qF "$FAKE" && ps_clean=0 && break
     sleep 0.05
 done
 wait "$probe_pid" 2>/dev/null
@@ -94,6 +97,13 @@ esac
 # config-supplied foreign endpoint → rejected
 bash "$SCRIPT" probe --executor openrouter --project-dir "$PROJ" --endpoint "https://evil.example.com/v1/models" >/dev/null 2>&1
 [ "$?" -eq 3 ] && ok "config-supplied foreign endpoint rejected (rc 3)" || bad "foreign endpoint not rejected"
+# ② review batch — EXACT-TUPLE pin: the PUBLIC /api/v1/models on the ALLOWLISTED host is
+# rejected (host-only acceptance would false-green a fake key); only the exact pinned URL passes.
+bash "$SCRIPT" probe --executor openrouter --project-dir "$PROJ" --endpoint "https://openrouter.ai/api/v1/models" >/dev/null 2>&1
+[ "$?" -eq 3 ] && ok "(②) public /api/v1/models on the allowed host REJECTED (false-green guard)" || bad "(②) public /models accepted — false-green hole open"
+bash "$SCRIPT" probe --executor openrouter --project-dir "$PROJ" --endpoint "https://openrouter.ai/api/v1/key" >/dev/null 2>&1
+rc_exact=$?
+[ "$rc_exact" -ne 3 ] && ok "(②) the EXACT pinned /api/v1/key is accepted (rc=$rc_exact, not a reject)" || bad "(②) exact pinned endpoint wrongly rejected"
 
 # probe with NO key stored → returns 2 (not a crash, not a PASS)
 PROJ2="$(mktemp -d)"; ( cd "$PROJ2" && git init -q )

@@ -63,7 +63,15 @@ _forge_validate_tree() {  # $1=dir
                 || { echo "ERROR: invalid YAML post-resolve (fail-closed): ${f#"${dir}"/}" >&2; return 1; }
         done < <(find "$dir" -type f \( -name '*.yaml' -o -name '*.yml' \))
     else
-        echo "  WARN: python3+PyYAML unavailable — YAML validity assert skipped (install for full fail-closed coverage)." >&2
+        # FAIL-CLOSED (review batch ⑥): if any token-free YAML is staged we CANNOT assert its
+        # post-resolve validity without PyYAML → refuse rather than ship unvalidated structure.
+        local _ystaged=""
+        while IFS= read -r f; do grep -q '{{[A-Za-z0-9_]' "$f" || { _ystaged="$f"; break; }; done \
+            < <(find "$dir" -type f \( -name '*.yaml' -o -name '*.yml' \) 2>/dev/null)
+        if [ -n "$_ystaged" ]; then
+            echo "ERROR: python3+PyYAML unavailable but resolved YAML is staged (${_ystaged#"${dir}"/}) — cannot assert validity. Fail-closed; install python3+PyYAML." >&2
+            return 1
+        fi
     fi
 }
 
@@ -72,8 +80,11 @@ _forge_validate_tree() {  # $1=dir
 _forge_gitleaks_scan() {  # $1=dir
     local dir="$1"
     command -v gitleaks >/dev/null 2>&1 || {
-        echo "  WARN: gitleaks absent — S/F1 secret backstop SKIPPED (install gitleaks; Tier-2 toolchain)." >&2
-        return 0
+        # FAIL-CLOSED (review batch ⑥, recurrence of Plan-02 R3/R5a): the S/F1 secret backstop
+        # is mandatory on this [SENSIBLE] boundary. A missing tool must NOT silently degrade to
+        # fail-OPEN — a pasted key would then reach the materialized tree unscanned.
+        echo "ERROR: gitleaks absent — the S/F1 secret backstop cannot run; fail-closed (nothing ships). Install gitleaks (Tier-2 toolchain)." >&2
+        return 1
     }
     if [ -f "$dir/.gitleaks.toml" ]; then
         gitleaks detect --no-git --source "$dir" --config "$dir/.gitleaks.toml" --redact --no-banner >/dev/null 2>&1
@@ -122,7 +133,39 @@ place_settings() {  # $1=project-dir
         return 0
     fi
     jq -e . "$tpl" >/dev/null 2>&1 || { echo "ERROR: resolved settings template is invalid JSON (fail-closed): ${tpl#"${proj}"/}" >&2; return 1; }
+    # ① fold (review batch / AgentShield): an unresolved {{token}} in the placed settings.json
+    # (e.g. {{GATED_MCP_PREFIXES}} in a matcher) would silently inert the prod-MCP gate. Fail-closed.
+    if grep -q '{{[A-Za-z0-9_]' "$tpl"; then
+        echo "ERROR: resolved settings template still carries an unresolved {{token}} (→ inert gate matcher). Fail-closed; not placed: ${tpl#"${proj}"/}" >&2
+        return 1
+    fi
     mv "$tpl" "$dst"
+    return 0
+}
+
+# resolve_files — scoped variant of resolve_tree (review batch ⑧). Substitutes answers into
+# ONLY the listed files (so a post-sync re-resolve never re-tokenizes consumer-owned [SKIP]
+# files), then runs the SAME fail-closed validity + secret backstop over the dir. Iterates the
+# ANSWER keys (the values we hold), not every tree token.
+resolve_files() {  # $1=dir  $2=answers.json  $3..=files
+    local dir="$1" answers="$2"; shift 2
+    [ -f "$answers" ] || { echo "ERROR: resolve_files: answers not found: $answers" >&2; return 2; }
+    jq -e . "$answers" >/dev/null 2>&1 || { echo "ERROR: resolve_files: answers not valid JSON: $answers" >&2; return 2; }
+    local tok val f
+    while IFS= read -r tok; do
+        [ -z "$tok" ] && continue
+        val="$(jq -r --arg k "$tok" '.[$k]' "$answers")"
+        for f in "$@"; do
+            [ -f "$f" ] || continue
+            grep -qF "{{$tok}}" "$f" || continue
+            case "$f" in
+                *.json) _forge_sub_json_file "$f" "$tok" "$val" || { echo "ERROR: resolve_files JSON sub failed: $f" >&2; return 1; } ;;
+                *)      _forge_sub_text_file "$f" "$tok" "$val" || { echo "ERROR: resolve_files text sub failed: $f" >&2; return 1; } ;;
+            esac
+        done
+    done < <(jq -r 'keys[]' "$answers")
+    _forge_validate_tree "$dir" || return 1
+    _forge_gitleaks_scan "$dir" || return 1
     return 0
 }
 
