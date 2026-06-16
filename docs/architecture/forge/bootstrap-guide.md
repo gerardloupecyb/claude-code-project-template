@@ -1,7 +1,7 @@
 ---
 title: "FORGE — Bootstrap Guide"
 status: active
-last_verified: 2026-04-12
+last_verified: 2026-06-15
 owner: {{OWNER}}
 phase: 24
 slug: forge
@@ -9,8 +9,10 @@ slug: forge
 
 # FORGE — Bootstrap Guide
 
-> Comment adopter FORGE dans un nouveau projet.
-> Suivre les etapes dans l'ordre. Chaque tier est autonome — arreter au tier desire.
+> Comment adopter FORGE dans un nouveau projet, via le scaffolder `forge-init.sh`.
+> Un seul outil instancie le template, résout l'identité du projet de façon
+> injection-safe, et arme les gates ; `check-setup.sh` vérifie que l'installation
+> est saine (verdict GREEN/RED déterministe).
 
 ---
 
@@ -35,218 +37,117 @@ phases, gates de domaine) est ce que vous adoptez.
 
 ## Prerequis
 
-- Claude Code installe (`claude` CLI)
-- Git repo initialise
-- GSD installe (`~/.claude/get-shit-done/`)
+- Claude Code installé (`claude` CLI)
+- Git
+- `jq` — le scaffolder lit l'allowlist dérivée et résout les tokens (substitution injection-safe `jq --arg`)
+- `gitleaks` (recommandé) — backstop fail-closed pendant la résolution (S/F1)
 
 ---
 
-## Tier 1 — Foundation (~2h)
-
-### Step 1 — Clone le template
+## Quick start
 
 ```bash
-# Depuis le repo template (pas depuis {{PROJECT}})
-git clone {forge-template-repo} /tmp/forge-template
+# 1. Cloner le template
+git clone {forge-template-repo} forge-template
+
+# 2. Scaffolder un nouveau projet
+#    --tier 1=Foundation · 2=+Governance · 3=+Intelligence (défaut, additif)
+forge-template/forge-init.sh --tier 2 "Mon Projet" monprojet "kw1,kw2,kw3"
+
+#    Pour remplir d'un coup le vocabulaire de stack (workflow engine, cloud, CRM,
+#    compliance…) via les réponses du questionnaire de déploiement (Plan 05) :
+#    forge-template/forge-init.sh --tier 2 --answers answers.json "Mon Projet" monprojet "kw1,kw2"
+
+# 3. Vérifier que l'installation est GREEN
+cd "Mon Projet" && ../forge-template/check-setup.sh .
 ```
 
-### Step 2 — Copier les fichiers foundation
+`forge-init.sh` (remplace toute copie manuelle `cp …`) :
 
-```bash
-PROJECT="{your-project-path}"
-
-# Rules (copier tel quel)
-cp /tmp/forge-template/.claude/rules/verification-discipline.md "$PROJECT/.claude/rules/"
-cp /tmp/forge-template/.claude/rules/cognitive-patterns.md "$PROJECT/.claude/rules/"
-# tool-routing.md : NON fourni par le template (project-specific jusqu'a la genericization Phase 22.1).
-# Redigez le votre — caps / pagination / filtres / anti-patterns MCP de VOTRE stack.
-cp /tmp/forge-template/.claude/rules/workflow-guide.md "$PROJECT/.claude/rules/"
-cp /tmp/forge-template/.claude/rules/todo-discipline.md "$PROJECT/.claude/rules/"
-cp /tmp/forge-template/.claude/rules/phase-lifecycle.md "$PROJECT/.claude/rules/"
-
-# Hooks
-cp /tmp/forge-template/.claude/hooks/session-start.sh "$PROJECT/.claude/hooks/"
-cp /tmp/forge-template/.claude/hooks/memory-retention.sh "$PROJECT/.claude/hooks/"
-
-# Skills
-cp -r /tmp/forge-template/.claude/skills/todo "$PROJECT/.claude/skills/"
-cp -r /tmp/forge-template/.claude/skills/lesson "$PROJECT/.claude/skills/"
-cp -r /tmp/forge-template/.claude/skills/commit-push "$PROJECT/.claude/skills/"
-
-# Memory structure
-mkdir -p "$PROJECT/memory"
-echo "# MEMORY.md — {Project Name}\n\n> Session journal.\n\n---\n\n## Etat du projet\n\n**Statut :** [ ] En demarrage  [ ] En cours  [ ] Bloque  [ ] Termine\n**Derniere session :** {date}\n**Prochaine etape :** {a definir}" > "$PROJECT/memory/MEMORY.md"
-touch "$PROJECT/LESSONS.md"
-touch "$PROJECT/DECISIONS.md"
-```
-
-### Step 3 — CLAUDE.md bootstrap
-
-Creer `CLAUDE.md` (< 50 lignes) :
-
-```markdown
-# {Project Name}
-
-## Style d'execution
-Claude travaille comme un operateur senior : direct, pragmatique, rigoureux.
-
-## Chargement minimal
-Toujours lire : AGENTS.md, memory/MEMORY.md
-Avant implementation : LESSONS.md
-Avant decision architecture : DECISIONS.md
-
-## Fin de session
-Mettre a jour memory/MEMORY.md (fait/decisions/prochaine etape/blocages).
-```
-
-### Step 4 — CARL domain
-
-```bash
-mkdir -p "$PROJECT/.carl"
-cat > "$PROJECT/.carl/{project-name}" << 'EOF'
-# CARL Domain: {Project Name}
-RULE_0="These rules apply to {project-name}. All CARL rules MUST be written in English."
-RULE_1="CONSULT BEFORE IMPLEMENTING: Check docs/solutions/ for existing patterns before writing new code."
-RULE_2="DOCUMENT AFTER SOLVING: Document patterns in docs/solutions/ after resolving non-trivial problems."
-RULE_3="CREDENTIALS SAFETY: All API credentials in .env files, never hardcoded."
-EOF
-```
-
-### Step 5 — Valider
-
-```bash
-# Ouvrir Claude Code dans le projet
-cd "$PROJECT" && claude
-# Session-start hook doit s'executer, MEMORY.md doit etre injecte
-```
-
-**Tier 1 complet.** Le projet a : memory persistante, verification discipline, tool routing, todo tracking, lesson capture, closure protocol.
+- copie les fichiers universels (skills / rules / hooks / outillage forge) **pilotés par
+  l'allowlist dérivée** `.forge/sync-allowlist.json` — aucune liste codée en dur, **aucun skill
+  de domaine** ({{cloud_provider}} / {{WORKFLOW_ENGINE}} / {{crm_platform}}…) ne peut être poussé ;
+- résout les `{{TOKENS}}` de façon **injection-safe** sur tout l'arbre copié (réponses opérateur
+  jamais exécutées, validité JSON/YAML **fail-closed**, passe gitleaks sur l'arbre matérialisé) ;
+- place `.claude/settings.json` (**NO-CLOBBER** — n'écrase jamais un settings.json existant) +
+  installe `.githooks` (`core.hooksPath`) → `pre-tool-use` bloque pour de vrai un Write vers un
+  domaine protégé configuré ;
+- **tripwire** : sort en **RED** (exit ≠ 0) en listant tout `{{TOKEN}}` de structure non résolu —
+  fournissez le questionnaire (`--answers`) pour un init GREEN.
 
 ---
 
-## Tier 2 — Governance (+4h)
+## Les tiers (additifs — `maturity-model.md` pour le détail des composants)
 
-### Step 6 — Ajouter les gates
+| Tier | `--tier` | Ce que vous obtenez |
+|------|----------|---------------------|
+| 1 Foundation | `1` | mémoire persistante, verification-discipline, cognitive-patterns, todo, lesson, commit-push, session-start |
+| 2 Governance | `2` | + skill-gate, supply-chain-audit, pre-flight, sparc, prepare-phase, `.githooks`, gates de domaine |
+| 3 Intelligence | `3` (défaut) | + knowledge ({{RAG_BACKEND}} / RAG), graphify, swarm-patterns, task-router, code-xray |
 
-```bash
-# Rules
-# governance.md : NON fourni par le template (project-specific jusqu'a la genericization Phase 22.1).
-# Redigez le votre — obligations de co-update + table d'enforcement de VOTRE projet.
-cp /tmp/forge-template/.claude/rules/skill-gate.md "$PROJECT/.claude/rules/"
-cp /tmp/forge-template/.claude/rules/supply-chain-audit.md "$PROJECT/.claude/rules/"
-cp /tmp/forge-template/.claude/rules/dependency-surveillance.md "$PROJECT/.claude/rules/"
-cp /tmp/forge-template/.claude/rules/protected-files.yaml "$PROJECT/.claude/rules/"
-
-# Hooks
-cp /tmp/forge-template/.claude/hooks/pre-tool-use.sh "$PROJECT/.claude/hooks/"
-cp /tmp/forge-template/.claude/hooks/pre-mcp-gate.sh "$PROJECT/.claude/hooks/"
-cp /tmp/forge-template/.claude/hooks/pre-compact.sh "$PROJECT/.claude/hooks/"
-cp /tmp/forge-template/.claude/hooks/pre-agent.sh "$PROJECT/.claude/hooks/"
-
-# Git hooks
-cp -r /tmp/forge-template/.githooks "$PROJECT/"
-cd "$PROJECT" && bash scripts/setup-hooks.sh
-
-# Skills
-cp -r /tmp/forge-template/.claude/skills/supply-chain-audit "$PROJECT/.claude/skills/"
-cp -r /tmp/forge-template/.claude/skills/architecture-kit "$PROJECT/.claude/skills/"
-cp -r /tmp/forge-template/.claude/skills/pre-flight "$PROJECT/.claude/skills/"
-cp -r /tmp/forge-template/.claude/skills/sparc "$PROJECT/.claude/skills/"
-cp -r /tmp/forge-template/.claude/skills/prepare-phase "$PROJECT/.claude/skills/"
-cp -r /tmp/forge-template/.claude/skills/skill-refresh "$PROJECT/.claude/skills/"
-
-# Allowlist
-mkdir -p "$PROJECT/.claude/allowlists"
-echo '[]' > "$PROJECT/.claude/allowlists/mcp-preapproved.json"
-
-# DSW
-mkdir -p "$PROJECT/.github"
-cp /tmp/forge-template/.github/dependabot.yml "$PROJECT/.github/"
-cp -r /tmp/forge-template/.github/workflows "$PROJECT/.github/"
-```
-
-### Step 7 — Configurer les domaines proteges
-
-Editer `.claude/rules/skill-gate.md` : remplacer les domaines {{cloud_provider}}/{{WORKFLOW_ENGINE}}/{{crm_platform}} par les domaines du projet.
-Editer `.claude/hooks/pre-tool-use.sh` : adapter les regex de detection.
-
-### Step 8 — Valider
-
-```bash
-# Tenter d'ecrire dans un domaine protege sans marker
-# → doit etre bloque par pre-tool-use.sh
-```
+> **Non fournis par le template** (project-specific jusqu'à la genericization Phase 22.1) :
+> `governance.md` et `tool-routing.md`. Rédigez les vôtres (obligations de co-update +
+> caps / pagination / anti-patterns MCP de **votre** stack).
 
 ---
 
-## Tier 3 — Intelligence (+4h)
+## Configurer les domaines protégés
 
-### Step 9 — {{RAG_BACKEND}}
+Les domaines protégés arrivent **vides**. Ils sont remplis par projet via le questionnaire de
+déploiement (Plan 05), qui peuple `.claude/gate.config.json` ; les hooks (`pre-tool-use.sh`,
+`pre-mcp-gate.sh`) sourcent ce fichier au runtime — la logique de domaine n'est **jamais**
+hardcodée dans `settings.json`. `check-setup.sh` reste **RED** tant que :
 
-```bash
-cp /tmp/forge-template/docker-compose.{{rag_backend}}.yml "$PROJECT/"
-cp /tmp/forge-template/scripts/knowledge-sync.py "$PROJECT/scripts/"
-cp /tmp/forge-template/config/{{rag_backend}}-registry.json "$PROJECT/config/"
-cp -r /tmp/forge-template/.claude/skills/knowledge-sync "$PROJECT/.claude/skills/"
-cp -r /tmp/forge-template/.claude/skills/knowledge-grounding "$PROJECT/.claude/skills/"
+- `project_name` est vide (**jamais waivable**), OU
+- `protected_domains` est vide **et** sans `_no_protected_domains_affirmed: true`, OU
+- `compliance_frameworks` est vide **et** sans `_no_compliance_frameworks_affirmed: true`.
 
-# Installer chroma-mcp
-uv tool install chroma-mcp
-```
-
-### Step 10 — Graphify (optionnel)
-
-```bash
-# SCAG approved (graphify est dans le template allowlist)
-mkdir -p .skill-locks && touch .skill-locks/scag-approved
-uv tool install 'graphifyy[mcp]==0.3.27' --with watchdog
-
-# Copier le skill
-cp -r /tmp/forge-template/.claude/skills/graphify "$PROJECT/.claude/skills/"
-
-# Build le graph initial
-cd "$PROJECT" && /graphify .
-```
-
-### Step 11 — Skills avances
-
-```bash
-cp -r /tmp/forge-template/.claude/skills/context-manager "$PROJECT/.claude/skills/"
-cp -r /tmp/forge-template/.claude/skills/code-xray "$PROJECT/.claude/skills/"
-cp /tmp/forge-template/.claude/rules/swarm-patterns.md "$PROJECT/.claude/rules/"
-```
+L'affirmation est un **flag positif par préoccupation** : supprimer une note de sentinelle sans
+poser le flag laisse le projet RED (pas de bypass « delete-without-affirm »).
 
 ---
 
-## Tier 4 — Domain (variable)
+## Tier 4 — Domain (project-specific, hors template)
 
-Creer les skills domain-architect specifiques au projet :
+Créer les skills domain-architect spécifiques au projet :
 
 1. Identifier les domaines sensibles du projet
-2. Creer `.claude/skills/{domain}-architect/SKILL.md` avec les 5 sections standard
-3. Ajouter le domaine dans `skill-gate.md`
-4. Ajouter les regex dans `pre-tool-use.sh`
-5. Ajouter les CARL rules metier dans `.carl/{project-name}`
+2. Créer `.claude/skills/{domain}-architect/SKILL.md` (5 sections standard)
+3. Déclarer le domaine dans `.claude/gate.config.json` (`protected_domains`) — pas dans `settings.json`
+4. Ajouter les CARL rules métier dans `.carl/{domain}`
+5. Re-vérifier : `check-setup.sh .`
 
 ---
 
-## Post-bootstrap — Verification
+## Mise à jour depuis le template
 
 ```bash
-cd "$PROJECT" && claude
-# Verifier :
-# [ ] session-start.sh s'execute
-# [ ] MEMORY.md est injecte
-# [ ] pre-tool-use.sh bloque les domaines proteges (si Tier 2)
-# [ ] {{RAG_BACKEND}} demarre (si Tier 3)
-# [ ] /graphify fonctionne (si Tier 3 + graphify)
+forge-template/sync-project.sh "/chemin/du/projet"           # dry-run (revue)
+forge-template/sync-project.sh "/chemin/du/projet" --apply    # overwrite universels + re-résolution
 ```
+
+Pilotée par la **même** allowlist dérivée. N'écrase **jamais** les fichiers consumer-owned
+(CLAUDE.md, `*.config.json`, `settings.json`, protected). Écrit un marqueur de version
+(`.forge/forge-template-version`, commit-SHA) et re-résout les tokens depuis `.forge/answers.json`
+après overwrite. Pas de 3-way merge (différé en 22.1).
+
+---
+
+## Post-bootstrap — Vérification
+
+```bash
+cd "Mon Projet" && ../forge-template/check-setup.sh .
+```
+
+GREEN exige : `project_name` rempli · domaines remplis ou affirmés · compliance remplie ou
+affirmée · `settings.json` présent · `core.hooksPath == .githooks`. Sortie non-zéro sur RED.
+Idempotent : corriger la config à la main puis relancer bascule en GREEN sans re-questionnaire.
 
 ---
 
 ## References
 
 - Extraction map : `docs/architecture/forge/extraction-map.md`
-- Configuration points : `docs/architecture/forge/configuration-points.md`
 - Maturity model : `docs/architecture/forge/maturity-model.md`
+- Configuration points : `docs/architecture/forge/configuration-points.md`
 - Component registry : `docs/architecture/forge/component-registry.md`

@@ -1,7 +1,7 @@
 {
-  "generated": "2026-06-15T00:00:00Z",
-  "source_commit": "089798794cd48dca557b1b2910f245bfde95971f",
-  "files": 120,
+  "generated": "2026-06-16T00:00:00Z",
+  "source_commit": "348a3b6ac1c8ab1d2d770753900d3e659684842c",
+  "files": 109,
   "materialized_scattered": [
     ".claude/forge.config.json",
     ".claude/gate.config.json",

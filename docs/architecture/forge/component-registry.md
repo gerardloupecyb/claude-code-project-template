@@ -210,7 +210,7 @@ post-commit (git)
 | **{{PROJECT}}-adaptable** | Cree pour {{PROJECT}} mais le pattern est generique — reutilisable en adaptant le contenu | `supply-chain-audit`, `client-email-template-writer`, `infosec-governance-writer`, `data-compliance-advisor`, `reference-audit`, `pmo` (FORGE-portable via `config.yaml` — Phase 1005) | Manuel + extraire le pattern dans FORGE |
 | **Externe** | Package tiers installe via MCP-only pattern | `graphify` | `uv tool upgrade graphifyy` + recopy SKILL.md |
 | **Compound Engineering** | Vient du framework CE (compound-engineering) | `ce-review`, `ce-plan`, `ce-brainstorm`, `ce-work`, `agent-browser`, `brainstorming`, `document-review` | Via compound-engineering updates |
-| **GSD** | Vient du framework GSD (get-shit-done) | Tous les `gsd:*` commands | `/gsd:update` |
+| **GSD** | Vient du framework GSD (get-shit-done) | Tous les `gsd:*` commands | TBD — retarget vers open-gsd 1.4.5 **audité** en Phase 22.1 (DEC-053) ; ne PAS `/gsd:update` vers une version non auditée |
 | **CARL** | Vient du framework CARL | `carl:manager`, `carl:tasks:*` | CARL framework updates |
 
 ### Processus de mise a jour par origine
@@ -258,7 +258,9 @@ post-commit (git)
 
 ```
 CE : mises a jour via le framework compound-engineering (repo source)
-GSD : /gsd:update → telecharge la derniere version + /gsd:reapply-patches
+GSD : provenance TBD — retarget vers open-gsd 1.4.5 audité en Phase 22.1 (DEC-053) ;
+      ne PAS propager /gsd:update / /gsd:reapply-patches vers une version non auditée
+      (le cutover 1.4.5 a falsifié la prémisse de compatibilité layout — cf. Phase 36)
 CARL : mises a jour via le manifest .carl/ (pas de mecanisme auto)
 ```
 
