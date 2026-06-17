@@ -126,6 +126,13 @@ mkset "$EXP" 'PreToolUse' 'Write|Edit'; [ "$(verdict "$NH")" = 1 ] && ok "(②st
 # GREEN — the exact forge-placed canonical command, with the default and a BROADER matcher (coverage, not exact).
 mkset "$EXP" 'PreToolUse' 'Write|Edit|MultiEdit|Bash'; [ "$(verdict "$NH")" = 0 ] && ok "(②struct) exact forge-placed command + full matcher ⇒ GREEN" || bad "(②struct) forge-placed canonical wrongly RED"
 mkset "$EXP" 'PreToolUse' 'Write|Edit|MultiEdit|Bash|Task'; [ "$(verdict "$NH")" = 0 ] && ok "(②struct) exact command + BROADER matcher (Task added) ⇒ GREEN (coverage)" || bad "(②struct) broader matcher wrongly RED"
+# A′ schema-shape guards (narrow-pass #2 cross-vendor: jq `[]?` iterates OBJECT values too, so an
+# object-shaped container with the exact command would false-GREEN even though Claude Code requires
+# ARRAYS there → the gate would not wire). type=="array" guards at BOTH levels ⇒ object shapes RED.
+jq -n --arg c "$EXP" '{hooks:{PreToolUse:{x:{matcher:"Write|Edit|MultiEdit|Bash",hooks:[{type:"command",command:$c}]}}}}' > "$NH/.claude/settings.json"
+[ "$(verdict "$NH")" = 1 ] && ok "(②struct) PreToolUse as an OBJECT (not array) ⇒ RED (schema-shape guard)" || bad "(②struct) object-shaped PreToolUse wrongly GREEN (Claude Code would not wire it)"
+jq -n --arg c "$EXP" '{hooks:{PreToolUse:[{matcher:"Write|Edit|MultiEdit|Bash",hooks:{y:{type:"command",command:$c}}}]}}' > "$NH/.claude/settings.json"
+[ "$(verdict "$NH")" = 1 ] && ok "(②struct) entry .hooks as an OBJECT (not array) ⇒ RED (schema-shape guard)" || bad "(②struct) object-shaped entry .hooks wrongly GREEN"
 rm -rf "$NH"
 
 # NO-CLOBBER (function-level, observed): pre-existing settings.json is left untouched

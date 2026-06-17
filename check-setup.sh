@@ -95,9 +95,12 @@ fi
 if [ ! -f "$SJ" ]; then fail "settings.json MISSING (run forge-init to place it)"
 elif ! jq -e . "$SJ" >/dev/null 2>&1; then fail "settings.json is not valid JSON"
 elif ! jq -e --arg cmd "$EXPECTED_HOOK_CMD" '
-    [ .hooks.PreToolUse[]?
-      | . as $e | ($e.hooks // []) as $h
-      | select( [ $h[] | select(.type=="command") | .command ] | index($cmd) )      # entry registers the EXACT command
+    [ .hooks.PreToolUse
+      | select(type == "array")                       # PreToolUse MUST be an array — jq `[]?` iterates an
+      | .[] | . as $e                                 #   OBJECT''s values too, so an object-shaped container
+      | ($e.hooks // null) | select(type == "array")  #   would false-GREEN (Claude Code requires arrays here)
+      | [ .[] | select(.type=="command") | .command ] as $cmds
+      | select( $cmds | index($cmd) )                 # entry registers the EXACT command as a type==command hook
       | ($e.matcher // "") as $m
       | select( ["Write","Edit","MultiEdit","Bash"] | all( . as $v | $v | test($m) ) )  # ...and its matcher COVERS the gate verbs
     ] | length > 0' "$SJ" >/dev/null 2>&1; then
