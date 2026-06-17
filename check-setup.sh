@@ -82,6 +82,18 @@ else fail "compliance_frameworks empty AND not affirmed (set frameworks OR _no_c
 # the forge-placed command → GREEN. The full TUPLE (event+matcher+command in the SAME entry) is matched, so
 # a hook under the wrong event or behind a too-narrow matcher cannot false-GREEN. A residual {{token}}
 # anywhere in settings.json still REDs (separate check below — Note 2: token non-resolution must not GREEN).
+#
+# AUTHORITATIVE vs BEST-EFFORT (cross-vendor terminal — H5 disposition). The COMMAND check is
+# AUTHORITATIVE: exact string-equality + the array type-guards close the spoof classes by CONSTRUCTION
+# (no engine can diverge from a string compare). The matcher-COVERAGE sub-check is BEST-EFFORT: it tests
+# the gate verbs against the matcher using jq's Oniguruma regex, which is NOT Claude Code's JS RegExp — a
+# matcher valid in jq but invalid in JS (e.g. `(?>.*)`) can false-GREEN here (H5). Calibrated near-ZERO on
+# the forge path: forge places the plain `Write|Edit|MultiEdit|Bash` (JS-valid, never triggers H5), and
+# Claude Code itself rejects a JS-invalid matcher at load (the consumer sees the error). The AUTHORITATIVE
+# end-to-end #2 verification is the suite's BEHAVIORAL gate-fire test
+# (tests/forge-init-checksetup.test.sh § "(gate-fire)"), which runs the real hook — not this static
+# heuristic. We deliberately do NOT chase jq↔JS regex parity here (a static check cannot mirror the JS
+# runtime; that is the residual the convergence terminal stopped refining).
 SJ="$PROJ/.claude/settings.json"
 SJT="$(dirname "$0")/.claude/settings.json.template"
 # canonical gate command = the SSOT template's PreToolUse command ending in /pre-tool-use.sh (NOT the
@@ -102,12 +114,12 @@ elif ! jq -e --arg cmd "$EXPECTED_HOOK_CMD" '
       | [ .[] | select(.type=="command") | .command ] as $cmds
       | select( $cmds | index($cmd) )                 # entry registers the EXACT command as a type==command hook
       | ($e.matcher // "") as $m
-      | select( ["Write","Edit","MultiEdit","Bash"] | all( . as $v | $v | test($m) ) )  # ...and its matcher COVERS the gate verbs
+      | select( ["Write","Edit","MultiEdit","Bash"] | all( . as $v | $v | test($m) ) )  # ...matcher covers gate verbs (BEST-EFFORT: jq regex ≠ JS RegExp — H5; gate-fire test is authoritative)
     ] | length > 0' "$SJ" >/dev/null 2>&1; then
     fail "settings.json present but no PreToolUse entry registers the canonical gate command ($EXPECTED_HOOK_CMD) as a type==command under a matcher covering Write/Edit/MultiEdit/Bash — the gate is not wired as forge placed it (a command that only mentions/encodes the path, or a too-narrow matcher, does NOT count; re-run forge-init)"
 elif grep -q '{{[A-Za-z0-9_]' "$SJ"; then
     fail "settings.json has an unresolved {{token}} (e.g. {{GATED_MCP_PREFIXES}} in a matcher → inert prod-MCP gate) — re-run forge-init"
-else pass "settings.json present + canonical pre-tool-use.sh hook registered (exact command, covering matcher) + no residual {{token}}"; fi
+else pass "settings.json present + canonical pre-tool-use.sh hook registered (exact command + matcher covers gate verbs, best-effort) + no residual {{token}} — authoritative gate-fire is the behavioral test"; fi
 
 # (v) githooks installed
 hp=$(git -C "$PROJ" config --get core.hooksPath 2>/dev/null || echo "")

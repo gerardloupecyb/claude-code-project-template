@@ -133,6 +133,15 @@ jq -n --arg c "$EXP" '{hooks:{PreToolUse:{x:{matcher:"Write|Edit|MultiEdit|Bash"
 [ "$(verdict "$NH")" = 1 ] && ok "(②struct) PreToolUse as an OBJECT (not array) ⇒ RED (schema-shape guard)" || bad "(②struct) object-shaped PreToolUse wrongly GREEN (Claude Code would not wire it)"
 jq -n --arg c "$EXP" '{hooks:{PreToolUse:[{matcher:"Write|Edit|MultiEdit|Bash",hooks:{y:{type:"command",command:$c}}}]}}' > "$NH/.claude/settings.json"
 [ "$(verdict "$NH")" = 1 ] && ok "(②struct) entry .hooks as an OBJECT (not array) ⇒ RED (schema-shape guard)" || bad "(②struct) object-shaped entry .hooks wrongly GREEN"
+# H5 (cross-vendor terminal — DOCUMENTED best-effort boundary, NOT an unaddressed gap): the matcher-
+# COVERAGE sub-check uses jq's Oniguruma regex, which is NOT Claude Code's JS RegExp. A matcher valid in
+# jq but invalid in JS (e.g. `(?>.*)` atomic group) GREENs the STATIC check. Calibrated near-zero — forge
+# places the plain JS-valid `Write|Edit|MultiEdit|Bash`, and Claude Code rejects a JS-invalid matcher at
+# load (the consumer sees the error). BACKSTOPPED by the behavioral gate-fire test below (authoritative).
+# Pinned here so the static boundary is EXPLICIT; both branches pass (characterization, not a regression).
+jq -n --arg c "$EXP" '{hooks:{PreToolUse:[{matcher:"(?>.*)",hooks:[{type:"command",command:$c}]}]}}' > "$NH/.claude/settings.json"
+if [ "$(verdict "$NH")" = 0 ]; then ok "(②struct/H5) jq-valid/JS-invalid matcher '(?>.*)' GREENs the STATIC check — KNOWN best-effort boundary; behavioral gate-fire test is authoritative (Claude Code rejects it at load)"
+else ok "(②struct/H5) '(?>.*)' ⇒ RED — static tightened beyond the documented best-effort boundary (also acceptable)"; fi
 rm -rf "$NH"
 
 # NO-CLOBBER (function-level, observed): pre-existing settings.json is left untouched
@@ -147,6 +156,11 @@ else
 fi
 rm -rf "$NC"
 
+# ★ AUTHORITATIVE #2 VERIFICATION (cross-vendor terminal disposition) — this BEHAVIORAL gate-fire test is
+# the source of truth that the gate actually fires end-to-end. check-setup.sh's static check is a fast
+# readiness heuristic (authoritative on the command via exact-match + array guards; BEST-EFFORT on matcher
+# coverage — see H5). Where the static heuristic and this behavioral test could differ (a jq-valid/JS-
+# invalid matcher), THIS test (running the real hook) governs. Keep it green and exercising the real hook.
 # REAL gate-fire: configure a protected domain, attempt a matching Write ⇒ pre-tool-use exit 2
 tmp="$(mktemp)"; jq '.protected_domains += [{"name":"secretdom","marker":"secretdom","file_patterns":"\\.secret$","command_patterns":"","required_skills":"secret-skill","lessons_domain":"sec","unlock":"touch .skill-locks/secretdom"}]' "$PROJ/.claude/gate.config.json" > "$tmp" && mv "$tmp" "$PROJ/.claude/gate.config.json"
 GATE_IN='{"tool_name":"Write","tool_input":{"file_path":"config/app.secret"}}'
