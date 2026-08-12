@@ -1,3 +1,13 @@
+> ## ⚠️ ARCHIVÉ (2026-08-12) — remplacé par `forge-template`
+>
+> Ce repo est une lignée **morte** (dernier vrai développement : 2026-06-17, 26 skills aux anciens
+> noms, aucun transport vendor, pas de `/delegate`, pas de `.gitleaks.toml`). Il reste scaffoldable,
+> et c'est exactement le piège : **ne l'utilisez pas**.
+>
+> La cible canonique est **[`forge-template`](https://github.com/gerardloupecyb/forge-template)**
+> (privé) — bootstrap livré : `scripts/forge/forge-init.sh --answers <fichier> --dest <dir>`,
+> questionnaire `answers.example.json`. Voir son `GUIDE-INSTALLATION.md`.
+
 # Claude Code Project Template
 
 [![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/gerardloupecyb/claude-code-project-template/releases)
